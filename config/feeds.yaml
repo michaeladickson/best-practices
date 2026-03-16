@@ -1,0 +1,27 @@
+# AI & Engineering RSS Feeds
+
+feeds:
+  - name: "Nate Jones"
+    url: "https://natesnewsletter.substack.com/feed"
+    category: ai_strategy
+  - name: "Simon Willison"
+    url: "https://simonwillison.net/atom/everything/"
+    category: ai_engineering
+  - name: "Latent Space"
+    url: "https://www.latent.space/feed"
+    category: ai_engineering
+  - name: "The Pragmatic Engineer"
+    url: "https://newsletter.pragmaticengineer.com/feed"
+    category: engineering
+  - name: "Anthropic Blog"
+    url: "https://www.anthropic.com/rss.xml"
+    category: ai_models
+  - name: "OpenAI Blog"
+    url: "https://openai.com/blog/rss.xml"
+    category: ai_models
+  - name: "AI Engineering"
+    url: "https://aiengineer.substack.com/feed"
+    category: ai_engineering
+  - name: "Lenny's Newsletter"
+    url: "https://www.lennysnewsletter.com/feed"
+    category: product

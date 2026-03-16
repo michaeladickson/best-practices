@@ -1,0 +1,366 @@
+"""
+src/digest/ai_digest.py
+Configurable AI community digest — fetches RSS feeds, analyzes with Gemini,
+scores relevance to a project context, and generates recommendations.
+
+Feeds and project context are loaded from YAML config files, making this
+reusable across projects.
+"""
+import json
+import os
+import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from time import mktime
+from typing import Optional
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+import click
+import feedparser
+import structlog
+import yaml
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent.parent.parent / ".env")
+
+log = structlog.get_logger()
+
+CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
+
+
+def _load_feeds(feeds_path: Optional[str] = None) -> list[dict]:
+    path = Path(feeds_path) if feeds_path else CONFIG_DIR / "feeds.yaml"
+    with open(path) as f:
+        return yaml.safe_load(f)["feeds"]
+
+
+def _load_context(context_path: Optional[str] = None) -> dict:
+    path = Path(context_path) if context_path else CONFIG_DIR / "context.yaml"
+    with open(path) as f:
+        return yaml.safe_load(f)
+
+
+def _build_context_prompt(ctx: dict) -> str:
+    """Build the project context section of the prompt from config."""
+    return f"""You are advising the owner of a project called "{ctx.get('project_name', 'unknown')}".
+
+Description: {ctx.get('description', '')}
+
+Tech stack: {ctx.get('tech_stack', '')}
+
+Current AI usage:
+{ctx.get('current_ai_usage', '')}
+
+Key areas:
+{ctx.get('key_areas', '')}
+
+The owner is interested in:
+{ctx.get('interests', '')}
+"""
+
+
+def _get_gemini_client():
+    from google import genai
+
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if api_key:
+        return genai.Client(api_key=api_key)
+    project = os.environ.get("GCP_PROJECT_ID", "")
+    if not project:
+        raise ValueError("Set GCP_PROJECT_ID in .env or provide GEMINI_API_KEY")
+    return genai.Client(vertexai=True, project=project, location="us-central1")
+
+
+def _fetch_recent_posts(feeds: list[dict], days: int = 7) -> list[dict]:
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    posts = []
+
+    for feed_info in feeds:
+        try:
+            feed = feedparser.parse(feed_info["url"])
+            for entry in feed.entries:
+                published = None
+                if hasattr(entry, "published_parsed") and entry.published_parsed:
+                    published = datetime.fromtimestamp(
+                        mktime(entry.published_parsed), tz=timezone.utc
+                    )
+                elif hasattr(entry, "updated_parsed") and entry.updated_parsed:
+                    published = datetime.fromtimestamp(
+                        mktime(entry.updated_parsed), tz=timezone.utc
+                    )
+
+                if published and published >= cutoff:
+                    content = ""
+                    if hasattr(entry, "content") and entry.content:
+                        content = entry.content[0].get("value", "")
+                    elif hasattr(entry, "summary"):
+                        content = entry.summary or ""
+
+                    if len(content) > 3000:
+                        content = content[:3000] + "..."
+
+                    posts.append({
+                        "source": feed_info["name"],
+                        "category": feed_info.get("category", ""),
+                        "title": entry.get("title", "Untitled"),
+                        "link": entry.get("link", ""),
+                        "published": published.strftime("%Y-%m-%d"),
+                        "content_preview": content,
+                    })
+            source_count = len([p for p in posts if p["source"] == feed_info["name"]])
+            log.info("feed_fetched", source=feed_info["name"], posts_found=source_count)
+        except Exception as e:
+            log.warning("feed_fetch_failed", source=feed_info["name"], error=str(e))
+
+    posts.sort(key=lambda p: p["published"], reverse=True)
+    log.info("total_posts_fetched", count=len(posts))
+    return posts
+
+
+def _analyze_posts(posts: list[dict], context_prompt: str,
+                   project_name: str) -> Optional[dict]:
+    if not posts:
+        return None
+
+    client = _get_gemini_client()
+
+    posts_text = ""
+    for i, post in enumerate(posts, 1):
+        posts_text += f"\n--- Post {i} ---\n"
+        posts_text += f"Source: {post['source']} [{post['category']}]\n"
+        posts_text += f"Title: {post['title']}\n"
+        posts_text += f"Date: {post['published']}\n"
+        posts_text += f"URL: {post['link']}\n"
+        posts_text += f"Content:\n{post['content_preview']}\n"
+
+    prompt = f"""Analyze these recent AI/engineering blog posts for relevance to a specific project.
+
+{context_prompt}
+
+Here are the posts from the past week:
+{posts_text}
+
+Return a JSON object with this structure:
+{{
+  "top_posts": [
+    {{
+      "title": "...",
+      "source": "...",
+      "url": "...",
+      "relevance_score": 1-10,
+      "summary": "2-3 sentence summary focused on what's actionable",
+      "why_relevant": "1 sentence on why this matters for {project_name}"
+    }}
+  ],
+  "project_recommendations": [
+    {{
+      "recommendation": "Specific, actionable suggestion for {project_name}",
+      "inspired_by": "Which post(s) inspired this",
+      "effort": "small|medium|large",
+      "impact": "Description of expected impact"
+    }}
+  ]
+}}
+
+Rules:
+- Only include posts with relevance_score >= 5
+- Rank top_posts by relevance_score descending, max 5 posts
+- Generate 2-4 project_recommendations based on themes across the posts
+- Recommendations should be specific to {project_name}, not generic AI advice
+- If a post is paywalled/truncated, score based on what's visible
+- Be honest — if nothing is relevant this week, return empty arrays"""
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+    )
+
+    text = response.text
+    if "```json" in text:
+        text = text.split("```json")[1].split("```")[0]
+    elif "```" in text:
+        text = text.split("```")[1].split("```")[0]
+
+    try:
+        return json.loads(text.strip())
+    except json.JSONDecodeError as e:
+        log.error("json_parse_failed", error=str(e), response=text[:200])
+        return None
+
+
+def _build_email(analysis: dict, week_label: str,
+                 project_name: str) -> tuple[str, str, str]:
+    top_posts = analysis.get("top_posts", [])
+    recommendations = analysis.get("project_recommendations", [])
+
+    subject = f"AI Digest ({project_name}) — {week_label} — {len(top_posts)} posts, {len(recommendations)} recommendations"
+
+    # Text body
+    text_lines = [f"AI Best Practices Digest — {project_name} — {week_label}\n"]
+    if top_posts:
+        text_lines.append("TOP POSTS:")
+        for p in top_posts:
+            text_lines.append(f"\n  [{p['relevance_score']}/10] {p['title']} ({p['source']})")
+            text_lines.append(f"  {p['summary']}")
+            text_lines.append(f"  Why: {p['why_relevant']}")
+            text_lines.append(f"  {p['url']}")
+    if recommendations:
+        text_lines.append("\n\nPROJECT RECOMMENDATIONS:")
+        for r in recommendations:
+            text_lines.append(f"\n  [{r['effort'].upper()}] {r['recommendation']}")
+            text_lines.append(f"  Inspired by: {r['inspired_by']}")
+            text_lines.append(f"  Impact: {r['impact']}")
+    text_body = "\n".join(text_lines)
+
+    # HTML body
+    post_rows = ""
+    for p in top_posts:
+        sc = "#27ae60" if p["relevance_score"] >= 8 else "#f39c12" if p["relevance_score"] >= 6 else "#95a5a6"
+        post_rows += f"""
+        <div style="border-left:4px solid {sc};padding:12px 16px;margin:12px 0;background:#f8f9fa;border-radius:0 4px 4px 0">
+          <div style="font-size:13px;color:{sc};font-weight:600;margin-bottom:4px">
+            {p['relevance_score']}/10 — {p['source']}
+          </div>
+          <div style="font-weight:600;margin-bottom:6px">
+            <a href="{p['url']}" style="color:#2c3e50;text-decoration:none">{p['title']}</a>
+          </div>
+          <div style="font-size:14px;color:#555;margin-bottom:4px">{p['summary']}</div>
+          <div style="font-size:13px;color:#888">Why it matters: {p['why_relevant']}</div>
+        </div>"""
+
+    effort_colors = {"small": "#27ae60", "medium": "#f39c12", "large": "#e74c3c"}
+    rec_rows = ""
+    for r in recommendations:
+        ec = effort_colors.get(r["effort"], "#95a5a6")
+        rec_rows += f"""
+        <div style="padding:12px 16px;margin:12px 0;background:#fff;border:1px solid #e0e0e0;border-radius:4px">
+          <div style="display:inline-block;background:{ec};color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;margin-bottom:6px">
+            {r['effort'].upper()}
+          </div>
+          <div style="font-weight:600;margin:6px 0">{r['recommendation']}</div>
+          <div style="font-size:13px;color:#888">Inspired by: {r['inspired_by']}</div>
+          <div style="font-size:13px;color:#555;margin-top:4px">Impact: {r['impact']}</div>
+        </div>"""
+
+    html_body = f"""
+<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto">
+  <div style="background:#4472C4;padding:20px;border-radius:8px 8px 0 0">
+    <h2 style="margin:0;color:#fff">AI Best Practices Digest</h2>
+    <p style="margin:4px 0 0;color:#ccd9f0;font-size:14px">{project_name} — {week_label}</p>
+  </div>
+  <div style="background:#fff;padding:24px;border:1px solid #eee">
+    <h3 style="color:#2c3e50;border-bottom:1px solid #eee;padding-bottom:8px">
+      Top Posts ({len(top_posts)})
+    </h3>
+    {post_rows if post_rows else '<p style="color:#888">No highly relevant posts this week.</p>'}
+    <h3 style="color:#2c3e50;border-bottom:1px solid #eee;padding-bottom:8px;margin-top:24px">
+      Project Recommendations ({len(recommendations)})
+    </h3>
+    {rec_rows if rec_rows else '<p style="color:#888">No new recommendations this week.</p>'}
+  </div>
+  <div style="background:#f8f9fa;padding:12px 24px;border-radius:0 0 8px 8px;border:1px solid #eee;border-top:none">
+    <p style="color:#888;font-size:12px;margin:0">
+      Generated by ai-digest for {project_name}. Sources: {', '.join(set(p['source'] for p in top_posts)) or 'N/A'}.
+    </p>
+  </div>
+</div>""".strip()
+
+    return subject, html_body, text_body
+
+
+def _send_email(subject: str, html_body: str, text_body: str,
+                from_email: str, to_email: str) -> bool:
+    try:
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail
+
+        api_key = os.environ.get("SENDGRID_API_KEY", "")
+        if not api_key:
+            try:
+                from google.cloud import secretmanager
+                client = secretmanager.SecretManagerServiceClient()
+                project = os.environ.get("GCP_PROJECT_ID", "")
+                name = f"projects/{project}/secrets/sendgrid-api-key/versions/latest"
+                api_key = client.access_secret_version(
+                    request={"name": name}
+                ).payload.data.decode("utf-8")
+            except Exception:
+                pass
+
+        if not api_key:
+            log.warning("sendgrid_not_configured")
+            return False
+
+        message = Mail(from_email=from_email, to_emails=to_email,
+                       subject=subject, plain_text_content=text_body,
+                       html_content=html_body)
+        response = SendGridAPIClient(api_key).send(message)
+        log.info("digest_sent", status_code=response.status_code)
+        return response.status_code in (200, 202)
+    except Exception as e:
+        log.error("digest_send_failed", error=str(e))
+        return False
+
+
+@click.command()
+@click.option("--days", default=7, help="Look back N days for new posts")
+@click.option("--dry-run", is_flag=True, help="Print to stdout instead of emailing")
+@click.option("--context", "context_path", default=None,
+              help="Path to context YAML (default: config/context.yaml)")
+@click.option("--feeds", "feeds_path", default=None,
+              help="Path to feeds YAML (default: config/feeds.yaml)")
+def main(days: int, dry_run: bool, context_path: Optional[str],
+         feeds_path: Optional[str]):
+    """Fetch AI/engineering posts, analyze relevance, and send digest."""
+    ctx = _load_context(context_path)
+    feeds = _load_feeds(feeds_path)
+    project_name = ctx.get("project_name", "unknown")
+    today = datetime.now().strftime("%Y-%m-%d")
+    week_label = f"Week of {today}"
+
+    log.info("digest_start", project=project_name, days=days, feeds=len(feeds))
+
+    posts = _fetch_recent_posts(feeds, days=days)
+    if not posts:
+        print("No new posts found.")
+        return
+
+    log.info("analyzing_posts", count=len(posts))
+    context_prompt = _build_context_prompt(ctx)
+    analysis = _analyze_posts(posts, context_prompt, project_name)
+    if not analysis:
+        print("Failed to analyze posts.")
+        return
+
+    top_count = len(analysis.get("top_posts", []))
+    rec_count = len(analysis.get("project_recommendations", []))
+    log.info("analysis_complete", top_posts=top_count, recommendations=rec_count)
+
+    subject, html_body, text_body = _build_email(analysis, week_label, project_name)
+
+    if dry_run:
+        print(f"\n{'='*60}")
+        print(f"Subject: {subject}")
+        print(f"{'='*60}")
+        print(text_body)
+        print(f"{'='*60}")
+        return
+
+    email_cfg = ctx.get("email", {})
+    from_email = email_cfg.get("from", os.environ.get("ALERT_EMAIL", ""))
+    to_email = email_cfg.get("to", os.environ.get("ALERT_EMAIL", ""))
+
+    if not from_email or not to_email:
+        print("No email configured. Use --dry-run or set email in context.yaml")
+        return
+
+    success = _send_email(subject, html_body, text_body, from_email, to_email)
+    if success:
+        print(f"Digest sent: {subject}")
+    else:
+        print("Failed to send. Check logs.")
+
+
+if __name__ == "__main__":
+    main()
