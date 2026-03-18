@@ -25,3 +25,15 @@ feeds:
   - name: "Lenny's Newsletter"
     url: "https://www.lennysnewsletter.com/feed"
     category: product
+  - name: "Pascal Biese (LLM Watch)"
+    url: "https://xaiguy.substack.com/feed"
+    category: ai_engineering
+  - name: "Rahul Agarwal (MLWhiz)"
+    url: "https://mlwhiz.substack.com/feed"
+    category: ai_engineering
+  - name: "The AI Break"
+    url: "https://theaibreak.substack.com/feed"
+    category: ai_engineering
+  - name: "Ruben Dominguez (The AI Corner)"
+    url: "https://theaicorner1.substack.com/feed"
+    category: ai_strategy
