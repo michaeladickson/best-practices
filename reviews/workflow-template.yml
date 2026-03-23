@@ -1,12 +1,18 @@
-# Copy this to .github/workflows/weekly-reviews.yml in any repo.
-# Review prompts are fetched from the best-practices repo at runtime,
-# so updates to prompts automatically apply to all repos.
+# Dual-model review workflow (Gemini + Claude → Synthesis).
+# Review prompts fetched from best-practices repo at runtime.
+#
+# Setup:
+# 1. Copy this to .github/workflows/weekly-reviews.yml in your repo
+# 2. Create .github/prompts/review-context.md from the template in best-practices/reviews/
+# 3. Set secrets: ANTHROPIC_API_KEY (or CLAUDE_CODE_OAUTH_TOKEN), GCP_SA_KEY
+# 4. Ensure GITHUB_TOKEN has issues:write permission
 
 name: Weekly Reviews
 
 on:
   schedule:
     - cron: '53 12 * * 1'  # Monday ~8am ET (code review)
+    - cron: '53 12 * * 2'  # Tuesday ~8am ET (security review)
     - cron: '53 12 * * 3'  # Wednesday ~8am ET (UI review)
     - cron: '53 12 * * 5'  # Friday ~8am ET (QA review)
   workflow_dispatch:
@@ -17,9 +23,9 @@ on:
         type: choice
         options:
           - code
+          - security
           - ui
           - qa
-          - security
 
 jobs:
   review:
@@ -27,6 +33,7 @@ jobs:
     permissions:
       contents: read
       issues: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -39,41 +46,198 @@ jobs:
             DOW=$(date -u +%u)
             case $DOW in
               1) echo "type=code" >> $GITHUB_OUTPUT ;;
+              2) echo "type=security" >> $GITHUB_OUTPUT ;;
               3) echo "type=ui" >> $GITHUB_OUTPUT ;;
               5) echo "type=qa" >> $GITHUB_OUTPUT ;;
               *) echo "type=code" >> $GITHUB_OUTPUT ;;
             esac
           fi
 
-      - name: Fetch review prompt
+      # ── Fetch centralized prompts from best-practices repo ──────────
+      - name: Fetch review prompts
         run: |
           TYPE="${{ steps.review-type.outputs.type }}"
-          curl -sH "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/${TYPE}-review.md" \
-            -o review-prompt.md
+          BASE="https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews"
+          curl -sf "${BASE}/${TYPE}-review.md" -o review-prompt.md
+          curl -sf "${BASE}/synthesize.md" -o synthesize-prompt.md
 
-      - name: Run review
-        uses: anthropics/claude-code-action@beta
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt_file: review-prompt.md
-          output_file: review-output.md
-
-      - name: Create issue
+      # ── Fetch existing open issues for dedup ────────────────────────
+      - name: Fetch open issues
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          {
+            echo "# Existing Open Issues"
+            echo ""
+            echo "These issues are already tracked. Do NOT re-report findings that are"
+            echo "covered by an existing issue. If a finding is already listed below,"
+            echo "skip it entirely — even if you would phrase it differently."
+            echo ""
+            gh issue list --state open --limit 100 --json number,title,body \
+              --jq '.[] | "## #\(.number): \(.title)\n\(.body)\n"'
+          } > existing-issues.md
+
+          ISSUE_COUNT=$(gh issue list --state open --limit 100 --json number --jq 'length')
+          echo "Fetched $ISSUE_COUNT open issues for dedup"
+
+      # ── Step 1: Gemini review ───────────────────────────────────────
+      - name: Collect source files for Gemini
+        run: |
+          {
+            # Include project-specific review context if it exists
+            if [ -f .github/prompts/review-context.md ]; then
+              cat .github/prompts/review-context.md
+              echo ""
+            fi
+
+            echo "# Source files for review"
+            echo ""
+
+            # Python files
+            for f in $(find . -name '*.py' -not -path '*/venv/*' -not -path '*__pycache__*' -not -path '*node_modules*' -not -path '*/.venv/*' | sort); do
+              echo "## $f"
+              echo '```python'
+              cat "$f"
+              echo '```'
+              echo ""
+            done
+
+            # TypeScript/JavaScript files
+            for f in $(find . -name '*.tsx' -o -name '*.ts' | grep -v node_modules | grep -v '.d.ts' | sort); do
+              echo "## $f"
+              echo '```typescript'
+              cat "$f"
+              echo '```'
+              echo ""
+            done
+
+            # Swift files
+            for f in $(find . -name '*.swift' -not -path '*/Pods/*' -not -path '*/.build/*' | sort); do
+              echo "## $f"
+              echo '```swift'
+              cat "$f"
+              echo '```'
+              echo ""
+            done
+          } > source-snapshot.md
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Run Gemini review
+        run: |
           TYPE="${{ steps.review-type.outputs.type }}"
-          DATE=$(date +%Y-%m-%d)
+          PROJECT="${{ vars.GCP_PROJECT_ID || 'hybrid-elysium-471814-p2' }}"
+          LOCATION="us-central1"
+          MODEL="gemini-2.5-flash"
 
-          case $TYPE in
-            code)     TITLE="Weekly Code Review — $DATE";     LABELS="code-review,automated" ;;
-            ui)       TITLE="Weekly UI Review — $DATE";       LABELS="ui-review,automated" ;;
-            qa)       TITLE="Weekly QA Review — $DATE";        LABELS="qa-review,automated" ;;
-            security) TITLE="Security Audit — $DATE";          LABELS="security,automated" ;;
-          esac
+          # Build the full prompt
+          {
+            if [ -f .github/prompts/review-context.md ]; then
+              cat .github/prompts/review-context.md
+              echo ""
+            fi
+            cat existing-issues.md
+            echo ""
+            cat review-prompt.md
+            echo ""
+            echo "Here are the source files to review:"
+            echo ""
+            cat source-snapshot.md
+          } > gemini-full-prompt.txt
 
-          gh issue create \
-            --title "$TITLE" \
-            --body-file review-output.md \
-            --label "$LABELS"
+          # Build JSON request using Python (avoids shell arg length limits)
+          python3 -c "
+          import json
+          with open('gemini-full-prompt.txt') as f:
+              text = f.read()
+          req = {
+              'contents': [{'role': 'user', 'parts': [{'text': text}]}],
+              'generationConfig': {'temperature': 0.2, 'maxOutputTokens': 8192}
+          }
+          json.dump(req, open('gemini-request.json', 'w'))
+          print(f'Request size: {len(text)//1024}KB')
+          "
+
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          ENDPOINT="https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT}/locations/${LOCATION}/publishers/google/models/${MODEL}:generateContent"
+
+          RESP=$(curl -s -X POST "$ENDPOINT" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d @gemini-request.json \
+            --max-time 300)
+
+          echo "$RESP" | jq -r '.candidates[0].content.parts[0].text // empty' > gemini-output.md
+
+          if [ ! -s gemini-output.md ]; then
+            echo "$RESP" | jq -r '.error.message // "Unknown error"' >&2
+            echo "Gemini review produced no output. Synthesis will use Claude's review only." > gemini-output.md
+          fi
+
+          echo "--- Gemini output (first 20 lines) ---"
+          head -20 gemini-output.md
+
+      # ── Step 2: Claude review ───────────────────────────────────────
+      - name: Prepare Claude prompt
+        run: |
+          TYPE="${{ steps.review-type.outputs.type }}"
+          echo "$TYPE" > review-type.txt
+          # Hide .mcp.json so claude-code-action doesn't try to start MCP servers
+          mv .mcp.json .mcp.json.bak 2>/dev/null || true
+
+      - name: Run Claude review
+        uses: anthropics/claude-code-action@beta
+        with:
+          mode: agent
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_tools: Read,Glob,Grep,Bash,Write
+          mcp_config: '{"mcpServers":{}}'
+          direct_prompt: |
+            FIRST: If .github/prompts/review-context.md exists, read it — it defines what
+            this app is, its threat model, intentional design decisions you must NOT flag,
+            and what makes a good vs bad finding. Follow it strictly.
+
+            THEN: Read review-prompt.md for the specific review instructions.
+
+            ALSO: Read existing-issues.md — do NOT report findings already tracked there.
+
+            Review all source files in the repository.
+
+            When done, write your complete findings to a file called claude-output.md
+            in the repository root. Output ONLY the findings as specified in the prompt
+            file, no title or extra text.
+
+      # ── Step 3: Synthesize both reviews ─────────────────────────────
+      - name: Synthesize reviews
+        uses: anthropics/claude-code-action@beta
+        with:
+          mode: agent
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_tools: Read,Glob,Grep,Bash,Write
+          mcp_config: '{"mcpServers":{}}'
+          direct_prompt: |
+            You have two independent reviews of the same codebase — one from Claude
+            (claude-output.md) and one from Gemini (gemini-output.md).
+
+            Read both files, then read synthesize-prompt.md for detailed instructions.
+
+            If .github/prompts/review-context.md exists, read it too — it defines
+            intentional design decisions that should NOT be flagged.
+
+            CRITICAL: Also read existing-issues.md. Any finding that duplicates or overlaps
+            with an existing open issue MUST be moved to the "Dismissed" section with the
+            note "Already tracked in #<number>". Do not create duplicate work items.
+
+            Write the synthesized issue body to review-output.md in the repository root.
+            Output ONLY the synthesized issue body, no title or preamble.
+
+            After writing review-output.md, create a GitHub issue using the gh CLI:
+            - Read the TYPE from the file 'review-type.txt' (contains: code, security, ui, or qa)
+            - Title format: "Weekly {Type} Review — YYYY-MM-DD" (use today's date)
+            - Labels: "{type}-review,automated"
+            - Body: contents of review-output.md
+          claude_env: |
+            GH_TOKEN=${{ github.token }}
