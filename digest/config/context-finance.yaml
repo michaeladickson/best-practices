@@ -1,0 +1,45 @@
+# Operational finance / CFO context for digest relevance scoring.
+# Usage: python -m digest --context digest/config/context-finance.yaml
+
+project_name: "operational-finance"
+description: |
+  Building AI-powered tools for operational finance, accounting, and CFO workflows.
+  Targets: small/mid-size businesses, franchise operations, client engagements.
+  Focus is on automating the back-office: books, invoices, payroll, reporting, forecasting.
+
+tech_stack: |
+  Python 3.12, FastAPI, PostgreSQL, React, GCP Cloud Run.
+  External: QuickBooks Online API, Gmail API, SendGrid, When I Work.
+  AI: Gemini for document extraction, classification, and analysis.
+
+current_ai_usage: |
+  - Gemini for vendor invoice extraction (PDF → structured data → QBO bills)
+  - Gemini for email classification and routing
+  - Gemini for draft response generation
+  - LightGBM for demand forecasting
+  - Claude Code for all development
+
+key_areas: |
+  - Automated accounting sync (sales → journal entries, invoice → bills)
+  - Vendor invoice parsing and processing (Sysco, US Foods, franchising)
+  - Payroll automation with state-specific compliance (OT, tips)
+  - Demand and revenue forecasting (LightGBM + feature engineering)
+  - Month-end close automation (accruals, reconciliation, variance analysis)
+  - Multi-entity financial reporting and consolidation
+  - Labor cost tracking and scheduling optimization
+
+interests: |
+  - AI applications for CFO/finance teams and controllers
+  - LLMs for document extraction (invoices, statements, receipts, tax forms)
+  - Automated financial reporting and variance analysis
+  - AI-powered audit and reconciliation
+  - QBO API patterns and accounting system integrations
+  - Payroll compliance automation
+  - Real-time financial dashboards and alerting
+  - Franchise / multi-entity accounting patterns
+  - AI for accounts payable and accounts receivable
+
+email:
+  from: "michael@bluegrasscookies.com"
+  to: "michael.a.dickson@gmail.com"
+  subject_prefix: "Finance Ops Digest"

@@ -1,4 +1,4 @@
-# AI & Engineering RSS Feeds
+# RSS Feeds — AI, Engineering, Finance & Investing
 
 feeds:
   - name: "Nate Jones"
@@ -37,3 +37,32 @@ feeds:
   - name: "Ruben Dominguez (The AI Corner)"
     url: "https://theaicorner1.substack.com/feed"
     category: ai_strategy
+
+  # Finance & AI
+  - name: "The Financial Revolutionist"
+    url: "https://thefr.com/feed"
+    category: ai_finance
+  - name: "Finimize"
+    url: "https://finimize.com/wp/feed/"
+    category: investing
+  - name: "CFO Dive"
+    url: "https://www.cfodive.com/feeds/news/"
+    category: cfo
+  - name: "The Diff"
+    url: "https://www.thediff.co/feed"
+    category: finance_strategy
+  - name: "Net Interest (Marc Rubinstein)"
+    url: "https://www.netinterest.co/feed"
+    category: finance_strategy
+  - name: "Kyla Scanlon"
+    url: "https://kylascanlon.substack.com/feed"
+    category: macro
+  - name: "The Macro Compass"
+    url: "https://themacrocompass.substack.com/feed"
+    category: macro
+  - name: "Accounting Today"
+    url: "https://www.accountingtoday.com/feed"
+    category: accounting
+  - name: "FinTech Takes (Alex Johnson)"
+    url: "https://fintechascend.substack.com/feed"
+    category: fintech

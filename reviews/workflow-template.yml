@@ -1,0 +1,79 @@
+# Copy this to .github/workflows/weekly-reviews.yml in any repo.
+# Review prompts are fetched from the best-practices repo at runtime,
+# so updates to prompts automatically apply to all repos.
+
+name: Weekly Reviews
+
+on:
+  schedule:
+    - cron: '53 12 * * 1'  # Monday ~8am ET (code review)
+    - cron: '53 12 * * 3'  # Wednesday ~8am ET (UI review)
+    - cron: '53 12 * * 5'  # Friday ~8am ET (QA review)
+  workflow_dispatch:
+    inputs:
+      review_type:
+        description: 'Review type to run'
+        required: true
+        type: choice
+        options:
+          - code
+          - ui
+          - qa
+          - security
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine review type
+        id: review-type
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=${{ inputs.review_type }}" >> $GITHUB_OUTPUT
+          else
+            DOW=$(date -u +%u)
+            case $DOW in
+              1) echo "type=code" >> $GITHUB_OUTPUT ;;
+              3) echo "type=ui" >> $GITHUB_OUTPUT ;;
+              5) echo "type=qa" >> $GITHUB_OUTPUT ;;
+              *) echo "type=code" >> $GITHUB_OUTPUT ;;
+            esac
+          fi
+
+      - name: Fetch review prompt
+        run: |
+          TYPE="${{ steps.review-type.outputs.type }}"
+          curl -sH "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/${TYPE}-review.md" \
+            -o review-prompt.md
+
+      - name: Run review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt_file: review-prompt.md
+          output_file: review-output.md
+
+      - name: Create issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TYPE="${{ steps.review-type.outputs.type }}"
+          DATE=$(date +%Y-%m-%d)
+
+          case $TYPE in
+            code)     TITLE="Weekly Code Review — $DATE";     LABELS="code-review,automated" ;;
+            ui)       TITLE="Weekly UI Review — $DATE";       LABELS="ui-review,automated" ;;
+            qa)       TITLE="Weekly QA Review — $DATE";        LABELS="qa-review,automated" ;;
+            security) TITLE="Security Audit — $DATE";          LABELS="security,automated" ;;
+          esac
+
+          gh issue create \
+            --title "$TITLE" \
+            --body-file review-output.md \
+            --label "$LABELS"

@@ -1,0 +1,45 @@
+# Investing & wealth management context for digest relevance scoring.
+# Usage: python -m digest --context digest/config/context-investing.yaml
+
+project_name: "investing"
+description: |
+  Personal wealth management platform and investing research tools.
+  Aggregates portfolio data from multiple sources, runs macro analysis,
+  categorizes spending, and generates actionable investment theses.
+  Building competency for potential client advisory tools.
+
+tech_stack: |
+  Python 3.12, FastAPI, SQLite (local), Supabase (remote).
+  External: Plaid API, yfinance, FRED API.
+  AI: Gemini for analysis, categorization, and thesis generation.
+
+current_ai_usage: |
+  - Gemini for transaction categorization (batch, cached by transaction ID)
+  - Gemini for macro digest analysis and thesis generation
+  - Gemini for spending report narrative generation
+  - Claude Code for all development
+
+key_areas: |
+  - Multi-source portfolio aggregation (Plaid + manual holdings + manual assets)
+  - Macro economic analysis (FRED indicators, market data, RSS feeds)
+  - Spending analysis with lifestyle-oriented categories
+  - Investment thesis generation with investor profile context
+  - Net worth tracking and trend analysis
+  - 529 education savings planning
+  - Tax-aware portfolio strategy (Roth, traditional, taxable)
+
+interests: |
+  - AI-driven investment research and portfolio analysis
+  - Macro economic trend detection and impact assessment
+  - Factor investing, tax-loss harvesting, asset allocation strategies
+  - AI for personal finance and wealth advisory
+  - Fintech infrastructure (Plaid, brokerage APIs, data aggregation)
+  - Behavioral finance and spending pattern insights
+  - Alternative data sources for investment signals
+  - Robo-advisor architecture and portfolio optimization algorithms
+  - AI for financial planning (retirement, education, estate)
+
+email:
+  from: "michael@bluegrasscookies.com"
+  to: "michael.a.dickson@gmail.com"
+  subject_prefix: "Investing Digest"

@@ -1,5 +1,5 @@
 """
-src/digest/ai_digest.py
+digest/ai_digest.py
 Configurable AI community digest — fetches RSS feeds, analyzes with Gemini,
 scores relevance to a project context, and generates recommendations.
 
@@ -14,7 +14,7 @@ from pathlib import Path
 from time import mktime
 from typing import Optional
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import click
 import feedparser
@@ -22,11 +22,11 @@ import structlog
 import yaml
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).parent.parent.parent / ".env")
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 log = structlog.get_logger()
 
-CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
+CONFIG_DIR = Path(__file__).parent / "config"
 
 
 def _load_feeds(feeds_path: Optional[str] = None) -> list[dict]:
@@ -36,7 +36,7 @@ def _load_feeds(feeds_path: Optional[str] = None) -> list[dict]:
 
 
 def _load_context(context_path: Optional[str] = None) -> dict:
-    path = Path(context_path) if context_path else CONFIG_DIR / "context.yaml"
+    path = Path(context_path) if context_path else CONFIG_DIR / "context-engineering.yaml"
     with open(path) as f:
         return yaml.safe_load(f)
 
