@@ -105,7 +105,22 @@ Review the latest digest knowledge files (`data/digest_knowledge/*.md`):
 - Do any digest findings contradict or reinforce what the reviews found this week?
 - Should any digest recommendation become a backlog item?
 
-## 11. Cross-Repo Patterns
+## 11. Practice Promotion
+
+Review digest recommendations and review findings for patterns that should become permanent best practices:
+
+- Has a digest recommendation been **implemented and validated** in the codebase? If so, document it as a practice in `practices/` with code examples from the actual implementation.
+- Has a review finding been **fixed the same way multiple times**? That fix pattern should become a documented practice so it doesn't recur.
+- Has a security threat been **mitigated**? Document the mitigation as a security practice.
+
+For each practice to promote, provide:
+- Suggested filename: `practices/<category>/<name>.md`
+- Which digest/review inspired it
+- Draft content (pattern, code example, "Where Used" section)
+
+The practices catalog (`practices/INDEX.md`) is the permanent knowledge base. Digest intelligence is ephemeral (8-week window). Reviews are weekly snapshots. Practices are forever.
+
+## 12. Cross-Repo Patterns
 
 If this review covers crumbl-ops, also check:
 - Are patterns from best-practices being followed? (`practices/INDEX.md`)
