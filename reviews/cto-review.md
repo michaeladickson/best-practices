@@ -73,8 +73,24 @@ For each prompt that needs updating, provide specific edits in diff format.
 - **Overall Health Score**: Green / Yellow / Red with 1-sentence justification
 - **Executive Summary**: 3-5 bullets for a standup
 - **Function Scorecards**: Table with coverage grade, value grade, top gap
-- **Action Items**: Prioritized checklist with markdown checkboxes
+- **Autonomous Actions** (Claude Code can handle without human input):
+  - Bug fixes with clear root cause and test coverage
+  - Linting/formatting/accessibility fixes
+  - Test script generation and commit
+  - Dependency updates with no breaking changes
+  - Documentation updates (CLAUDE.md, practices, review-context)
+  - Review prompt improvements
+  - For each: describe the fix and estimated effort
+- **Needs Your Input** (requires product/business decision):
+  - Architecture changes or new features
+  - Prioritization trade-offs (what to build vs defer)
+  - Business logic changes (forecast parameters, labor targets, pricing)
+  - Security decisions (what level of risk is acceptable)
+  - Third-party integrations or vendor decisions
+  - For each: describe the decision needed and options
 
 Be direct and opinionated — this is a CTO review, not a consensus document.
+This email is the owner's primary touchpoint with the dev team.
+Make it scannable in 60 seconds.
 
 Output ONLY the review, no title or preamble.
