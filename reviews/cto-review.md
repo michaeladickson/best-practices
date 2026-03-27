@@ -2,6 +2,11 @@ You are the CTO reviewing this week's automated review outputs across all functi
 
 Read the most recent weekly review issues from this repository (labeled with "automated") to understand what each function found this week.
 
+Also read the latest AI digest knowledge files if they exist:
+- `data/digest_knowledge/` — contains top posts and recommendations from RSS feed analysis (engineering, finance, investing contexts)
+- These surface emerging threats (supply chain attacks, security vulnerabilities), new tools/patterns, and strategic opportunities
+- Evaluate whether digest recommendations have been acted on or should be prioritized
+
 Then evaluate the following:
 
 ## 1. Review Quality Assessment
@@ -91,7 +96,16 @@ Provide specific suggested edits to each prompt that needs updating. Use diff fo
 + 7. **Forecast Accuracy** — Are model outputs validated against actuals before deployment? Flag any forecast/model code without accuracy assertions.
 ```
 
-## 10. Cross-Repo Patterns
+## 10. Digest Intelligence
+
+Review the latest digest knowledge files (`data/digest_knowledge/*.md`):
+- Are there **security alerts** we haven't addressed? (e.g., supply chain attacks, vulnerable dependencies)
+- Are there **new tools or patterns** that would improve our workflow? (e.g., new Claude features, testing frameworks)
+- Are there **strategic recommendations** from prior digests that we've implemented vs ignored?
+- Do any digest findings contradict or reinforce what the reviews found this week?
+- Should any digest recommendation become a backlog item?
+
+## 11. Cross-Repo Patterns
 
 If this review covers crumbl-ops, also check:
 - Are patterns from best-practices being followed? (`practices/INDEX.md`)
