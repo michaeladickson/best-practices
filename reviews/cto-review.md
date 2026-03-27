@@ -91,7 +91,15 @@ Provide specific suggested edits to each prompt that needs updating. Use diff fo
 + 7. **Forecast Accuracy** — Are model outputs validated against actuals before deployment? Flag any forecast/model code without accuracy assertions.
 ```
 
-## 10. Team Recommendations
+## 10. Cross-Repo Patterns
+
+If this review covers crumbl-ops, also check:
+- Are patterns from best-practices being followed? (`practices/INDEX.md`)
+- Are shared review findings applicable to wealth-mgmt or other repos?
+- Are there duplicate solutions across repos that should be consolidated?
+- Is the digest surfacing recommendations that apply to multiple projects?
+
+## 11. Team Recommendations
 
 Based on all of the above:
 - Top 3 things to fix this week (highest risk × effort balance)

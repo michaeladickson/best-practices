@@ -352,6 +352,44 @@ def _send_email(subject: str, html_body: str, text_body: str,
         return False
 
 
+KNOWLEDGE_DIR = Path(__file__).parent.parent / "data" / "digest_knowledge"
+
+
+def _save_digest_knowledge(analysis: dict, project_name: str, date_str: str):
+    """Save digest analysis to knowledge base for long-term reference."""
+    KNOWLEDGE_DIR.mkdir(parents=True, exist_ok=True)
+
+    top_posts = analysis.get("top_posts", [])
+    recommendations = analysis.get("project_recommendations", [])
+
+    if not top_posts and not recommendations:
+        return
+
+    filename = f"{date_str}_{project_name}.md"
+    path = KNOWLEDGE_DIR / filename
+
+    lines = [f"# Digest: {project_name} — {date_str}\n"]
+
+    if top_posts:
+        lines.append("## Top Posts\n")
+        for p in top_posts:
+            lines.append(f"- **{p.get('title', 'Untitled')}** ({p.get('source', '?')}) "
+                         f"— relevance {p.get('relevance_score', '?')}/10")
+            lines.append(f"  {p.get('summary', '')}")
+            lines.append(f"  Why: {p.get('why_relevant', '')}\n")
+
+    if recommendations:
+        lines.append("## Recommendations\n")
+        for r in recommendations:
+            lines.append(f"- [{r.get('effort', '?').upper()}] {r.get('recommendation', '')}")
+            lines.append(f"  Inspired by: {r.get('inspired_by', '')}")
+            lines.append(f"  Impact: {r.get('impact', '')}\n")
+
+    path.write_text("\n".join(lines))
+    log.info("digest_knowledge_saved", path=str(path), posts=len(top_posts),
+             recommendations=len(recommendations))
+
+
 @click.command()
 @click.option("--days", default=7, help="Look back N days for new posts")
 @click.option("--dry-run", is_flag=True, help="Print to stdout instead of emailing")
@@ -405,6 +443,9 @@ def main(days: int, dry_run: bool, context_path: Optional[str],
     top_count = len(analysis.get("top_posts", []))
     rec_count = len(analysis.get("project_recommendations", []))
     log.info("analysis_complete", top_posts=top_count, recommendations=rec_count)
+
+    # Persist analysis to knowledge base
+    _save_digest_knowledge(analysis, project_name, today)
 
     subject, html_body, text_body = _build_email(analysis, week_label, project_name)
 
