@@ -34,6 +34,12 @@ Check for:
    - Are there orphaned records or referential integrity gaps?
    - Is the cookie_forecasts → forecast_daily_revenue → labor_cache chain consistent?
 
+6. **Webhook & External Sync Integrity**
+   - Are there WIW time entries with NULL end_time older than 12 hours? This indicates a dropped Zapier webhook for the clock-out event. Run: `SELECT store_id, work_date, COUNT(*) FROM wiw_time_entries WHERE end_time IS NULL AND start_time < NOW() - INTERVAL '12 hours' GROUP BY store_id, work_date ORDER BY work_date DESC`
+   - Does the gap-fill function `detect_and_fill_missing_clockouts()` in `wiw_sync.py` exist and handle the fallback to scheduled shift end times?
+   - Are there time entries where length_hours = 0 but end_time is set (corrupt data)?
+   - Are there days where total labor hours are significantly below historical DOW average for a store (suggests missing punches even if entries exist)?
+
 6. **Dashboard Accuracy**
    - Do frontend charts/metrics match backend queries?
    - Are there client-side calculations that could diverge from server-side?

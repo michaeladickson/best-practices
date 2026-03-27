@@ -2,7 +2,7 @@ Perform a comprehensive QA review of this codebase. Focus on:
 
 1. **Happy Path Coverage** — Verify all API routes have proper request/response handling and validation
 2. **Edge Cases** — Empty data, null values, boundary values, large datasets, unicode/special characters
-3. **Data Integrity** — Non-atomic operations, optimistic updates without rollback, SQL concerns, missing constraints
+3. **Data Integrity** — Non-atomic operations, optimistic updates without rollback, SQL concerns, missing constraints. For time/labor data specifically: overlapping time entries for the same employee on the same day, entries under 5 minutes (accidental punches), NULL end_times older than 12 hours (dropped webhooks), and duplicate entries from webhook re-delivery. This data feeds payroll — accuracy is critical.
 4. **Multi-Tenant Scenarios** — Tenant/store filtering, cross-tenant access prevention, new tenant onboarding gaps
 5. **Error Handling** — Backend error responses, silent frontend failures, timeout handling, network retry
 6. **Date & Timezone** — Client vs server time, day-of-week mismatches, month/year boundaries, DST transitions
@@ -34,8 +34,9 @@ For each test:
 Focus test generation on:
 1. Financial calculations (forecast accuracy, labor targets, P&L math)
 2. Data pipeline integrity (sync idempotency, dedup correctness)
-3. API contract validation (response shapes, error handling)
-4. Edge cases from findings above
+3. Time entry integrity (overlapping entries, accidental punches, NULL end_times, duplicate webhook deliveries — this data feeds payroll)
+4. API contract validation (response shapes, error handling)
+5. Edge cases from findings above
 
 Include the test code in fenced code blocks with the correct language tag.
 
