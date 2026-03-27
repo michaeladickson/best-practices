@@ -50,14 +50,24 @@ Flag if any function is consistently producing low-value findings or missing imp
 - Are bugs being introduced faster than they're fixed? (Check if review findings from prior weeks are still open.)
 - Are there areas of the codebase that get changed frequently but reviewed rarely?
 
-## 7. Cross-Function Gaps
+## 7. Test Coverage & Automation
+
+- Run `find . -name "test_*" -o -name "*.test.ts" -o -name "*.test.tsx" | grep -v node_modules` to assess current test coverage
+- Are the QA review's generated test scripts being committed? Check if new tests appeared since last week.
+- What percentage of critical paths have automated tests? (forecast accuracy, financial calculations, data pipeline integrity, auth)
+- Are there areas where a bug shipped that a test would have caught?
+- Is the QA review producing useful, runnable test scripts or just recommendations?
+- Suggest the 3 highest-value tests that should be written this week.
+
+## 8. Cross-Function Gaps
 
 - Did code review catch something QA missed (or vice versa)?
 - Did a UI change introduce a security concern not flagged?
 - Are the reviews covering new code, or mostly re-flagging old issues?
 - Is the synthesis step (Gemini + Claude merge) adding value or just concatenating?
+- Did the data review catch pipeline issues that devops should own (or vice versa)?
 
-## 8. Review Prompt Evaluation
+## 9. Review Prompt Evaluation
 
 Fetch the current review prompts from the best-practices repo:
 - `https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/code-review.md`
@@ -81,7 +91,7 @@ Provide specific suggested edits to each prompt that needs updating. Use diff fo
 + 7. **Forecast Accuracy** — Are model outputs validated against actuals before deployment? Flag any forecast/model code without accuracy assertions.
 ```
 
-## 9. Team Recommendations
+## 10. Team Recommendations
 
 Based on all of the above:
 - Top 3 things to fix this week (highest risk × effort balance)

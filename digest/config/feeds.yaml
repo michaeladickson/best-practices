@@ -38,6 +38,12 @@ feeds:
     url: "https://theaicorner1.substack.com/feed"
     category: ai_strategy
 
+  # AI + Investing (cross-routed from wealth-mgmt for AI best practices)
+  - name: "Compound With AI"
+    url: "https://news.aiinvestinghq.com/feed"
+    category: ai_investing
+    description: "Claude-based investment analysis workflows — annual reports, earnings calls, business deep-dives"
+
   # Finance & AI
   - name: "The Financial Revolutionist"
     url: "https://thefr.com/feed"
@@ -66,3 +72,25 @@ feeds:
   - name: "FinTech Takes (Alex Johnson)"
     url: "https://fintechascend.substack.com/feed"
     category: fintech
+
+  # DevOps, SRE & Infrastructure
+  - name: "Charity Majors (Honeycomb)"
+    url: "https://charity.wtf/feed/"
+    category: devops
+  - name: "SRE Weekly"
+    url: "https://sreweekly.com/feed/"
+    category: devops
+  - name: "Last Week in AWS"
+    url: "https://www.lastweekinaws.com/feed/"
+    category: cloud
+  - name: "The New Stack"
+    url: "https://thenewstack.io/feed/"
+    category: devops
+
+  # Engineering Management & Testing
+  - name: "Will Larson (Irrational Exuberance)"
+    url: "https://lethain.com/feeds/"
+    category: eng_management
+  - name: "Software Testing Weekly"
+    url: "https://softwaretestingweekly.com/feed.xml"
+    category: testing

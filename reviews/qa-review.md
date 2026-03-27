@@ -18,6 +18,25 @@ Format your findings as a markdown document with:
 - Findings grouped by category with severity levels (Critical, High, Medium, Low)
 - Each finding should have: file, line number, description, suggested fix
 - Use markdown checkboxes so items can be tracked
-- Include a prioritized test recommendations section at the end
 
-Output ONLY the findings, no title or preamble.
+## Test Script Generation
+
+After identifying findings, generate actual runnable test scripts for the top 5 highest-priority gaps. Write them in the appropriate test framework:
+- Python: pytest (place in `tests/` directory)
+- TypeScript: vitest (place in `frontend/src/test/` directory)
+
+For each test:
+- File path where the test should live
+- Full test code (not pseudocode — runnable as-is)
+- What it validates and why it matters
+- Mark as `## Generated Test: <name>`
+
+Focus test generation on:
+1. Financial calculations (forecast accuracy, labor targets, P&L math)
+2. Data pipeline integrity (sync idempotency, dedup correctness)
+3. API contract validation (response shapes, error handling)
+4. Edge cases from findings above
+
+Include the test code in fenced code blocks with the correct language tag.
+
+Output ONLY the findings and test scripts, no title or preamble.
