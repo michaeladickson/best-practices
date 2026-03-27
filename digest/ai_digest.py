@@ -72,9 +72,32 @@ def _get_gemini_client():
     return genai.Client(vertexai=True, project=project, location="us-central1")
 
 
+ARCHIVE_DIR = Path(__file__).parent.parent / "data" / "feed_archive"
+
+
+def _load_archive() -> dict:
+    """Load the post archive. Keys are URLs (dedup)."""
+    archive_path = ARCHIVE_DIR / "posts.json"
+    if archive_path.exists():
+        with open(archive_path) as f:
+            return json.load(f)
+    return {}
+
+
+def _save_archive(archive: dict):
+    """Persist the post archive."""
+    ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
+    archive_path = ARCHIVE_DIR / "posts.json"
+    with open(archive_path, "w") as f:
+        json.dump(archive, f, indent=2, default=str)
+    log.info("archive_saved", posts=len(archive))
+
+
 def _fetch_recent_posts(feeds: list[dict], days: int = 7) -> list[dict]:
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     posts = []
+    archive = _load_archive()
+    new_archived = 0
 
     for feed_info in feeds:
         try:
@@ -90,31 +113,57 @@ def _fetch_recent_posts(feeds: list[dict], days: int = 7) -> list[dict]:
                         mktime(entry.updated_parsed), tz=timezone.utc
                     )
 
-                if published and published >= cutoff:
-                    content = ""
-                    if hasattr(entry, "content") and entry.content:
-                        content = entry.content[0].get("value", "")
-                    elif hasattr(entry, "summary"):
-                        content = entry.summary or ""
+                if not published:
+                    continue
 
-                    if len(content) > 3000:
-                        content = content[:3000] + "..."
+                content = ""
+                if hasattr(entry, "content") and entry.content:
+                    content = entry.content[0].get("value", "")
+                elif hasattr(entry, "summary"):
+                    content = entry.summary or ""
 
-                    posts.append({
-                        "source": feed_info["name"],
-                        "category": feed_info.get("category", ""),
-                        "title": entry.get("title", "Untitled"),
-                        "link": entry.get("link", ""),
-                        "published": published.strftime("%Y-%m-%d"),
-                        "content_preview": content,
-                    })
+                if len(content) > 3000:
+                    content = content[:3000] + "..."
+
+                link = entry.get("link", "")
+                post = {
+                    "source": feed_info["name"],
+                    "category": feed_info.get("category", ""),
+                    "title": entry.get("title", "Untitled"),
+                    "link": link,
+                    "published": published.strftime("%Y-%m-%d"),
+                    "content_preview": content,
+                }
+
+                # Archive every post we see (dedup by URL)
+                if link and link not in archive:
+                    archive[link] = post
+                    new_archived += 1
+
+                # Only return posts within the lookback window
+                if published >= cutoff:
+                    posts.append(post)
+
             source_count = len([p for p in posts if p["source"] == feed_info["name"]])
             log.info("feed_fetched", source=feed_info["name"], posts_found=source_count)
         except Exception as e:
             log.warning("feed_fetch_failed", source=feed_info["name"], error=str(e))
 
+    # Persist archive
+    if new_archived > 0:
+        _save_archive(archive)
+        log.info("new_posts_archived", count=new_archived)
+
     posts.sort(key=lambda p: p["published"], reverse=True)
     log.info("total_posts_fetched", count=len(posts))
+    return posts
+
+
+def fetch_all_archived_posts() -> list[dict]:
+    """Return all posts from the archive (for re-running analysis against full history)."""
+    archive = _load_archive()
+    posts = list(archive.values())
+    posts.sort(key=lambda p: p.get("published", ""), reverse=True)
     return posts
 
 
@@ -310,8 +359,12 @@ def _send_email(subject: str, html_body: str, text_body: str,
               help="Path to context YAML (default: config/context.yaml)")
 @click.option("--feeds", "feeds_path", default=None,
               help="Path to feeds YAML (default: config/feeds.yaml)")
+@click.option("--backfill", is_flag=True,
+              help="Fetch max history from all feeds and archive (no analysis)")
+@click.option("--all-history", is_flag=True,
+              help="Analyze all archived posts (capped at 8 weeks) instead of just this week")
 def main(days: int, dry_run: bool, context_path: Optional[str],
-         feeds_path: Optional[str]):
+         feeds_path: Optional[str], backfill: bool, all_history: bool):
     """Fetch AI/engineering posts, analyze relevance, and send digest."""
     ctx = _load_context(context_path)
     feeds = _load_feeds(feeds_path)
@@ -319,9 +372,25 @@ def main(days: int, dry_run: bool, context_path: Optional[str],
     today = datetime.now().strftime("%Y-%m-%d")
     week_label = f"Week of {today}"
 
+    if backfill:
+        # Fetch everything available from all feeds and archive it
+        log.info("backfill_start", feeds=len(feeds))
+        _fetch_recent_posts(feeds, days=365)  # RSS feeds typically retain 3-6 months
+        print("Backfill complete. Posts archived to data/feed_archive/posts.json")
+        return
+
     log.info("digest_start", project=project_name, days=days, feeds=len(feeds))
 
-    posts = _fetch_recent_posts(feeds, days=days)
+    if all_history:
+        # Use archived posts, capped at 8 weeks
+        all_posts = fetch_all_archived_posts()
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=56)).strftime("%Y-%m-%d")
+        posts = [p for p in all_posts if p.get("published", "") >= cutoff]
+        week_label = f"Full Review (last 8 weeks as of {today})"
+        log.info("using_archive", total_archived=len(all_posts), within_window=len(posts))
+    else:
+        posts = _fetch_recent_posts(feeds, days=days)
+
     if not posts:
         print("No new posts found.")
         return

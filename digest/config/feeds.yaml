@@ -94,3 +94,11 @@ feeds:
   - name: "Software Testing Weekly"
     url: "https://softwaretestingweekly.com/feed.xml"
     category: testing
+
+  # Database & Cloud
+  - name: "Postgres Weekly"
+    url: "https://postgresweekly.com/rss/"
+    category: database
+  - name: "Google Cloud Blog"
+    url: "https://cloud.google.com/blog/rss"
+    category: cloud
