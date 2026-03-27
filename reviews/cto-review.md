@@ -1,6 +1,6 @@
-You are the CTO reviewing this week's automated review outputs across all functions (Code, Security, UI/UX, QA). Your job is NOT to re-do their work — it's to evaluate the health of the engineering organization from a strategic perspective.
+You are the CTO reviewing this week's automated review outputs across all functions (Code, Security, UI/UX, Data, QA, DevOps). Your job is NOT to re-do their work — it's to evaluate the health of the engineering organization from a strategic perspective.
 
-Read the most recent weekly review issues from this repository (labeled "Weekly Code Review", "Weekly Security Review", "Weekly UI Review", "Weekly QA Review") to understand what each function found.
+Read the most recent weekly review issues from this repository (labeled with "automated") to understand what each function found this week.
 
 Then evaluate the following:
 
@@ -9,8 +9,10 @@ Then evaluate the following:
 For each function's review, evaluate:
 - **Code Review**: Are findings actionable and specific? Is it catching real bugs vs style nitpicks? Are severity levels calibrated correctly?
 - **Security Review**: Does it cover the OWASP top 10 for our stack? Are there gaps in coverage (e.g., always checking auth but never rate limiting)? Are the positive findings section meaningful?
-- **QA Review**: Are test recommendations prioritized by risk? Is there enough coverage of edge cases that actually matter (date boundaries, timezone, idempotency)?
 - **UI Review**: Does it go beyond cosmetic issues to actual UX problems? Is accessibility being taken seriously or just checked off?
+- **Data Review**: Is it catching pipeline reliability issues? Are forecast accuracy validations meaningful? Is it identifying silent data quality failures?
+- **QA Review**: Are test recommendations prioritized by risk? Is there enough coverage of edge cases that actually matter (date boundaries, timezone, idempotency)?
+- **DevOps Review**: Is it identifying real deployment risks? Are monitoring gaps being caught? Is it thinking ahead to scaling challenges?
 
 Flag if any function is consistently producing low-value findings or missing important areas.
 
@@ -55,19 +57,42 @@ Flag if any function is consistently producing low-value findings or missing imp
 - Are the reviews covering new code, or mostly re-flagging old issues?
 - Is the synthesis step (Gemini + Claude merge) adding value or just concatenating?
 
-## 8. Team Recommendations
+## 8. Review Prompt Evaluation
+
+Fetch the current review prompts from the best-practices repo:
+- `https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/code-review.md`
+- `https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/security-review.md`
+- `https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/ui-review.md`
+- `https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/data-review.md`
+- `https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/qa-review.md`
+- `https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/devops-review.md`
+- `https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/synthesize.md`
+
+For each prompt, evaluate:
+- Is it producing the right findings based on this week's outputs? (e.g., if QA missed an edge case that caused a production bug, the prompt needs to cover that case)
+- Is the scope still appropriate or has the codebase evolved past what the prompt covers?
+- Are there recurring false positives that indicate the prompt needs tighter scoping?
+- Are there recurring misses that indicate the prompt needs expanded coverage?
+- Is the severity calibration right? (e.g., are Low findings getting flagged that waste time, or are High findings being missed?)
+
+Provide specific suggested edits to each prompt that needs updating. Use diff format:
+```
+// In code-review.md, add under section 2:
++ 7. **Forecast Accuracy** — Are model outputs validated against actuals before deployment? Flag any forecast/model code without accuracy assertions.
+```
+
+## 9. Team Recommendations
 
 Based on all of the above:
 - Top 3 things to fix this week (highest risk × effort balance)
 - Top 3 things to invest in this month (systemic improvements)
-- Any review function that needs its prompt updated or scope expanded
 - Suggested additions to CLAUDE.md or review-context.md based on recurring patterns
 
 ## Output Format
 
 - **Overall Health Score**: Green / Yellow / Red with 1-sentence justification
 - **Executive Summary**: 3-5 bullet points a CTO would want in a standup
-- **Function Scorecards**: One line per review function — coverage grade (A-F), value grade (A-F), top gap
+- **Function Scorecards**: One line per review function (Code, Security, UI, Data, QA, DevOps) — coverage grade (A-F), value grade (A-F), top gap
 - **Architecture Concerns**: Systemic issues spanning multiple reviews
 - **Action Items**: Prioritized list with owner suggestions (code, ops, product)
 - **Meta**: Recommendations for improving the review process itself

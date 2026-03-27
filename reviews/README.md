@@ -17,19 +17,23 @@ Centralized review prompts and workflow for all repos. Dual-model (Gemini + Clau
 | Monday | Code | `code-review.md` — Security, data integrity, error handling, performance |
 | Tuesday | Security | `security-review.md` — OWASP-aligned penetration test review |
 | Wednesday | UI | `ui-review.md` — Consistency, accessibility, responsiveness, UX |
+| Thursday | Data | `data-review.md` — Pipeline reliability, forecast accuracy, financial data integrity |
 | Friday | QA | `qa-review.md` — Edge cases, concurrency, auth, idempotency |
-| Saturday | **CTO** | `cto-review.md` — Strategic layer: reads all 4 function reviews, evaluates architecture, velocity, cross-function gaps, and overall health |
+| Friday PM | DevOps | `devops-review.md` — Deployment reliability, monitoring, secrets, scaling |
+| Saturday | **CTO** | `cto-review.md` — Strategic layer: reads all 6 function reviews, evaluates health, suggests prompt improvements |
 
 ## Architecture
 
 ```
-Mon: Code Review  ──┐
-Tue: Security     ──┤
-Wed: UI Review    ──┼── Sat: CTO Review (reads all 4 outputs)
-Fri: QA Review    ──┘
+Mon: Code Review    ──┐
+Tue: Security       ──┤
+Wed: UI Review      ──┤
+Thu: Data Review    ──┼── Sat: CTO Review (reads all outputs, evaluates prompts)
+Fri: QA Review      ──┤
+Fri: DevOps Review  ──┘
 ```
 
-Each function review runs independently (Gemini + Claude → synthesis → GitHub issue). The CTO review runs after all 4, reads the issues, and evaluates at a strategic level.
+Each function review runs independently (Gemini + Claude → synthesis → GitHub issue). The CTO review runs after all 6, reads their issues, evaluates at a strategic level, and suggests improvements to the review prompts themselves.
 
 ## Files
 
@@ -39,7 +43,9 @@ Each function review runs independently (Gemini + Claude → synthesis → GitHu
 | `ui-review.md` | UI/UX review prompt |
 | `qa-review.md` | QA review prompt |
 | `security-review.md` | Security audit prompt (CWE references, positive findings) |
-| `cto-review.md` | CTO-level strategic review — reads all function outputs, evaluates health |
+| `data-review.md` | Data integrity, pipeline reliability, forecast accuracy |
+| `devops-review.md` | Deployment, monitoring, secrets, infrastructure, scaling |
+| `cto-review.md` | CTO-level strategic review — reads all function outputs, evaluates health, improves prompts |
 | `synthesize.md` | Instructions for merging Gemini + Claude findings |
 | `review-context-template.md` | Template for per-repo context (threat model, intentional decisions) |
 | `workflow-template.yml` | Full GitHub Actions workflow — copy to each repo |

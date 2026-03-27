@@ -14,7 +14,9 @@ on:
     - cron: '53 12 * * 1'  # Monday ~8am ET (code review)
     - cron: '53 12 * * 2'  # Tuesday ~8am ET (security review)
     - cron: '53 12 * * 3'  # Wednesday ~8am ET (UI review)
+    - cron: '53 12 * * 4'  # Thursday ~8am ET (data review)
     - cron: '53 12 * * 5'  # Friday ~8am ET (QA review)
+    - cron: '53 16 * * 5'  # Friday ~12pm ET (DevOps review)
     - cron: '53 14 * * 6'  # Saturday ~10am ET (CTO review — after all functions complete)
   workflow_dispatch:
     inputs:
@@ -26,7 +28,9 @@ on:
           - code
           - security
           - ui
+          - data
           - qa
+          - devops
           - cto
 
 jobs:
@@ -50,7 +54,14 @@ jobs:
               1) echo "type=code" >> $GITHUB_OUTPUT ;;
               2) echo "type=security" >> $GITHUB_OUTPUT ;;
               3) echo "type=ui" >> $GITHUB_OUTPUT ;;
-              5) echo "type=qa" >> $GITHUB_OUTPUT ;;
+              4) echo "type=data" >> $GITHUB_OUTPUT ;;
+              5)
+                HOUR=$(date -u +%H)
+                if [ "$HOUR" -ge 15 ]; then
+                  echo "type=devops" >> $GITHUB_OUTPUT
+                else
+                  echo "type=qa" >> $GITHUB_OUTPUT
+                fi ;;
               6) echo "type=cto" >> $GITHUB_OUTPUT ;;
               *) echo "type=code" >> $GITHUB_OUTPUT ;;
             esac

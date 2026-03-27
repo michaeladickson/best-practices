@@ -4,6 +4,9 @@
 project_name: "crumbl-ops"
 description: |
   Operations platform for 3 Crumbl Cookies franchise locations + a holding company in Kentucky.
+  Expanding to 10 stores via two acquisitions (July 2026 close). Owner/operator acts as CTO
+  managing all engineering with Claude Code as primary development partner.
+  Automated weekly review system (Code, Security, UI, Data, QA, DevOps + CTO synthesis).
 
 tech_stack: |
   Python 3.12, FastAPI, PostgreSQL, React 18 + TypeScript, GCP Cloud Run.
@@ -24,10 +27,17 @@ key_areas: |
   - Inventory and receiving workflows (partially built)
 
 interests: |
-  - Making Claude Code sessions more efficient
+  - Making Claude Code sessions more efficient (hooks, skills, memory, session management)
   - Automating more operational workflows
   - Better financial modeling and reporting
   - AI-powered features for the business (not just development tooling)
+  - Engineering leadership: automated code review systems, CI/CD best practices, quality gates
+  - AI-driven testing and QA: automated test generation, property-based testing, mutation testing
+  - Observability and monitoring: alerting strategies, SLOs, data pipeline health checks
+  - Scaling small-team engineering: how to maintain quality with 1-2 engineers across multiple repos
+  - AI agents for operations: autonomous deployment, self-healing pipelines, anomaly detection
+  - Technical debt management: measurement, prioritization, paydown strategies
+  - Forecast model evaluation: backtesting frameworks, accuracy tracking, model drift detection
 
 email:
   from: "michael@bluegrasscookies.com"
