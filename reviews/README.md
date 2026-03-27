@@ -18,6 +18,18 @@ Centralized review prompts and workflow for all repos. Dual-model (Gemini + Clau
 | Tuesday | Security | `security-review.md` — OWASP-aligned penetration test review |
 | Wednesday | UI | `ui-review.md` — Consistency, accessibility, responsiveness, UX |
 | Friday | QA | `qa-review.md` — Edge cases, concurrency, auth, idempotency |
+| Saturday | **CTO** | `cto-review.md` — Strategic layer: reads all 4 function reviews, evaluates architecture, velocity, cross-function gaps, and overall health |
+
+## Architecture
+
+```
+Mon: Code Review  ──┐
+Tue: Security     ──┤
+Wed: UI Review    ──┼── Sat: CTO Review (reads all 4 outputs)
+Fri: QA Review    ──┘
+```
+
+Each function review runs independently (Gemini + Claude → synthesis → GitHub issue). The CTO review runs after all 4, reads the issues, and evaluates at a strategic level.
 
 ## Files
 
@@ -27,6 +39,7 @@ Centralized review prompts and workflow for all repos. Dual-model (Gemini + Clau
 | `ui-review.md` | UI/UX review prompt |
 | `qa-review.md` | QA review prompt |
 | `security-review.md` | Security audit prompt (CWE references, positive findings) |
+| `cto-review.md` | CTO-level strategic review — reads all function outputs, evaluates health |
 | `synthesize.md` | Instructions for merging Gemini + Claude findings |
 | `review-context-template.md` | Template for per-repo context (threat model, intentional decisions) |
 | `workflow-template.yml` | Full GitHub Actions workflow — copy to each repo |

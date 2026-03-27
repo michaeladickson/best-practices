@@ -15,6 +15,7 @@ on:
     - cron: '53 12 * * 2'  # Tuesday ~8am ET (security review)
     - cron: '53 12 * * 3'  # Wednesday ~8am ET (UI review)
     - cron: '53 12 * * 5'  # Friday ~8am ET (QA review)
+    - cron: '53 14 * * 6'  # Saturday ~10am ET (CTO review — after all functions complete)
   workflow_dispatch:
     inputs:
       review_type:
@@ -26,6 +27,7 @@ on:
           - security
           - ui
           - qa
+          - cto
 
 jobs:
   review:
@@ -49,6 +51,7 @@ jobs:
               2) echo "type=security" >> $GITHUB_OUTPUT ;;
               3) echo "type=ui" >> $GITHUB_OUTPUT ;;
               5) echo "type=qa" >> $GITHUB_OUTPUT ;;
+              6) echo "type=cto" >> $GITHUB_OUTPUT ;;
               *) echo "type=code" >> $GITHUB_OUTPUT ;;
             esac
           fi
@@ -59,7 +62,9 @@ jobs:
           TYPE="${{ steps.review-type.outputs.type }}"
           BASE="https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews"
           curl -sf "${BASE}/${TYPE}-review.md" -o review-prompt.md
-          curl -sf "${BASE}/synthesize.md" -o synthesize-prompt.md
+          if [ "$TYPE" != "cto" ]; then
+            curl -sf "${BASE}/synthesize.md" -o synthesize-prompt.md
+          fi
 
       # ── Fetch existing open issues for dedup ────────────────────────
       - name: Fetch open issues
@@ -80,8 +85,47 @@ jobs:
           ISSUE_COUNT=$(gh issue list --state open --limit 100 --json number --jq 'length')
           echo "Fetched $ISSUE_COUNT open issues for dedup"
 
-      # ── Step 1: Gemini review ───────────────────────────────────────
+      # ── CTO Review (runs instead of Gemini+Claude+Synthesis) ────────
+      - name: Run CTO review
+        if: steps.review-type.outputs.type == 'cto'
+        uses: anthropics/claude-code-action@beta
+        with:
+          mode: agent
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_tools: Read,Glob,Grep,Bash,Write
+          mcp_config: '{"mcpServers":{}}'
+          direct_prompt: |
+            You are running a CTO-level strategic review. Read review-prompt.md for full instructions.
+
+            FIRST: Use the gh CLI to fetch this week's review issues:
+              gh issue list --state all --limit 10 --label "automated" --json number,title,body,createdAt \
+                --jq '.[] | select(.createdAt > (now - 7*24*3600 | strftime("%Y-%m-%dT%H:%M:%SZ")))' \
+                > /dev/null 2>&1 || true
+
+            Actually, use this approach to get the last 7 days of review issues:
+              gh issue list --state all --limit 20 --label "automated" --json number,title,body,createdAt
+
+            Read each issue body. These are the Code, Security, UI, and QA reviews from this week.
+            Also read existing-issues.md for the full list of open issues.
+
+            If .github/prompts/review-context.md exists, read it for project context.
+
+            Perform the CTO review as specified in review-prompt.md.
+
+            Write output to review-output.md, then create a GitHub issue:
+            - Title: "Weekly CTO Review — YYYY-MM-DD" (today's date)
+            - Labels: "cto-review,automated"
+            - Body: contents of review-output.md
+          claude_env: |
+            GH_TOKEN=${{ github.token }}
+
+      - name: Skip remaining steps for CTO review
+        if: steps.review-type.outputs.type == 'cto'
+        run: echo "CTO review complete — skipping function-level review steps"
+
+      # ── Step 1: Gemini review (skipped for CTO) ───────────────────
       - name: Collect source files for Gemini
+        if: steps.review-type.outputs.type != 'cto'
         run: |
           {
             # Include project-specific review context if it exists
@@ -122,11 +166,13 @@ jobs:
           } > source-snapshot.md
 
       - name: Authenticate to GCP
+        if: steps.review-type.outputs.type != 'cto'
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Run Gemini review
+        if: steps.review-type.outputs.type != 'cto'
         run: |
           TYPE="${{ steps.review-type.outputs.type }}"
           PROJECT="${{ vars.GCP_PROJECT_ID || 'hybrid-elysium-471814-p2' }}"
@@ -182,6 +228,7 @@ jobs:
 
       # ── Step 2: Claude review ───────────────────────────────────────
       - name: Prepare Claude prompt
+        if: steps.review-type.outputs.type != 'cto'
         run: |
           TYPE="${{ steps.review-type.outputs.type }}"
           echo "$TYPE" > review-type.txt
@@ -189,6 +236,7 @@ jobs:
           mv .mcp.json .mcp.json.bak 2>/dev/null || true
 
       - name: Run Claude review
+        if: steps.review-type.outputs.type != 'cto'
         uses: anthropics/claude-code-action@beta
         with:
           mode: agent
@@ -210,8 +258,9 @@ jobs:
             in the repository root. Output ONLY the findings as specified in the prompt
             file, no title or extra text.
 
-      # ── Step 3: Synthesize both reviews ─────────────────────────────
+      # ── Step 3: Synthesize both reviews (skipped for CTO) ──────────
       - name: Synthesize reviews
+        if: steps.review-type.outputs.type != 'cto'
         uses: anthropics/claude-code-action@beta
         with:
           mode: agent
