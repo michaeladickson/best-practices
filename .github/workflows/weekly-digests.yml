@@ -1,0 +1,74 @@
+# Weekly digest pipeline — runs Sunday evening, before Monday's reviews.
+# Fetches RSS feeds, analyzes with Gemini, saves knowledge files, commits.
+#
+# Knowledge files feed into Mon-Sat review system via digest-intelligence.md.
+
+name: Weekly Digests
+
+on:
+  schedule:
+    - cron: '0 22 * * 0'  # Sunday 6pm ET (10pm UTC)
+  workflow_dispatch:
+    inputs:
+      context:
+        description: 'Which digest to run (or all)'
+        required: true
+        type: choice
+        options:
+          - all
+          - engineering
+          - finance
+          - investing
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r digest/requirements.txt
+
+      - name: Determine contexts to run
+        id: contexts
+        run: |
+          INPUT="${{ inputs.context || 'all' }}"
+          if [ "$INPUT" = "all" ]; then
+            echo "contexts=engineering finance investing" >> $GITHUB_OUTPUT
+          else
+            echo "contexts=$INPUT" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run digests
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+        run: |
+          for CTX in ${{ steps.contexts.outputs.contexts }}; do
+            echo "=== Running $CTX digest ==="
+            python -m digest \
+              --context "digest/config/context-${CTX}.yaml" \
+              --days 7 \
+              || echo "Warning: $CTX digest failed"
+            echo ""
+          done
+
+      - name: Commit knowledge files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/digest_knowledge/ data/feed_archive/posts.json
+          if git diff --cached --quiet; then
+            echo "No new digest knowledge to commit"
+          else
+            COUNT=$(git diff --cached --name-only | wc -l)
+            git commit -m "Weekly digest: ${COUNT} knowledge files updated [automated]"
+            git push
+            echo "Committed $COUNT files"
+          fi
