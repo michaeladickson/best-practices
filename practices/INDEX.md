@@ -18,9 +18,14 @@ Patterns and conventions extracted from production repos. Reference these when s
 - [Gemini Integration](ai/gemini-integration.md) — Client setup, model selection, batch processing, Edge Functions
 - [Prompt Engineering](ai/prompt-engineering.md) — Classification, context-aware, structured output, code review
 
+## AI Safety
+
+- [Prompt Injection Mitigation](ai-safety/prompt-injection-mitigation.md) — XML tag wrapping, negative instructions, input isolation
+
 ## Security
 
 - [Secrets Management](security/secrets-management.md) — Env vars, GCP Secret Manager, Fernet, auth, rate limiting
+- [SQL Injection Prevention](security/sql-injection-prevention.md) — Parameterized queries, %s placeholders, ILIKE escaping
 
 ## DevOps
 
@@ -32,6 +37,10 @@ Patterns and conventions extracted from production repos. Reference these when s
 - [AI for Finance](finance/ai-for-finance.md) — Accounting automation, classification, forecasting, data aggregation
 - [Investing Patterns](finance/investing-patterns.md) — Portfolio architecture, macro analysis, spending categories, Plaid, client-ready patterns
 - [Payroll & Labor](finance/payroll-patterns.md) — Payroll engine, OT rules, time integration, labor analytics
+
+## Development
+
+- [Payroll Testing](development/payroll-testing.md) — Decimal precision, OT edge cases, tip distribution, known-good validation
 
 ## Reviews
 

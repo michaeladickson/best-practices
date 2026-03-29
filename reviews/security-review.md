@@ -12,7 +12,8 @@ Check for:
    - Session management issues
 
 2. **Injection**
-   - SQL injection (parameterized queries, dynamic query building)
+   - SQL injection: focus on queries where USER-CONTROLLED INPUT (HTTP params, request body, webhook payload) is interpolated. Internal values from config/JWT/hardcoded column names are NOT injection risks — skip these.
+   - Prompt injection: LLM prompts that interpolate external content (emails, user messages) without wrapping
    - Command injection (subprocess, os.system)
    - Template injection, path traversal
    - XSS (input sanitization, output encoding)
