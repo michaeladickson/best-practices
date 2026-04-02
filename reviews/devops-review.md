@@ -40,6 +40,15 @@ Check for:
    - Are API queries bounded or could they OOM with more data?
    - Are Cloud Run concurrency and memory limits appropriate?
 
+7. **Cost Management**
+   - Are Cloud Run instances scaling to zero when idle?
+   - Is the Cloud SQL connection pool sized correctly (not holding unnecessary idle connections)?
+   - Are there unnecessary Cloud Storage operations (e.g., old GCS upload patterns)?
+   - Are nightly sync durations trending up? Could indicate inefficient queries or API call creep.
+   - Are there failed Cloud Run job executions that ran full duration before failing (wasted compute)?
+   - Are there external API calls that could be cached or batched to reduce volume?
+   - Is the Cloud SQL tier appropriate for current usage (not over-provisioned)?
+
 Format your findings as a markdown document with:
 - Executive summary (2-3 sentences on operational readiness)
 - Findings grouped by severity (Critical, High, Medium, Low)
