@@ -1,3 +1,10 @@
+FIRST: If review-context.md exists, read it for project context, threat model, and
+intentional design decisions. Follow it strictly — do NOT flag intentional decisions.
+ALSO: Read existing-issues.md — do NOT report findings already tracked there.
+ALSO: Read digest-intelligence.md for emerging threats and patterns to check against.
+
+---
+
 Perform a comprehensive data integrity, database engineering, and financial reconciliation review of this codebase. You are a senior data engineer validating that data pipelines, database schema, and financial data produce accurate, timely results.
 
 Review all source files related to data processing, forecasting, database schema, and reporting.
@@ -39,26 +46,26 @@ Check for:
    - Are unique constraints and dedup logic sufficient to prevent double-counting?
    - Are there orphaned records or referential integrity gaps?
    - Is the cookie_forecasts → forecast_daily_revenue → labor_cache chain consistent?
+   - Are cookie lookups using `crumbl_cookie_id` (stable UUID) and NOT cookie names? Name-based lookups break when Crumbl renames cookies.
 
 6. **Webhook & External Sync Integrity**
-   - Are there WIW time entries with NULL end_time older than 12 hours? This indicates a dropped Zapier webhook for the clock-out event. Run: `SELECT store_id, work_date, COUNT(*) FROM wiw_time_entries WHERE end_time IS NULL AND start_time < NOW() - INTERVAL '12 hours' GROUP BY store_id, work_date ORDER BY work_date DESC`
+   - Are there WIW time entries with NULL end_time older than 12 hours? This indicates a dropped Zapier webhook for the clock-out event.
    - Does the gap-fill function `detect_and_fill_missing_clockouts()` in `wiw_sync.py` exist and handle the fallback to scheduled shift end times?
    - Are there time entries where length_hours = 0 but end_time is set (corrupt data)?
    - Are there days where total labor hours are significantly below historical DOW average for a store (suggests missing punches even if entries exist)?
 
 7. **Database Schema Health**
-   - Are there tables that exist in the DB but are never referenced in any Python code? Cross-reference `pg_tables` against source code.
-   - Are there tables that haven't received writes recently? (Check `pg_stat_user_tables` for stale tables)
+   - Are there tables that exist in the DB but are never referenced in any Python code?
    - Are there API routes or sync functions querying tables that no longer exist (dropped by migrations)?
    - Are there columns that are always NULL or always the same value (dead columns)?
-   - Are there missing indexes on columns used in WHERE/JOIN clauses? Look for sequential scans on large tables.
+   - Are code references to dropped columns still present? (e.g., `net_sales`, `avg_order_value`, `desserts_sold` were removed from `store_daily_metrics` — verify no code still reads them)
+   - Are there missing indexes on columns used in WHERE/JOIN clauses?
    - Are there tables being populated by multiple independent data feeds with overlapping data?
    - Are there physical tables that could be replaced by views over source-of-truth tables?
-   - Are materialized views refreshed in the correct order (after source tables are updated)?
    - Are there derived tables that can't be re-created from source tables (data only exists in derived form)?
 
 8. **Data Feed Efficiency**
-   - Are there API calls fetching data that's already available from another call? Map each external API call to the table it feeds and look for overlaps.
+   - Are there API calls fetching data that's already available from another call?
    - Are there row-by-row INSERT loops that could use batch executemany for better throughput?
    - Are there nightly syncs re-fetching unchanged data (e.g., recipe details for cookies already in the DB)?
    - Are there API calls that could use a date range instead of one-call-per-day?
@@ -74,7 +81,6 @@ Check for:
 
 10. **API Integration Health**
     - Are API response schemas being validated or just assumed correct?
-    - Are there circuit breaker metrics showing increased failure rates?
     - Are auth tokens being refreshed before expiry (not after failure)?
     - Are API call counts tracked per sync run to detect creep?
     - Are there new fields in API responses we're not capturing (check raw_json for unused fields)?

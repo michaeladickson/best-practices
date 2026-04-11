@@ -1,7 +1,14 @@
+FIRST: If review-context.md exists, read it for project context, threat model, and
+intentional design decisions. Follow it strictly — do NOT flag intentional decisions.
+ALSO: Read existing-issues.md — do NOT report findings already tracked there.
+ALSO: Read digest-intelligence.md for emerging threats and patterns to check against.
+
+---
+
 Perform a focused security review of this codebase. You are a senior
 application security engineer doing a penetration test review.
 
-Review ALL source files and configuration files.
+Review ALL source files AND configuration files (YAML, Dockerfiles, .env.example, GitHub Actions workflows, cloudbuild configs).
 
 Check for:
 
@@ -13,7 +20,7 @@ Check for:
 
 2. **Injection**
    - SQL injection: focus on queries where USER-CONTROLLED INPUT (HTTP params, request body, webhook payload) is interpolated. Internal values from config/JWT/hardcoded column names are NOT injection risks — skip these.
-   - Prompt injection: LLM prompts that interpolate external content (emails, user messages) without wrapping
+   - Prompt injection: LLM prompts that interpolate external content (emails, user messages) without wrapping in system_instruction or similar isolation
    - Command injection (subprocess, os.system)
    - Template injection, path traversal
    - XSS (input sanitization, output encoding)
@@ -23,6 +30,7 @@ Check for:
    - Secrets in logs (structlog fields, error messages, console.log)
    - Insecure defaults (fail-open patterns)
    - Environment variable handling
+   - Secrets in CI/CD workflow files or cloudbuild configs
 
 4. **Data Exposure**
    - Sensitive data in API responses (password hashes, tokens, internal IDs)

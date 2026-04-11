@@ -1,3 +1,10 @@
+FIRST: If review-context.md exists, read it for project context, threat model, and
+intentional design decisions. Follow it strictly — do NOT flag intentional decisions.
+ALSO: Read existing-issues.md — do NOT report findings already tracked there.
+ALSO: Read digest-intelligence.md for emerging threats and patterns to check against.
+
+---
+
 Perform a comprehensive DevOps and infrastructure review of this codebase. You are a senior SRE evaluating deployment reliability, monitoring coverage, and operational readiness.
 
 Review all source files, configuration files, Dockerfiles, CI/CD workflows, and deployment scripts.
@@ -35,10 +42,11 @@ Check for:
    - Are GitHub Actions workflows efficient (caching, parallelism)?
 
 6. **Scaling Readiness**
-   - As we add stores (3 → 10+), what breaks first?
+   - The platform currently supports 3 stores with 7 more under contract (10+ by mid-2026). What breaks first?
    - Are sync jobs parallelized per store or sequential?
    - Are API queries bounded or could they OOM with more data?
    - Are Cloud Run concurrency and memory limits appropriate?
+   - Are there hardcoded store lists or assumptions about store count?
 
 7. **Cost Management**
    - Are Cloud Run instances scaling to zero when idle?
@@ -48,6 +56,11 @@ Check for:
    - Are there failed Cloud Run job executions that ran full duration before failing (wasted compute)?
    - Are there external API calls that could be cached or batched to reduce volume?
    - Is the Cloud SQL tier appropriate for current usage (not over-provisioned)?
+
+8. **Migration Hygiene**
+   - Are there a large number of accumulated migrations that should be consolidated?
+   - Are migrations idempotent and safe to re-run?
+   - Is the migration runner resilient to partial failures?
 
 Format your findings as a markdown document with:
 - Executive summary (2-3 sentences on operational readiness)

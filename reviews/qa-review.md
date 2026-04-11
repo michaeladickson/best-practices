@@ -1,3 +1,10 @@
+FIRST: If review-context.md exists, read it for project context, threat model, and
+intentional design decisions. Follow it strictly — do NOT flag intentional decisions.
+ALSO: Read existing-issues.md — do NOT report findings already tracked there.
+ALSO: Read digest-intelligence.md for emerging threats and patterns to check against.
+
+---
+
 Perform a comprehensive QA review of this codebase. Focus on:
 
 1. **Happy Path Coverage** — Verify all API routes have proper request/response handling and validation

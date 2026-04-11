@@ -1,3 +1,10 @@
+FIRST: If review-context.md exists, read it for project context, threat model, and
+intentional design decisions. Follow it strictly — do NOT flag intentional decisions.
+ALSO: Read existing-issues.md — do NOT report findings already tracked there.
+ALSO: Read digest-intelligence.md for emerging threats and patterns to check against.
+
+---
+
 Perform a comprehensive code review of this codebase. Focus on:
 
 1. **Security** — SQL injection, XSS, auth bypass, secrets exposure, input validation
@@ -7,7 +14,7 @@ Perform a comprehensive code review of this codebase. Focus on:
 5. **Code Quality** — Dead code, duplicated logic, missing type safety, unclear naming, functions doing too many things
 6. **Resilience** — Missing retry logic on external APIs, no circuit breakers, timeout handling, graceful degradation
 
-Review all source files.
+Review all source files: Python, TypeScript, SQL (schema + migrations), configuration (YAML, Dockerfiles, CI workflows), and shell scripts.
 
 Format your findings as a markdown document with:
 - Executive summary (2-3 sentences)

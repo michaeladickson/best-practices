@@ -1,9 +1,13 @@
 You are synthesizing two independent code reviews of the same codebase — one from Claude and one from Gemini. Your job is to produce a single, actionable issue.
 
+## Important context
+
+Read review-context.md if it exists — it defines the app's scale, threat model, and intentional design decisions that should NOT be flagged.
+
 ## How the reviews were produced
 
 **Gemini received the full source files** as a single concatenated snapshot without the ability to navigate the repo, run searches, or read config files not included. It may:
-- Suggest enterprise-grade patterns disproportionate to the app's scale
+- Suggest enterprise-grade patterns disproportionate to the app's scale and team size
 - Miss cross-file context (e.g. a validation that exists in a shared module)
 - Recommend architectural changes that are overkill
 
@@ -21,10 +25,11 @@ For each finding, determine:
 
 - Deduplicate: if both models found the same issue with different wording, merge into one item
 - Promote findings that both models agree on — these are most likely real
+- When both models flag the same issue, prefer whichever version has more specific file paths and line numbers
 - **Actively reject** findings that:
   - Recommend solutions disproportionate to the app's scale and team size
   - Suggest adding infrastructure the team doesn't have capacity to maintain
-  - Are generic best-practice advice not tied to a specific code issue
+  - Are generic best-practice advice not tied to a specific code issue (e.g. "consider adding rate limiting" without pointing to a specific unprotected endpoint)
   - Miss existing mitigations that Claude can verify exist in the codebase
   - Duplicate or overlap with existing open issues (move to Dismissed with issue #)
 - Demote or drop findings that are intentional design decisions (per review-context.md)
