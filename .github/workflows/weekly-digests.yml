@@ -45,19 +45,36 @@ jobs:
             echo "contexts=$INPUT" >> $GITHUB_OUTPUT
           fi
 
+      - name: Validate secrets
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "::error::GEMINI_API_KEY secret is not set. Add it via: gh secret set GEMINI_API_KEY --repo michaeladickson/best-practices"
+            exit 1
+          fi
+          echo "Secrets validated"
+
       - name: Run digests
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
         run: |
+          FAILED=0
           for CTX in ${{ steps.contexts.outputs.contexts }}; do
             echo "=== Running $CTX digest ==="
-            python -m digest \
+            if ! python -m digest \
               --context "digest/config/context-${CTX}.yaml" \
-              --days 7 \
-              || echo "Warning: $CTX digest failed"
+              --days 7; then
+              echo "::warning::$CTX digest failed"
+              FAILED=$((FAILED + 1))
+            fi
             echo ""
           done
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "::warning::$FAILED digest(s) failed"
+          fi
 
       - name: Commit knowledge files
         run: |
