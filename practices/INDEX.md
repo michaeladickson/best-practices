@@ -49,5 +49,8 @@ See [`/reviews/README.md`](../reviews/README.md) for setup instructions.
 
 ## Claude Code
 
-- [CLAUDE.md Structure](claude-code/claude-md-structure.md) — Root + module templates, knowledge system
+- [CLAUDE.md Structure](claude-code/claude-md-structure.md) — Root + module templates, knowledge system, decision journal, layered architecture, rules/hooks/skills/agents
 - [CLI Patterns](claude-code/cli-patterns.md) — Click structure, common flags, command groups
+- [Token Efficiency](claude-code/token-efficiency.md) — Cache misses, context bloat, model routing, input format
+- [Remote Access](claude-code/remote-access.md) — Web Sessions, Remote Control, Dispatch, Channels
+- [Surface Guide](claude-code/surface-guide.md) — Chat vs. Cowork vs. Code Tab vs. Code CLI

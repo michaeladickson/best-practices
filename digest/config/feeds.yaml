@@ -25,6 +25,9 @@ feeds:
   - name: "Lenny's Newsletter"
     url: "https://www.lennysnewsletter.com/feed"
     category: product
+  - name: "Paweł Huryn (The Product Compass)"
+    url: "https://huryn.substack.com/feed"
+    category: product
   - name: "Pascal Biese (LLM Watch)"
     url: "https://xaiguy.substack.com/feed"
     category: ai_engineering
