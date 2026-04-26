@@ -320,33 +320,33 @@ def _build_email(analysis: dict, week_label: str,
 
 def _send_email(subject: str, html_body: str, text_body: str,
                 from_email: str, to_email: str) -> bool:
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+    port = int(os.environ.get("SMTP_PORT", "587"))
+    user = os.environ.get("SMTP_USER", from_email)
+    password = os.environ.get("SMTP_PASS", "")
+
+    if not (user and password):
+        log.warning("smtp_not_configured", has_user=bool(user), has_pass=bool(password))
+        return False
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = from_email
+    msg["To"] = to_email
+    msg.attach(MIMEText(text_body, "plain", "utf-8"))
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
+
     try:
-        from sendgrid import SendGridAPIClient
-        from sendgrid.helpers.mail import Mail
-
-        api_key = os.environ.get("SENDGRID_API_KEY", "")
-        if not api_key:
-            try:
-                from google.cloud import secretmanager
-                client = secretmanager.SecretManagerServiceClient()
-                project = os.environ.get("GCP_PROJECT_ID", "")
-                name = f"projects/{project}/secrets/sendgrid-api-key/versions/latest"
-                api_key = client.access_secret_version(
-                    request={"name": name}
-                ).payload.data.decode("utf-8")
-            except Exception:
-                pass
-
-        if not api_key:
-            log.warning("sendgrid_not_configured")
-            return False
-
-        message = Mail(from_email=from_email, to_emails=to_email,
-                       subject=subject, plain_text_content=text_body,
-                       html_content=html_body)
-        response = SendGridAPIClient(api_key).send(message)
-        log.info("digest_sent", status_code=response.status_code)
-        return response.status_code in (200, 202)
+        with smtplib.SMTP(host, port, timeout=30) as smtp:
+            smtp.starttls()
+            smtp.login(user, password)
+            smtp.send_message(msg)
+        log.info("digest_sent", to=to_email, subject=subject)
+        return True
     except Exception as e:
         log.error("digest_send_failed", error=str(e))
         return False

@@ -58,7 +58,8 @@ jobs:
       - name: Run digests
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SMTP_USER: "michael@bluegrasscookies.com"
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
         run: |
           FAILED=0
           for CTX in ${{ steps.contexts.outputs.contexts }}; do
