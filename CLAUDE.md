@@ -45,21 +45,45 @@ When starting a new project or making a decision, check `practices/INDEX.md` for
 Three digests, each targeted at a specific repo. Every digest:
 - Sends an email to `michael.a.dickson@gmail.com`
 - Saves a knowledge file under `data/digest_knowledge/`
-- Creates a self-contained GitHub issue in the target repo
+- Creates a self-contained GitHub issue in the target repo (local execution only — see below)
+
+### Scheduled execution (local, Sunday 6pm ET)
+
+The full pipeline runs locally as Windows Task Scheduler task `CC-WeeklyDigest`,
+not in GitHub Actions. Reasons: avoids storing a cross-repo PAT in this public
+repo, and uses local `gh` auth to file issues across crumbl-ops, command-center,
+wealth-mgmt.
+
+```powershell
+# One-time registration:
+powershell -ExecutionPolicy Bypass -File scripts/register_weekly_digest.ps1
+```
+
+The wrapper at `scripts/run_weekly_digest.sh`:
+1. Pulls `gemini-api-key` and `smtp-password` from GCP Secret Manager (project `hybrid-elysium-471814-p2`)
+2. Runs all three digests via WSL bash
+3. Creates GitHub issues in target repos using local `gh` auth
+4. Commits and pushes the new knowledge files back to `origin/main`
+
+### Manual / dev runs
 
 ```bash
 cd /path/to/best-practices
 pip install -r digest/requirements.txt
 
-# Crumbl-ops — engineering + operational finance combined
+# Dry-run any context
 python -m digest --context digest/config/context-crumbl-ops.yaml --dry-run
-
-# Command-center — agent / personal automation focused
 python -m digest --context digest/config/context-command-center.yaml --dry-run
-
-# Wealth-mgmt — investing, macro analysis, portfolio research
 python -m digest --context digest/config/context-wealth-mgmt.yaml --dry-run
+
+# Or run the full local pipeline manually
+bash scripts/run_weekly_digest.sh
 ```
+
+The GitHub Actions workflow (`.github/workflows/weekly-digests.yml`) remains
+for manual dispatch fallback (e.g., re-running a failed digest from any
+machine). It sends email + commits knowledge files but does NOT create
+issues — that part requires the local `gh` auth.
 
 ## Configuration
 
@@ -67,8 +91,7 @@ python -m digest --context digest/config/context-wealth-mgmt.yaml --dry-run
 - `digest/config/context-crumbl-ops.yaml` — Crumbl-ops digest (target: `michaeladickson/crumbl-ops`)
 - `digest/config/context-command-center.yaml` — Command-center digest (target: `michaeladickson/command-center`)
 - `digest/config/context-wealth-mgmt.yaml` — Wealth-mgmt digest (target: `michaeladickson/wealth-mgmt`)
-- `.env` — GEMINI_API_KEY, SMTP_PASS, GH_TOKEN (for cross-repo issue creation)
-- GitHub Action: `DIGEST_GH_TOKEN` secret = fine-grained PAT with Issues:write on the three target repos
+- Secrets: pulled from GCP Secret Manager at runtime; no `.env` in this public repo
 
 ## Key Conventions
 

@@ -476,12 +476,29 @@ def _build_issue_body(analysis: dict, project_name: str, date_str: str) -> str:
 
 def _create_github_issue(analysis: dict, ctx: dict, project_name: str,
                           date_str: str) -> bool:
-    """Create a GitHub issue in the configured target repo. Idempotent by title."""
+    """Create a GitHub issue in the configured target repo. Idempotent by title.
+
+    Requires `gh` CLI authenticated locally with cross-repo access. Skips silently
+    if `gh auth status` fails (e.g., when running in CI without a token).
+    """
     import subprocess
 
     issue_cfg = ctx.get("github_issue", {})
     repo = issue_cfg.get("repo")
     if not repo:
+        return False
+
+    # Verify gh is authenticated before doing anything.
+    try:
+        auth_check = subprocess.run(
+            ["gh", "auth", "status"], capture_output=True, text=True, timeout=10
+        )
+        if auth_check.returncode != 0:
+            log.info("issue_skipped_no_gh_auth", repo=repo,
+                     hint="CI does not create issues; run scripts/run_weekly_digest.sh locally")
+            return False
+    except Exception as e:
+        log.info("issue_skipped_gh_unavailable", repo=repo, error=str(e))
         return False
 
     top_posts = analysis.get("top_posts", [])

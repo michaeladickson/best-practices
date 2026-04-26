@@ -1,13 +1,16 @@
-# Weekly digest pipeline — runs Sunday evening, before Monday's reviews.
-# Fetches RSS feeds, analyzes with Gemini, saves knowledge files, commits.
+# Weekly digest pipeline — manual dispatch only.
 #
-# Knowledge files feed into Mon-Sat review system via digest-intelligence.md.
+# Primary execution is local via scripts/run_weekly_digest.sh registered with
+# Windows Task Scheduler. Local execution uses local gh auth + GCP Secret
+# Manager — no PAT stored in this public repo.
+#
+# This workflow stays available for manual re-runs. It does not create issues
+# (DIGEST_GH_TOKEN is intentionally not provided), it only sends emails and
+# commits knowledge files.
 
 name: Weekly Digests
 
 on:
-  schedule:
-    - cron: '0 22 * * 0'  # Sunday 6pm ET (10pm UTC)
   workflow_dispatch:
     inputs:
       context:
@@ -55,23 +58,18 @@ jobs:
       - name: Validate secrets
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          DIGEST_GH_TOKEN: ${{ secrets.DIGEST_GH_TOKEN }}
         run: |
           if [ -z "$GEMINI_API_KEY" ]; then
             echo "::error::GEMINI_API_KEY secret is not set."
             exit 1
           fi
-          if [ -z "$DIGEST_GH_TOKEN" ]; then
-            echo "::warning::DIGEST_GH_TOKEN not set — issues will not be created. Set a fine-grained PAT with Issues:write on crumbl-ops, command-center, wealth-mgmt."
-          fi
-          echo "Secrets validated"
+          echo "Secrets validated (note: workflow does not create GH issues — use local Task Scheduler for that)"
 
       - name: Run digests
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SMTP_USER: "michael@bluegrasscookies.com"
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          GH_TOKEN: ${{ secrets.DIGEST_GH_TOKEN }}
         run: |
           FAILED=0
           for CTX in ${{ steps.contexts.outputs.contexts }}; do
