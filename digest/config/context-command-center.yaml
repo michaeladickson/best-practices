@@ -1,0 +1,58 @@
+# Command-center digest context — engineering / agent-focused for personal hub.
+# Targets command-center repo. Excludes operational-finance topics (those go to crumbl-ops).
+
+project_name: "command-center"
+description: |
+  Personal + professional life management hub. Hub-and-spokes architecture:
+  this is the hub, spokes are crumbl-ops, healthpulse, wealth-mgmt.
+  Aggregates work via GitHub Issues + scheduled Python agents (email triage,
+  daily briefing, meeting prep, Sara digest, iMessage monitor).
+  Owner-only repo; primary user is Michael working solo with Claude Code.
+
+tech_stack: |
+  Python 3.11+, structlog, click, pydantic, pyproject.toml.
+  External: Gmail API (personal + Workspace), Google Calendar, GitHub Issues API,
+  iMessage SQLite (read-only on Sara's Mac), MCP connectors.
+  AI: Gemini for email classification, transcript debriefs, coaching distillation;
+  Claude Code as primary development partner.
+
+current_ai_usage: |
+  - Claude Code for all development; multiple custom skills (/start, /wrap-up, /meeting-debrief, /coaching-check-in, /search-email)
+  - Gemini classification for email triage (replaces keyword rules when available)
+  - Gemini for meeting transcript debriefs (Crumbl sync, strategic, Amelia check-ins, general)
+  - Cron-scheduled agents on Windows Task Scheduler
+  - MCP connectors loaded for Gmail, Calendar, GitHub
+
+key_areas: |
+  - Email triage across personal + business inboxes → GH Issues / briefing surface
+  - Daily briefing (calendar + issues → morning punch list, phone-friendly)
+  - Meeting prep (agenda + follow-ups → emailed 30 min before each meeting)
+  - Sara digest (weekly status email to wife on her requests)
+  - iMessage monitor (Sara's Mac — flags actionable items, runs every 15 min)
+  - Coaching corpus extraction and session distillation
+  - Cross-repo task aggregation via GitHub Issues + labels
+
+interests: |
+  - Agent decision quality: classification accuracy, prompt regression, fixture-based testing
+  - Multi-agent orchestration and shared memory between scheduled agents
+  - Multi-persona review patterns for high-stakes outbound content (Sara digest, Slack)
+  - Brain files / skills library — formalizing recurring agent workflows
+  - MCP server design — narrow vs. broad servers, event-driven and "always-on" patterns
+  - Prompt injection defenses for user-controlled inputs (email content, transcripts)
+  - Computer use agents for portals without APIs (tax, school, compliance)
+  - Hooks and pre/post tool use automation in Claude Code
+  - Cross-session memory (MEMORY.md auto-write, knowledge graph patterns)
+  - Token efficiency for long-running agent ecosystems
+  - Personal automation via Claude Cowork (Dispatch, scheduled tasks)
+  - Observability for agent fleets — what fired when, what each decided
+  - Productivity stack integration (calendar conflict detection, focus time, weekly reviews)
+
+email:
+  from: "michael@bluegrasscookies.com"
+  to: "michael.a.dickson@gmail.com"
+  subject_prefix: "Command-center Digest"
+
+github_issue:
+  repo: "michaeladickson/command-center"
+  labels: ["weekly-digest"]
+  title_prefix: "Weekly digest"

@@ -42,30 +42,33 @@ When starting a new project or making a decision, check `practices/INDEX.md` for
 
 ## Running the Digest
 
-Three digests, each with its own context:
+Three digests, each targeted at a specific repo. Every digest:
+- Sends an email to `michael.a.dickson@gmail.com`
+- Saves a knowledge file under `data/digest_knowledge/`
+- Creates a self-contained GitHub issue in the target repo
 
 ```bash
 cd /path/to/best-practices
 pip install -r digest/requirements.txt
 
-# Engineering (default) — AI tooling, architecture, dev practices
-python -m digest --dry-run
-python -m digest
+# Crumbl-ops — engineering + operational finance combined
+python -m digest --context digest/config/context-crumbl-ops.yaml --dry-run
 
-# Operational Finance — CFO workflows, accounting automation, payroll, forecasting
-python -m digest --context digest/config/context-finance.yaml --dry-run
+# Command-center — agent / personal automation focused
+python -m digest --context digest/config/context-command-center.yaml --dry-run
 
-# Investing — portfolio analysis, macro trends, wealth management, fintech
-python -m digest --context digest/config/context-investing.yaml --dry-run
+# Wealth-mgmt — investing, macro analysis, portfolio research
+python -m digest --context digest/config/context-wealth-mgmt.yaml --dry-run
 ```
 
 ## Configuration
 
-- `digest/config/feeds.yaml` — All RSS feed sources (engineering + finance + investing)
-- `digest/config/context-engineering.yaml` — Engineering/AI digest (default)
-- `digest/config/context-finance.yaml` — Operational finance / CFO digest
-- `digest/config/context-investing.yaml` — Investing / wealth management digest
-- `.env` — GEMINI_API_KEY, SENDGRID_API_KEY, ALERT_EMAIL
+- `digest/config/feeds.yaml` — All RSS feed sources
+- `digest/config/context-crumbl-ops.yaml` — Crumbl-ops digest (target: `michaeladickson/crumbl-ops`)
+- `digest/config/context-command-center.yaml` — Command-center digest (target: `michaeladickson/command-center`)
+- `digest/config/context-wealth-mgmt.yaml` — Wealth-mgmt digest (target: `michaeladickson/wealth-mgmt`)
+- `.env` — GEMINI_API_KEY, SMTP_PASS, GH_TOKEN (for cross-repo issue creation)
+- GitHub Action: `DIGEST_GH_TOKEN` secret = fine-grained PAT with Issues:write on the three target repos
 
 ## Key Conventions
 

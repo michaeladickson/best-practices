@@ -1,0 +1,70 @@
+# Crumbl-ops digest context — merges engineering + operational-finance interests.
+# Targets crumbl-ops repo: a single weekly issue covers both lenses.
+
+project_name: "crumbl-ops"
+description: |
+  Operations platform for 3+ Crumbl Cookies franchise locations in Kentucky,
+  expanding to 10 stores via two acquisitions (July 2026). Owner/operator acts
+  as both CTO and CFO — engineering AND finance workflows live in this repo.
+  Automates daily accounting, inventory, production planning, vendor invoices,
+  payroll, reporting, and a dual-model weekly review system.
+
+tech_stack: |
+  Python 3.12, FastAPI, PostgreSQL 17, React 18 + TypeScript, GCP Cloud Run.
+  External: QuickBooks Online API, Crumbl GraphQL API, Gmail, SendGrid, When I Work.
+  AI: Gemini for vendor invoice extraction + email classification; Claude Code as
+  primary development partner.
+
+current_ai_usage: |
+  - Claude Code for all development (CLAUDE.md, knowledge/ system, skills/)
+  - MCP server for read-only QBO queries
+  - Gemini for vendor invoice PDF extraction (Sysco, US Foods, franchising)
+  - Gemini for email classification and routing
+  - Gemini for draft response generation (customer service, vendor inquiries)
+  - LightGBM for demand forecasting
+  - Dual-model adversarial weekly reviews (Gemini red-team + Claude reviewer)
+
+key_areas: |
+  Engineering:
+  - Automated daily accounting sync (sales → QBO journal entries)
+  - Vendor invoice parsing and processing (Sysco, US Foods, franchising)
+  - Production planning and demand forecasting
+  - Inventory and receiving workflows
+  - FastAPI + React frontend, Cloud Run deployment
+
+  Finance / CFO:
+  - Payroll engine (biweekly, Kentucky OT law, tip distribution)
+  - Month-end accruals, reconciliation, variance analysis
+  - Multi-entity financial reporting and consolidation (DCP, BCP, 3 stores)
+  - Labor cost tracking and scheduling optimization
+  - Marketplace platform reconciliation (DoorDash, UberEats, Grubhub)
+
+interests: |
+  Engineering leadership:
+  - Making Claude Code sessions more efficient (hooks, skills, memory, session management)
+  - AI-driven testing and QA: automated test generation, property-based testing, mutation testing
+  - Observability and monitoring: alerting strategies, SLOs, data pipeline health checks
+  - Scaling small-team engineering: maintaining quality with 1-2 engineers across multiple repos
+  - AI agents for operations: autonomous deployment, self-healing pipelines, anomaly detection
+  - Technical debt management: measurement, prioritization, paydown strategies
+  - Forecast model evaluation: backtesting frameworks, accuracy tracking, model drift detection
+
+  CFO / operational finance:
+  - LLMs for document extraction (invoices, statements, receipts, tax forms)
+  - Automated financial reporting and variance analysis
+  - AI-powered audit and reconciliation
+  - QBO API patterns and accounting system integrations
+  - Payroll compliance automation
+  - Real-time financial dashboards and alerting
+  - Franchise / multi-entity accounting patterns
+  - AI for accounts payable and accounts receivable
+
+email:
+  from: "michael@bluegrasscookies.com"
+  to: "michael.a.dickson@gmail.com"
+  subject_prefix: "Crumbl-ops Digest"
+
+github_issue:
+  repo: "michaeladickson/crumbl-ops"
+  labels: ["sprint-next", "weekly-digest"]
+  title_prefix: "Weekly digest"

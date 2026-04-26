@@ -16,9 +16,9 @@ on:
         type: choice
         options:
           - all
-          - engineering
-          - finance
-          - investing
+          - crumbl-ops
+          - command-center
+          - wealth-mgmt
 
 jobs:
   digest:
@@ -35,12 +35,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r digest/requirements.txt
 
+      - name: Install gh CLI (for cross-repo issue creation)
+        run: |
+          if ! command -v gh >/dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y gh
+          fi
+          gh --version
+
       - name: Determine contexts to run
         id: contexts
         run: |
           INPUT="${{ inputs.context || 'all' }}"
           if [ "$INPUT" = "all" ]; then
-            echo "contexts=engineering finance investing" >> $GITHUB_OUTPUT
+            echo "contexts=crumbl-ops command-center wealth-mgmt" >> $GITHUB_OUTPUT
           else
             echo "contexts=$INPUT" >> $GITHUB_OUTPUT
           fi
@@ -48,10 +55,14 @@ jobs:
       - name: Validate secrets
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DIGEST_GH_TOKEN: ${{ secrets.DIGEST_GH_TOKEN }}
         run: |
           if [ -z "$GEMINI_API_KEY" ]; then
-            echo "::error::GEMINI_API_KEY secret is not set. Add it via: gh secret set GEMINI_API_KEY --repo michaeladickson/best-practices"
+            echo "::error::GEMINI_API_KEY secret is not set."
             exit 1
+          fi
+          if [ -z "$DIGEST_GH_TOKEN" ]; then
+            echo "::warning::DIGEST_GH_TOKEN not set — issues will not be created. Set a fine-grained PAT with Issues:write on crumbl-ops, command-center, wealth-mgmt."
           fi
           echo "Secrets validated"
 
@@ -60,6 +71,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SMTP_USER: "michael@bluegrasscookies.com"
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          GH_TOKEN: ${{ secrets.DIGEST_GH_TOKEN }}
         run: |
           FAILED=0
           for CTX in ${{ steps.contexts.outputs.contexts }}; do

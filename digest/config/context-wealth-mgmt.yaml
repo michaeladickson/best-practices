@@ -1,7 +1,7 @@
-# Investing & wealth management context for digest relevance scoring.
-# Usage: python -m digest --context digest/config/context-investing.yaml
+# Wealth-mgmt digest context — investing / personal wealth.
+# Targets wealth-mgmt repo. Renamed from context-investing.yaml.
 
-project_name: "investing"
+project_name: "wealth-mgmt"
 description: |
   Personal wealth management platform and investing research tools.
   Aggregates portfolio data from multiple sources, runs macro analysis,
@@ -47,4 +47,9 @@ interests: |
 email:
   from: "michael@bluegrasscookies.com"
   to: "michael.a.dickson@gmail.com"
-  subject_prefix: "Investing Digest"
+  subject_prefix: "Wealth-mgmt Digest"
+
+github_issue:
+  repo: "michaeladickson/wealth-mgmt"
+  labels: ["weekly-digest"]
+  title_prefix: "Weekly digest"

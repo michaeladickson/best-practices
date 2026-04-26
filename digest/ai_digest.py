@@ -204,10 +204,14 @@ Return a JSON object with this structure:
   ],
   "project_recommendations": [
     {{
+      "title": "Short imperative title (under 80 chars)",
       "recommendation": "Specific, actionable suggestion for {project_name}",
       "inspired_by": "Which post(s) inspired this",
       "effort": "small|medium|large",
-      "impact": "Description of expected impact"
+      "impact": "Description of expected impact",
+      "where_it_fits": "Likely module / area of {project_name} where this would slot in (it's OK to speculate based on the project description)",
+      "first_step": "The smallest concrete first step to validate this idea",
+      "risks": "Honest risks or tradeoffs to consider"
     }}
   ]
 }}
@@ -218,6 +222,7 @@ Rules:
 - Generate 2-4 project_recommendations based on themes across the posts
 - Recommendations should be specific to {project_name}, not generic AI advice
 - If a post is paywalled/truncated, score based on what's visible
+- For where_it_fits, first_step, risks: be concrete but acknowledge uncertainty
 - Be honest — if nothing is relevant this week, return empty arrays"""
 
     response = client.models.generate_content(
@@ -381,13 +386,146 @@ def _save_digest_knowledge(analysis: dict, project_name: str, date_str: str):
     if recommendations:
         lines.append("## Recommendations\n")
         for r in recommendations:
-            lines.append(f"- [{r.get('effort', '?').upper()}] {r.get('recommendation', '')}")
+            lines.append(f"- [{r.get('effort', '?').upper()}] {r.get('title') or r.get('recommendation', '')}")
+            if r.get('title'):
+                lines.append(f"  {r.get('recommendation', '')}")
             lines.append(f"  Inspired by: {r.get('inspired_by', '')}")
-            lines.append(f"  Impact: {r.get('impact', '')}\n")
+            lines.append(f"  Impact: {r.get('impact', '')}")
+            if r.get('where_it_fits'):
+                lines.append(f"  Where it fits: {r['where_it_fits']}")
+            if r.get('first_step'):
+                lines.append(f"  First step: {r['first_step']}")
+            if r.get('risks'):
+                lines.append(f"  Risks: {r['risks']}")
+            lines.append("")
 
     path.write_text("\n".join(lines))
     log.info("digest_knowledge_saved", path=str(path), posts=len(top_posts),
              recommendations=len(recommendations))
+
+
+def _build_issue_body(analysis: dict, project_name: str, date_str: str) -> str:
+    """Build a self-contained GitHub issue body from a digest analysis."""
+    top_posts = analysis.get("top_posts", [])
+    recommendations = analysis.get("project_recommendations", [])
+
+    lines = [
+        f"## Source",
+        f"`~/best-practices/data/digest_knowledge/{date_str}_{project_name}.md`",
+        "",
+        f"Auto-generated from the {date_str} weekly digest. The reference doc above has the raw analysis; this issue is the actionable view.",
+        "",
+    ]
+
+    if top_posts:
+        lines.append("## Top Posts to Read")
+        lines.append("")
+        for i, p in enumerate(top_posts, 1):
+            url = p.get("url", "")
+            title = p.get("title", "Untitled")
+            source = p.get("source", "?")
+            score = p.get("relevance_score", "?")
+            lines.append(f"{i}. **[{title}]({url})** ({source}) — relevance {score}/10")
+            if p.get("summary"):
+                lines.append(f"   {p['summary']}")
+            if p.get("why_relevant"):
+                lines.append(f"   *Why it matters here:* {p['why_relevant']}")
+            lines.append("")
+
+    if recommendations:
+        lines.append("## Ideas to Evaluate")
+        lines.append("")
+        for i, r in enumerate(recommendations, 1):
+            effort = r.get("effort", "?").upper()
+            title = r.get("title") or r.get("recommendation", "")[:80]
+            lines.append(f"### {i}. {title}  [{effort}]")
+            lines.append("")
+            if r.get("recommendation"):
+                lines.append(r["recommendation"])
+                lines.append("")
+            if r.get("where_it_fits"):
+                lines.append(f"**Where it fits:** {r['where_it_fits']}")
+                lines.append("")
+            if r.get("first_step"):
+                lines.append(f"**First step:** {r['first_step']}")
+                lines.append("")
+            if r.get("risks"):
+                lines.append(f"**Risks / tradeoffs:** {r['risks']}")
+                lines.append("")
+            if r.get("impact"):
+                lines.append(f"**Impact:** {r['impact']}")
+                lines.append("")
+            if r.get("inspired_by"):
+                lines.append(f"*Inspired by:* {r['inspired_by']}")
+                lines.append("")
+            lines.append("---")
+            lines.append("")
+
+    lines.extend([
+        "## Process",
+        "",
+        "Pick which idea to work on this week. None require all-or-nothing — start with the smallest first step listed.",
+        "",
+        "Comment progress / decisions on this issue. Close when satisfied; spawn follow-up issues for anything that warrants its own scope.",
+        "",
+        "*This issue was auto-generated by the weekly digest pipeline. The agent that opens it has full context to act — read it cold and start.*",
+    ])
+
+    return "\n".join(lines)
+
+
+def _create_github_issue(analysis: dict, ctx: dict, project_name: str,
+                          date_str: str) -> bool:
+    """Create a GitHub issue in the configured target repo. Idempotent by title."""
+    import subprocess
+
+    issue_cfg = ctx.get("github_issue", {})
+    repo = issue_cfg.get("repo")
+    if not repo:
+        return False
+
+    top_posts = analysis.get("top_posts", [])
+    recommendations = analysis.get("project_recommendations", [])
+    if not top_posts and not recommendations:
+        log.info("issue_skipped_empty_analysis", repo=repo)
+        return False
+
+    title_prefix = issue_cfg.get("title_prefix", "Weekly digest")
+    title = f"{title_prefix} {date_str}: ideas to evaluate"
+    labels = issue_cfg.get("labels", [])
+
+    # Idempotency: skip if an issue with this exact title already exists.
+    try:
+        check = subprocess.run(
+            ["gh", "issue", "list", "--repo", repo, "--state", "all",
+             "--search", f'in:title "{title}"', "--json", "number,title"],
+            capture_output=True, text=True, timeout=30,
+        )
+        if check.returncode == 0 and title in check.stdout:
+            log.info("issue_already_exists", repo=repo, title=title)
+            return True
+    except Exception as e:
+        log.warning("issue_existence_check_failed", repo=repo, error=str(e))
+
+    body = _build_issue_body(analysis, project_name, date_str)
+
+    cmd = ["gh", "issue", "create", "--repo", repo, "--title", title, "--body", body]
+    for label in labels:
+        cmd.extend(["--label", label])
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        if result.returncode == 0:
+            url = result.stdout.strip()
+            log.info("issue_created", repo=repo, url=url, title=title)
+            return True
+        else:
+            log.error("issue_create_failed", repo=repo,
+                      stderr=result.stderr[:500])
+            return False
+    except Exception as e:
+        log.error("issue_create_exception", repo=repo, error=str(e))
+        return False
 
 
 @click.command()
@@ -470,6 +608,10 @@ def main(days: int, dry_run: bool, context_path: Optional[str],
         print(f"Digest sent: {subject}")
     else:
         print("Failed to send. Check logs.")
+
+    # Create GitHub issue in target repo (if configured)
+    if ctx.get("github_issue", {}).get("repo"):
+        _create_github_issue(analysis, ctx, project_name, today)
 
 
 if __name__ == "__main__":
