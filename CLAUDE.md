@@ -78,3 +78,12 @@ python -m digest --context digest/config/context-investing.yaml --dry-run
 
 Track knowledge in `knowledge/INDEX.md` → category files.
 Log errors to `knowledge/ERRORS.md`.
+
+Annotate domain knowledge with verification dates so rules don't go stale:
+```
+- Claude Code supports hooks for pre/post tool execution
+  (verified: 2026-03-20, source: docs review)
+```
+- When you encounter evidence that contradicts an established rule, flag it to the user rather than silently following the old rule
+- If a rule is contradicted by new data, demote it: move it out of CLAUDE.md back into the relevant knowledge file as unverified, and note the contradiction
+- Periodically check `verified` dates — anything unverified for 90+ days should be re-tested when the opportunity arises
