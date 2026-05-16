@@ -10,10 +10,10 @@ if (-not (Test-Path $LogPath)) {
     New-Item -ItemType Directory -Path $LogPath | Out-Null
 }
 
-# Use WSL bash to run the shell script
-$WslCommand = "wsl -- bash -c `"cd /mnt/c/Users/micha/best-practices && bash scripts/run_weekly_digest.sh >> /mnt/c/Users/micha/best-practices/logs/weekly_digest.log 2>&1`""
-
-$Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -WindowStyle Hidden -Command `"$WslCommand`""
+# Invoke the .cmd wrapper directly — avoids nested-quote breakage when
+# powershell.exe -Command parses a wsl bash command with embedded redirects.
+# Wrapper at scripts/run_weekly_digest.cmd does the wsl call.
+$Action = New-ScheduledTaskAction -Execute "$RepoPath\scripts\run_weekly_digest.cmd" -WorkingDirectory $RepoPath
 
 # Sunday 6:00 PM local time
 $Trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At 6:00PM

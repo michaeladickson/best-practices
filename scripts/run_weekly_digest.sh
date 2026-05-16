@@ -12,7 +12,7 @@
 #   - smtp-password
 # Local prerequisites:
 #   - gh CLI authenticated (`gh auth status` returns OK)
-#   - gcloud authenticated (`gcloud auth list` shows active account)
+#   - Windows-side gcloud authenticated (`gcloud.exe auth list` shows active account)
 #   - python3 with digest/requirements.txt installed
 #   - git push access to origin
 
@@ -21,13 +21,21 @@ cd "$(dirname "$0")/.."
 
 GCP_PROJECT="hybrid-elysium-471814-p2"
 
+# Use Windows-side gcloud (via cmd.exe) instead of WSL gcloud. WSL gcloud auth
+# silently expires after a few weeks of inactivity; Windows-side stays fresh
+# through daily interactive use. The cmd.exe wrapper lets us call the
+# Windows-installed gcloud from this WSL shell.
+gcloud_w() {
+  cmd.exe /c "gcloud $*" 2>/dev/null | tr -d '\r'
+}
+
 echo "=== Fetching secrets from GCP Secret Manager ==="
-GEMINI_API_KEY=$(gcloud secrets versions access latest --secret=gemini-api-key --project="$GCP_PROJECT" 2>/dev/null) || {
+GEMINI_API_KEY=$(gcloud_w "secrets versions access latest --secret=gemini-api-key --project=$GCP_PROJECT") || {
   echo "ERROR: failed to fetch gemini-api-key from Secret Manager." >&2
   echo "Add it via: echo -n '<key>' | gcloud secrets create gemini-api-key --data-file=- --project=$GCP_PROJECT" >&2
   exit 1
 }
-SMTP_PASS=$(gcloud secrets versions access latest --secret=smtp-password --project="$GCP_PROJECT") || {
+SMTP_PASS=$(gcloud_w "secrets versions access latest --secret=smtp-password --project=$GCP_PROJECT") || {
   echo "ERROR: failed to fetch smtp-password from Secret Manager." >&2
   exit 1
 }
