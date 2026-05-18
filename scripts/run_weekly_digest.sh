@@ -17,6 +17,7 @@
 #   - git push access to origin
 
 set -e
+set -o pipefail  # so the gcloud failure in `gcloud_w | tr` actually propagates
 cd "$(dirname "$0")/.."
 
 GCP_PROJECT="hybrid-elysium-471814-p2"
@@ -35,10 +36,18 @@ GEMINI_API_KEY=$(gcloud_w "secrets versions access latest --secret=gemini-api-ke
   echo "Add it via: echo -n '<key>' | gcloud secrets create gemini-api-key --data-file=- --project=$GCP_PROJECT" >&2
   exit 1
 }
+if [ -z "$GEMINI_API_KEY" ]; then
+  echo "ERROR: gemini-api-key fetch returned empty. Check 'gcloud auth list' on Windows side." >&2
+  exit 1
+fi
 SMTP_PASS=$(gcloud_w "secrets versions access latest --secret=smtp-password --project=$GCP_PROJECT") || {
   echo "ERROR: failed to fetch smtp-password from Secret Manager." >&2
   exit 1
 }
+if [ -z "$SMTP_PASS" ]; then
+  echo "ERROR: smtp-password fetch returned empty. Check 'gcloud auth list' on Windows side." >&2
+  exit 1
+fi
 export GEMINI_API_KEY SMTP_PASS
 export SMTP_USER="michael@bluegrasscookies.com"
 
