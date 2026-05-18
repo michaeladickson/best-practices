@@ -1,0 +1,20 @@
+# Normalize line endings to prevent CRLF crashes in WSL bash.
+# Mirrors the command-center fix: core.autocrlf=true on Windows-side git was
+# rewriting committed LF scripts to CRLF on checkout, which made WSL read
+# shebangs as `/bin/bash\r` and return exit 127. .gitattributes pins all
+# source files to LF in the repo so future Windows editors can't reintroduce
+# CRLF, and *.ps1/.cmd/.bat/.vbs stay CRLF for Windows-native consumers.
+
+# Default: detect text vs binary, force LF in the index
+* text=auto eol=lf
+
+# Belt-and-suspenders for anything WSL bash runs directly
+*.sh   text eol=lf
+*.bash text eol=lf
+*.py   text eol=lf
+
+# Windows-native scripts keep CRLF
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.vbs text eol=crlf
