@@ -85,6 +85,63 @@ docs:
       - write-back
       - harness
 
+  - path: practices/ai-safety/agent-action-safety.md
+    topic: "Safety and control layers for AI agents that take real-world actions"
+    scope: |
+      Letting an agent move money, write to the database/QuickBooks, delete data, send
+      outbound messages, or deploy — without acting on implied approval. Action
+      classification by reversibility/blast radius, least-privilege / read-only-by-default
+      tools, a judge layer that gates before execution, human-in-the-loop for irreversible
+      actions, authorization specs and limits, fail-safe on uncertainty, independent
+      verification of effect (never trust the agent's self-report), and an audit trail.
+    keywords:
+      - judge layer
+      - control layer
+      - responsibility layer
+      - human-in-the-loop
+      - human review
+      - approval
+      - authoriz
+      - permission
+      - guardrail
+      - irreversible
+      - destructive
+      - agentic commerce
+      - autonomy
+      - sandbox
+      - least privilege
+      - audit trail
+      - liability
+
+  - path: practices/ai/llm-evaluation.md
+    topic: "Evaluating LLM/AI output quality and catching prompt/model regressions"
+    scope: |
+      Knowing whether an AI feature works and catching silent regressions from prompt
+      edits or model upgrades. Golden/fixture datasets per feature, task-appropriate
+      metrics (extraction accuracy, classification precision/recall, forecast backtest
+      error, rubric/LLM-as-judge for generation), regression gates in CI, model-version
+      pinning and upgrade gating, production drift monitoring, validated LLM-as-judge,
+      ground-truth/hallucination checks, growing the eval set from production failures,
+      and tracking cost/latency alongside quality.
+    keywords:
+      - eval
+      - evaluation
+      - regression
+      - fixture
+      - golden
+      - model drift
+      - backtest
+      - accuracy
+      - precision
+      - recall
+      - hallucinat
+      - llm-as-judge
+      - benchmark
+      - prompt regression
+      - model update
+      - shrinkflation
+      - ground truth
+
 # Anchors every doc must still contain after an auto-edit, else the write is rejected.
 required_anchors:
   - "## Sources"

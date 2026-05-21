@@ -17,10 +17,12 @@ Patterns and conventions extracted from production repos. Reference these when s
 
 - [Gemini Integration](ai/gemini-integration.md) — Client setup, model selection, batch processing, Edge Functions
 - [Prompt Engineering](ai/prompt-engineering.md) — Classification, context-aware, structured output, code review
+- [LLM Evaluation & Prompt-Regression](ai/llm-evaluation.md) — Golden/fixture datasets, task-appropriate metrics, CI regression gate, model-upgrade gating, drift monitoring
 
 ## AI Safety
 
 - [Prompt Injection Mitigation](ai-safety/prompt-injection-mitigation.md) — XML tag wrapping, negative instructions, input isolation
+- [Agent Action Safety & Control Layers](ai-safety/agent-action-safety.md) — Action tiers, least-privilege/read-only, judge layer, human-in-the-loop, authorization specs, audit trail
 
 ## Security
 
