@@ -124,14 +124,18 @@ but does NOT create issues — that part requires the local `gh` auth.
 
 ## Learning
 
-Track knowledge in `knowledge/INDEX.md` → category files.
-Log errors to `knowledge/ERRORS.md`.
+Track knowledge in `knowledge/INDEX.md` → category files. The full memory model —
+tiers, retrieval contracts, anti-fragmentation, and staleness — lives in
+[`practices/claude-code/context-memory-management.md`](practices/claude-code/context-memory-management.md).
+Key rules:
 
-Annotate domain knowledge with verification dates so rules don't go stale:
-```
-- Claude Code supports hooks for pre/post tool execution
-  (verified: 2026-03-20, source: docs review)
-```
-- When you encounter evidence that contradicts an established rule, flag it to the user rather than silently following the old rule
-- If a rule is contradicted by new data, demote it: move it out of CLAUDE.md back into the relevant knowledge file as unverified, and note the contradiction
-- Periodically check `verified` dates — anything unverified for 90+ days should be re-tested when the opportunity arises
+- **Corrections route to their home, not a catch-all log.** Behavioral feedback →
+  cross-session memory; architectural choices → the `decisions/` journal; a failed
+  domain hypothesis → demote it in the relevant `hypotheses.md`. A dedicated `ERRORS.md`
+  just fragments these.
+- **Don't date-stamp everything.** Let genuinely time-sensitive entries carry an inline
+  date; rely on git history for change time. Status *snapshots* can be staleness-checked
+  by mtime, but stable reference facts can't — age ≠ wrong.
+- **Flag contradictions.** When new evidence contradicts an established rule, surface it
+  to the user rather than silently following the old rule; if confirmed, demote the rule
+  where it lives.
