@@ -58,8 +58,8 @@ docs:
       retrieval contract specs, memory tiers (session/project/global), CLAUDE.md
       leanness and progressive disclosure, session budget (/clear, /compact,
       subagents), MCP/harness footprint, skills as institutional memory, governed
-      write-back (hypothesis->rule, decision journal, verification dates), and
-      carrying provenance with assembled context.
+      write-back (hypothesis->rule, decision journal), and carrying provenance with
+      assembled context.
     keywords:
       - context window
       - context management

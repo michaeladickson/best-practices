@@ -47,10 +47,10 @@ grade it **Good / Gap / Missing**, then give a concrete fix.
    formalized as version-controlled skills with clear input/output, or retyped each
    session ("shadow skills")? What should be promoted into `skills/`?
 
-8. **Governed write-back** — Is there a hypothesis→rule promotion path, a decision
-   journal (`decisions/*.md` with `Supersedes:` links), and verification dates on
-   durable facts? Or do agents/humans mutate knowledge files freely with no
-   discipline (memory rot)?
+8. **Governed write-back** — Is there a hypothesis→rule promotion path and a decision
+   journal (`decisions/*.md` with `Supersedes:` links)? Do corrections route to their
+   home (`decisions/`, `hypotheses.md`, cross-session memory) rather than a catch-all
+   log? Or do agents/humans mutate knowledge files freely with no discipline (memory rot)?
 
 9. **Provenance** — When context is assembled for an agent (especially financial /
    compliance workflows), is each fact tagged with its source so outputs are

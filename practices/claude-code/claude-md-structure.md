@@ -58,7 +58,7 @@ Every project should have a root `CLAUDE.md` that gives Claude Code full context
 ## Learning
 
 Track knowledge in `knowledge/INDEX.md` → category files.
-Log errors to `knowledge/ERRORS.md`.
+Route corrections to their home: behavior → cross-session memory, architecture → `decisions/`, a failed hypothesis → demote in `hypotheses.md`.
 ```
 
 ## Module-Level CLAUDE.md
@@ -89,7 +89,6 @@ For complex subsystems, add a local `CLAUDE.md` in the module directory:
 ```
 knowledge/
   INDEX.md        # Links to all knowledge files
-  ERRORS.md       # Recurring errors and solutions
   domain/         # What things are (accounts, tax rules, etc.)
   procedural/     # How to do things (data import, analysis, etc.)
   pricing/        # Example domain folder
@@ -101,7 +100,7 @@ knowledge/
 Principles:
 - Progressive disclosure: read top-down, load only what you need
 - Separate domain knowledge (what) from procedural (how)
-- Graduate resolved errors into knowledge files
+- Route corrections to their home (decisions / hypotheses.md / memory), not a catch-all error log
 - Review and merge/split files regularly
 
 **Hypothesis → Rule promotion** (paste into CLAUDE.md):
