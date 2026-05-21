@@ -1,0 +1,91 @@
+# Living practice docs that the weekly digest auto-updates from each week's articles.
+#
+# Used by digest/practice_updater.py. For each doc, the updater:
+#   1. keyword-prefilters the week's archived posts down to plausibly-relevant ones
+#   2. drops any post already in the dedup ledger (data/practice_updates/incorporated.json)
+#   3. asks Gemini to extract genuinely-NEW, actionable practices not already covered
+#   4. asks Gemini to integrate them into the full doc, then validates structure before writing
+#
+# Auto-edit mode: writes land directly in the curated body (no staging). Git history is
+# the safety net; required_anchors + length checks guard against a bad LLM response.
+
+docs:
+  - path: practices/claude-code/code-review-and-ai-slop.md
+    topic: "Code review of AI-generated code and preventing AI slop"
+    scope: |
+      Reviewing AI-generated code for hidden technical debt and the failure modes
+      specific to code an agent wrote: looks-clean-but-unmaintainable,
+      locally-correct-but-organizationally-catastrophic, confident fabrication,
+      code-without-reasoning, self-correction spirals, unverified code, net team
+      slowdown. Practices: spec-first then verify, make the agent defend its
+      reasoning, real-environment validation, written AI-code-review checklist,
+      automated review as a gate (not a replacement), human-in-the-loop for
+      destructive/irreversible actions, small scoped diffs, breaking self-correction
+      spirals, and measuring the cleanup/maintenance tax rather than raw velocity.
+    keywords:
+      - code review
+      - ai slop
+      - slop
+      - technical debt
+      - cleanup
+      - clean-up
+      - maintainab
+      - maintenance
+      - hallucinat
+      - verif
+      - validation
+      - " ci "
+      - regression
+      - test
+      - refactor
+      - autonomous
+      - agent
+      - production incident
+      - velocity
+      - defend
+      - spec
+      - review checklist
+      - pull request
+      - " pr "
+      - code quality
+
+  - path: practices/claude-code/context-memory-management.md
+    topic: "Context and memory management for Claude Code and coding agents"
+    scope: |
+      Giving an agent the right context at the right time and persisting what's worth
+      keeping. Context assembly vs. rediscovery, the knowledge-layer architecture
+      (retrieval + structure + access control + provenance + memory + write-back),
+      retrieval contract specs, memory tiers (session/project/global), CLAUDE.md
+      leanness and progressive disclosure, session budget (/clear, /compact,
+      subagents), MCP/harness footprint, skills as institutional memory, governed
+      write-back (hypothesis->rule, decision journal, verification dates), and
+      carrying provenance with assembled context.
+    keywords:
+      - context window
+      - context management
+      - context engineering
+      - context rot
+      - memory
+      - knowledge layer
+      - knowledge graph
+      - rag
+      - retrieval
+      - rediscover
+      - subagent
+      - compaction
+      - compact
+      - claude.md
+      - skill
+      - institutional memory
+      - second brain
+      - provenance
+      - token
+      - mcp
+      - progressive disclosure
+      - write-back
+      - harness
+
+# Anchors every doc must still contain after an auto-edit, else the write is rejected.
+required_anchors:
+  - "## Sources"
+  - "## Where Used"

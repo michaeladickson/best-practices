@@ -63,7 +63,25 @@ The wrapper at `scripts/run_weekly_digest.sh`:
 1. Pulls `gemini-api-key` and `smtp-password` from GCP Secret Manager (project `hybrid-elysium-471814-p2`)
 2. Runs all three digests via WSL bash
 3. Creates GitHub issues in target repos using local `gh` auth
-4. Commits and pushes the new knowledge files back to `origin/main`
+4. Auto-updates the living practice docs from the same week's articles (`python -m digest.practice_updater`) — see below
+5. Commits and pushes the new knowledge files + any practice-doc updates back to `origin/main` (two separate `[automated]` commits)
+
+### Auto-updating the living practice docs
+
+Each weekly run also feeds the week's archived articles to `digest/practice_updater.py`,
+which **auto-edits** the living practice docs in place:
+- `practices/claude-code/context-memory-management.md`
+- `practices/claude-code/code-review-and-ai-slop.md`
+
+Config is `digest/config/practice-docs.yaml` (topic, scope, keyword prefilter, required
+anchors). Guardrails, since this also edits the anti-slop doc itself:
+- **Dedup ledger** `data/practice_updates/incorporated.json` — a source article is never
+  integrated into the same doc twice.
+- **Two-stage LLM** — extract genuinely-new candidates, then integrate into the full doc.
+- **Structural validation before write** — H1 + required anchors (`## Sources`,
+  `## Where Used`) must survive and length must stay in bounds, else the write is
+  rejected and the doc is left untouched (retries next week). Git history is the backstop.
+- Most weeks change nothing. Review the `[automated]` practice commits like any other diff.
 
 ### Manual / dev runs
 
@@ -76,14 +94,17 @@ python -m digest --context digest/config/context-crumbl-ops.yaml --dry-run
 python -m digest --context digest/config/context-command-center.yaml --dry-run
 python -m digest --context digest/config/context-wealth-mgmt.yaml --dry-run
 
+# Preview the practice-doc auto-update (shows diffs, writes nothing, touches no ledger)
+python -m digest.practice_updater --dry-run
+
 # Or run the full local pipeline manually
 bash scripts/run_weekly_digest.sh
 ```
 
 The GitHub Actions workflow (`.github/workflows/weekly-digests.yml`) remains
 for manual dispatch fallback (e.g., re-running a failed digest from any
-machine). It sends email + commits knowledge files but does NOT create
-issues — that part requires the local `gh` auth.
+machine). It sends email + commits knowledge files and practice-doc updates,
+but does NOT create issues — that part requires the local `gh` auth.
 
 ## Configuration
 
@@ -91,6 +112,7 @@ issues — that part requires the local `gh` auth.
 - `digest/config/context-crumbl-ops.yaml` — Crumbl-ops digest (target: `michaeladickson/crumbl-ops`)
 - `digest/config/context-command-center.yaml` — Command-center digest (target: `michaeladickson/command-center`)
 - `digest/config/context-wealth-mgmt.yaml` — Wealth-mgmt digest (target: `michaeladickson/wealth-mgmt`)
+- `digest/config/practice-docs.yaml` — Living docs the weekly run auto-edits (topic, scope, keyword prefilter, required anchors)
 - Secrets: pulled from GCP Secret Manager at runtime; no `.env` in this public repo
 
 ## Key Conventions

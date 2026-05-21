@@ -116,6 +116,15 @@ for CTX in crumbl-ops command-center wealth-mgmt; do
 done
 
 echo ""
+echo "=== Updating living practice docs from this week's articles ==="
+# Auto-edits practices/claude-code/{context-memory-management,code-review-and-ai-slop}.md
+# from the same archived articles. Dedup ledger + structural validation guard the writes.
+if ! python3 -m digest.practice_updater --days 7; then
+  echo "WARNING: practice-doc update failed" >&2
+  FAILED=$((FAILED + 1))
+fi
+
+echo ""
 echo "=== Committing knowledge files ==="
 git add data/digest_knowledge/
 if git diff --cached --quiet; then
@@ -125,6 +134,19 @@ else
   git commit -m "Weekly digest: ${COUNT} knowledge files updated [automated]"
   git push origin main
   echo "Committed and pushed $COUNT files"
+fi
+
+echo ""
+echo "=== Committing practice-doc updates ==="
+git add practices/claude-code/context-memory-management.md \
+        practices/claude-code/code-review-and-ai-slop.md \
+        data/practice_updates/
+if git diff --cached --quiet; then
+  echo "No practice-doc updates to commit"
+else
+  git commit -m "Weekly practice update: living docs refreshed from digest articles [automated]"
+  git push origin main
+  echo "Committed and pushed practice-doc updates"
 fi
 
 if [ "$FAILED" -gt 0 ]; then
