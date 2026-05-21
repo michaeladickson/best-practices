@@ -50,6 +50,7 @@ See [`/reviews/README.md`](../reviews/README.md) for setup instructions.
 ## Claude Code
 
 - [CLAUDE.md Structure](claude-code/claude-md-structure.md) — Root + module templates, knowledge system, decision journal, layered architecture, rules/hooks/skills/agents
+- [Context & Memory Management](claude-code/context-memory-management.md) — Memory tiers, retrieval contracts / sources of truth, context-budget discipline, anti-fragmentation, provenance
 - [CLI Patterns](claude-code/cli-patterns.md) — Click structure, common flags, command groups
 - [Token Efficiency](claude-code/token-efficiency.md) — Cache misses, context bloat, model routing, input format
 - [Remote Access](claude-code/remote-access.md) — Web Sessions, Remote Control, Dispatch, Channels

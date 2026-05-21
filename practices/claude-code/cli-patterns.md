@@ -70,3 +70,4 @@ Invoke with: `python -m module`
 - **crumbl-ops**: Daily sync CLI with `--skip-*` flags
 - **wealth-mgmt**: Spending CLI with group commands
 - **best-practices**: Digest CLI with `--dry-run` and `--context`
+- **command-center**: Scheduled agents (email triage, daily briefing, meeting prep/debrief, Sara digest) — every agent CLI supports `--dry-run`

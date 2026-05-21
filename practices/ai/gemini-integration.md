@@ -102,3 +102,4 @@ App never touches GEMINI_API_KEY — Edge Function proxies all AI calls.
 - **wealth-mgmt**: Transaction categorization, macro digest analysis
 - **healthpulse**: Food parsing, health advisor, stretch recommendations (via Edge Functions)
 - **best-practices**: RSS digest analysis
+- **command-center**: Email-triage classification, daily-briefing comms digest, context-updater classification
