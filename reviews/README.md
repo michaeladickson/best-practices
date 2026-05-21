@@ -46,6 +46,8 @@ Each function review runs independently (Gemini + Claude → synthesis → GitHu
 | `data-review.md` | Data integrity, pipeline reliability, forecast accuracy |
 | `devops-review.md` | Deployment, monitoring, secrets, infrastructure, scaling |
 | `cto-review.md` | CTO-level strategic review — reads all function outputs, evaluates health, improves prompts |
+| `context-memory-review.md` | On-demand context/memory self-assessment — context assembly, memory tiers, CLAUDE.md leanness, skills, governed write-back |
+| `ai-slop-review.md` | On-demand AI-slop/code-review self-assessment — spec discipline, validation loop, destructive-action gating, cleanup-tax telemetry |
 | `synthesize.md` | Instructions for merging Gemini + Claude findings |
 | `review-context-template.md` | Template for per-repo context (threat model, intentional decisions) |
 | `workflow-template.yml` | Full GitHub Actions workflow — copy to each repo |
