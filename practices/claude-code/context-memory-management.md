@@ -37,6 +37,8 @@ Needs:
   - active rules for this domain         (source: knowledge/<domain>/rules.md)
 Format: pre-assembled markdown brief, newest-first, each fact tagged with its source.
 ```
+- **Implement runtime validation of retrieved context quality and completeness at production scale to prevent confident, incorrect answers.** Beyond defining retrieval contracts, actively monitor and validate the relevance, accuracy, and completeness of retrieved context during live agent operations, especially in RAG systems. This proactively addresses the problem of retrieval degradation at scale, preventing agents from generating fluent but incorrect outputs based on incomplete or irrelevant information.
+- **Implement declarative blueprint languages and standardized orchestration patterns for governable multi-agent systems.** Moving beyond ad-hoc prompt chaining, define agent interactions and context flows using declarative languages like ABL. Incorporate built-in orchestration patterns (e.g., supervisor, delegation, fan-out, agent-to-agent federation) to ensure structured, predictable, and governable context management across complex multi-agent workflows.
 
 ## Context Budget
 
@@ -83,6 +85,18 @@ Choices that outlive today's task go in `decisions/YYYY-MM-DD-{topic}.md` (see [
 
 When surfaced context is **AI-generated** (a model-written summary, a classification), mark it where it's shown, so a reader can tell synthesis from ground truth and knows to verify before acting. Raw data and AI synthesis should stay visually distinguishable. The same applies to *assembled* context: tag each fact with its source (especially for financial or compliance work), so a reviewer can trust or challenge a specific claim instead of the whole answer.
 
+## Rich Context & Human-Agent Collaboration
+
+- **Adopt interactive HTML artifacts as a rich communication medium for human-agent collaboration and planning.** Transition from purely text-based (e.g., Markdown) context and output to interactive HTML for agent communication. This enables visual mockups, interactive demos, and living design systems, allowing humans to stay more effectively in the loop, provide richer feedback, and enhance the clarity and depth of context exchanged during planning and iterative development workflows.
+
+## Governance & Control
+
+- **Establish a comprehensive control layer with multi-layered kill switches for robust agent governance and safety.** Design an explicit control layer that dictates agent behavior, memory retention, action permissions, and spending limits. Integrate kill switches across multiple architectural layers (e.g., application, platform, network, identity, cloud) to ensure immediate and effective cessation of agent activity when necessary, moving beyond general 'enforcement' to concrete, auditable infrastructure decisions.
+
+## Security & Isolation
+
+- **Utilize self-hosted sandboxes for agent runtime isolation to enhance security and data privacy.** Deploy agents within self-hosted sandboxes on customer infrastructure or managed service providers. This practice isolates agent tool execution, protecting internal networks from rogue scripts, preventing data leaks, and providing organizations with explicit control over data privacy, security, and runtime environment for sensitive context and actions.
+
 ## Enforcement (the frontier)
 
 None of the above is self-enforcing — docs drift from code silently. The maturity endpoint is an audit/maintenance agent that detects drift: *deterministically* for status snapshots (issues referenced in a status file that are now closed; file mtime), and via an *AI pass* for semantic drift (a per-module `CLAUDE.md` whose described inputs no longer match its code). Until that exists, drift is caught only when a human or agent happens to read both sides.
@@ -99,6 +113,11 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 - **Why agent harnesses fail inside cloud-native systems** (The New Stack) — harness footprint, feedback loops. Digest: 2026-05-18.
 - **How to build a skills library** (The New Stack) / **Red Hat's skill packs give AI agents institutional memory** — skills as durable memory. Digests: 2026-05-16/18.
 - **Spec-driven development at Notion** (Lenny's Newsletter) — context assembly via specs, subagents. Digest: 2026-05-18.
+- **Why production RAG systems give confident, wrong answers at scale** (The New Stack) — runtime validation of retrieved context quality. Digest: 2026-05-19.
+- **Kore counts down to Artemis, its moonshot for governable AI agents** (The New Stack) — declarative blueprint languages and orchestration patterns. Digest: 2026-05-21.
+- **Seven questions decide whether your AI agent ships. Most teams can answer two.** (Nate Jones) — comprehensive control layer with multi-layered kill switches. Digest: 2026-05-20.
+- **Anthropic debuts MCP tunnels and self-hosted sandboxes to lock down AI agent infrastructure** (The New Stack) — self-hosted sandboxes for agent runtime isolation. Digest: 2026-05-19.
+- **HTML is the new Markdown: How Anthropic engineers are building with Claude Code | Thariq Shihipar** (Lenny's Newsletter) — interactive HTML artifacts for human-agent collaboration. Digest: 2026-05-18.
 
 ## Where Used
 

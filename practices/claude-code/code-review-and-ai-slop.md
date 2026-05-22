@@ -47,20 +47,35 @@ Behavior: 3 attempts, exponential backoff (1s,2s,4s), retry only on 429/5xx,
 Done when: tests/test_qbo_client.py::test_retry_* pass; no change to call sites.
 ```
 
-### 2. Make the agent defend its reasoning
+### 2. Formally validate AI-generated or human-authored requirements for contradictions and ambiguities using logic engines before code generation begins.
+Before an agent generates code, ensure its underlying requirements are precise and consistent. Use specialized tools (e.g., SMT solvers) that convert natural language requirements into formal logic and prove their soundness, surfacing any contradictions or ambiguities for human resolution. This prevents downstream 'slop' and rework by catching fundamental issues at the earliest stage.
+
+### 3. Brief agents like a senior partner, providing goals, context, constraints, and quality bars, rather than explicit step-by-step instructions.
+As AI agents become more capable, treat them like a senior partner instead of a junior employee. Provide a comprehensive brief with the goal, context, constraints, and desired quality bar, allowing the agent room to reason and operate autonomously within those bounds, rather than micromanaging with detailed prompts.
+
+### 4. Leverage richer visual formats, like HTML artifacts, for agent communication and planning, generating interactive specs and living design systems before producing final code.
+Encourage agents to produce HTML-based interactive plans, mockups, or living design systems instead of just raw code or plain text. This facilitates better human understanding, collaboration, and feedback in the planning stage, significantly reducing 'slop' by catching issues earlier and ensuring alignment before code generation. This also suggests that a large portion of AI's output should be in planning artifacts rather than production-ready code.
+
+### 5. Provide AI agents with a permanent, comprehensive context foundation detailing business operations, brand voice, and historical decisions to ensure domain-specific, high-quality code generation.
+Implement a 'CLAUDE.md'-like file or similar mechanism within projects to serve as a persistent 'Business Snapshot.' This ensures the agent consistently generates code that aligns with the organization's unique context, reducing the need for repeated explanations and improving code relevance and quality across sessions.
+
+### 6. Make the agent defend its reasoning
 In review, prompt the agent to explain *why* it chose this design, what it ruled out,
 and what it's unsure about. This directly attacks "wrote code but didn't think"
 (digest 2026-05-18) and forces the latent reasoning into the open where a human can
 challenge it. If it can't defend a choice, that's a finding.
 
-### 3. Validate in a real environment — "looks done" is not done
+### 7. Validate in a real environment — "looks done" is not done
 The validation loop is central to agentic dev: code should be run, tested, and where
 relevant deployed to an ephemeral environment before it's trusted (digest 2026-04-26;
 "81% PR acceptance" came from environment-based validation, not better prompts).
 Don't accept an agent's claim that it tested something — require evidence (CI green +
 the actual diff read). Agents will confidently assert success they didn't achieve.
 
-### 4. Use a written AI-code-review checklist
+### 8. Design small, agent-executable, end-to-end validation checks that run quickly in a real environment to provide immediate feedback to coding agents.
+Traditional CI is too slow for agents. Create 'plans' – compact, end-to-end validation units that agents can author, select, and run within their session in seconds. This provides rapid, real-environment feedback crucial for iterative agent development and preventing slop.
+
+### 9. Use a written AI-code-review checklist
 Beyond the generic review, check the things slop hides behind (the "$1M incident"
 checklist, digest 2026-05-16):
 - **Readability/maintainability** — could a human own this in 6 months?
@@ -70,7 +85,7 @@ checklist, digest 2026-05-16):
 - **Real APIs** — no hallucinated methods, params, or imports.
 - **Blast radius** — what's the worst case if this is subtly wrong?
 
-### 5. Automated review as a gate, not a replacement
+### 10. Automated review as a gate, not a replacement
 Layered/multi-agent review (e.g., Claude Code Review) examines diffs within the full
 codebase, ranks findings by severity, and catches subtle bugs at a low false-positive
 rate (digest 2026-03-27). Use it as a *first-pass gate* — it raises signal — but keep
@@ -78,25 +93,25 @@ a human accountable for merge. Two cheap, high-leverage gates:
 - A second model/agent reviews the diff (dual-model, like this repo's review system).
 - The author-agent must address each finding or explain why it's a false positive.
 
-### 6. Human-in-the-loop for irreversible / high-blast-radius actions
+### 11. Human-in-the-loop for irreversible / high-blast-radius actions
 The data-loss catastrophe happened because an agent took a destructive action without
 a gate (digest 2026-03-27). Never let an agent run migrations, deletes, prod writes,
 or money movement unsupervised. Externalize operational knowledge (what's destructive,
 what's load-bearing) into `CLAUDE.md` / `knowledge/` so the agent has the context it
 otherwise lacks — and still gate the action.
 
-### 7. Keep diffs small and scoped
+### 12. Keep diffs small and scoped
 Big-bang AI diffs are unreviewable, so they get rubber-stamped — that's how slop
 merges. Constrain each change to one concern, fitting existing conventions. Small
-diffs make the checklist (#4) and reasoning review (#2) actually tractable.
+diffs make the checklist (#9) and reasoning review (#6) actually tractable.
 
-### 8. Stop the self-correction spiral
+### 13. Stop the self-correction spiral
 When a model starts re-fixing its own output in a loop (digest 2026-04-26), it rarely
 recovers in-context and it burns tokens while drifting. Cut it: `Esc Esc` / `/rewind`
 to before the spiral, re-spec, and retry — don't keep arguing with it. (See
 [token-efficiency.md](token-efficiency.md) session moves.)
 
-### 9. Measure the cleanup tax, not just velocity
+### 14. Measure the cleanup tax, not just velocity
 "2x velocity" is meaningless if rework doubles too. Intercom paired Claude Code with
 deep telemetry — invocations, sessions, dashboards (digest 2026-04-26). Track rework:
 how often AI-authored code is reverted, hot-fixed, or refactored shortly after merge.
@@ -134,11 +149,16 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **AI shrinkflation: …Claude Opus 4.7…** (The New Stack) — self-correction loops, token-for-coherence drift. Digest: 2026-04-26 (crumbl-ops).
 - **How Intercom 2x'd their engineering velocity in 9 months with Claude Code** (Lenny's Newsletter) — telemetry/dashboards alongside velocity. Digest: 2026-04-26 (crumbl-ops, investing, operational-finance).
 - **Spec-driven development at Notion** (Lenny's Newsletter) — spec-first, agents defend reasoning, fast CI. Digests: 2026-05-18 (all repos).
+- **68% of AI power users do one thing differently — and it is not a prompt trick** (Nate Jones) — treat agents like senior partners. Digest: 2026-05-21.
+- **CI wasn’t built for coding agents. Here’s what comes next.** (The New Stack) — rapid, agent-executable validation checks. Digest: 2026-05-21.
+- **Tutorial: Build a CLAUDE.md That Makes Claude Code Work Like It Knows You** (The AI Break) — persistent context foundation for agents. Digest: 2026-05-19.
+- **HTML is the new Markdown: How Anthropic engineers are building with Claude Code | Thariq Shihipar** (Lenny's Newsletter) — richer visual formats for planning. Digest: 2026-05-18.
+- **AWS found bugs in 60% of software requirements. Its fix isn’t more AI — it’s a 50-year-old logic engine.** (The New Stack) — formally validate requirements using logic engines. Digest: 2026-05-15.
 - Referenced-only (title in recommendations, no full summary saved): **We Taught AI to Write Code But We Forgot to Teach It to Think**, **You Need AI That Reduces Maintenance Costs**, **Beyond prompting: How KubeStellar reached 81% PR acceptance with AI agents**, **Are AI agents actually slowing us down?**, **Your Agent Can Code. It Just Can't See.**
 
 ## Where Used
 
-- **best-practices**: dual-model review system in [`reviews/`](../../reviews/) (Gemini + Claude → synthesis → deduped GitHub issue) is this doc's #5 in practice.
+- **best-practices**: dual-model review system in [`reviews/`](../../reviews/) (Gemini + Claude → synthesis → deduped GitHub issue) is this doc's #10 in practice.
 - **crumbl-ops**: Claude Code for all development with a single engineer — primary consumer of the checklist, validation loop, and destructive-action gating (payroll, QBO writes).
-- **command-center**: Scheduled agents taking outbound actions — #6 (human-in-the-loop) and reasoning-defense matter most.
+- **command-center**: Scheduled agents taking outbound actions — #11 (human-in-the-loop) and reasoning-defense matter most.
 - **wealth-mgmt**: "Fortress" software in a regulated context — spec-first + maintenance-cost discipline are load-bearing.
