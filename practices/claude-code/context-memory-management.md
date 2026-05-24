@@ -23,6 +23,7 @@ Every recurring fact gets **one canonical home**. Read that home; don't re-deriv
 - **Name the winner.** When two files describe the same fact, one is authoritative and the other points to it. Maintain a "sources of truth" table (one per repo) so the canonical home for each fact-scope is unambiguous.
 - **A per-module `CLAUDE.md` is a retrieval contract.** Read it instead of re-reading the module's code to learn what the module does. Because it stands in for the code, it **must mirror the code** — and when they disagree, *the code is authoritative and the doc is the bug.* A silently drifted doc is worse than no doc, because it is trusted.
 - **Point, don't restate.** A non-canonical mention of a fact should link to the home, not duplicate the content. Duplication is what drifts.
+- **Establish real-time data streaming as a secure, unified foundation for agents to access live business context.** Fragmented data across various systems (databases, SaaS, warehouses) and legacy security controls are significant roadblocks for agents reasoning across live business data. Implementing real-time data streaming platforms with integrated security controls and developer tooling provides a unified, secure, and efficient foundation for agents to retrieve and reason with up-to-date operational context, directly addressing fragmentation and supporting autonomous systems.
 
 Worked example (from a production hub repo): a `Sources of Truth` table maps *people* → a contacts file, *deal participants* → a domain knowledge file, *agent I/O* → that agent's `CLAUDE.md` (code-authoritative), *layout & conventions* → a file-map doc, *past choices* → the decision journal, *cross-session user facts* → memory.
 
@@ -84,6 +85,7 @@ Choices that outlive today's task go in `decisions/YYYY-MM-DD-{topic}.md` (see [
 ## Provenance
 
 When surfaced context is **AI-generated** (a model-written summary, a classification), mark it where it's shown, so a reader can tell synthesis from ground truth and knows to verify before acting. Raw data and AI synthesis should stay visually distinguishable. The same applies to *assembled* context: tag each fact with its source (especially for financial or compliance work), so a reviewer can trust or challenge a specific claim instead of the whole answer.
+- **Implement a trust boundary or classification for context elements based on their source (operator vs. external data).** Agentic systems are vulnerable to indirect prompt injection where instructions from external data (e.g., poisoned web pages, malicious GitHub issues) are indistinguishable from operator instructions within the inference context. Tag or classify context elements by source trustworthiness and instruct agents to treat untrusted instructions differently or seek explicit operator confirmation for sensitive actions, crucial for preventing credential brokering and unauthorized actions.
 
 ## Rich Context & Human-Agent Collaboration
 
@@ -96,6 +98,9 @@ When surfaced context is **AI-generated** (a model-written summary, a classifica
 ## Security & Isolation
 
 - **Utilize self-hosted sandboxes for agent runtime isolation to enhance security and data privacy.** Deploy agents within self-hosted sandboxes on customer infrastructure or managed service providers. This practice isolates agent tool execution, protecting internal networks from rogue scripts, preventing data leaks, and providing organizations with explicit control over data privacy, security, and runtime environment for sensitive context and actions.
+- **Select the agent's deployment substrate based on explicit security requirements for context ownership, credential management, and governance.** The choice of where an agent lives (e.g., self-hosted local machine vs. cloud service) fundamentally dictates who holds its context, who can access its credentials, and who controls the terms of its operation and data retention. For highly sensitive operations, a self-hosted or private cloud substrate may be a best practice to ensure direct control over the agent's memory, context, and sensitive access tokens, mitigating risks associated with third-party vendor control.
+- **Systematically use synthetic data in non-production environments when agents interact with sensitive contexts.** Agentic AI accelerates data interaction across the entire SDLC, including development sandboxes, CI/CD, and agent memory stores, often interacting with sensitive data without explicit requests. To prevent data privacy breaches and ensure compliance, implement a best practice of extensively replacing real sensitive data with high-quality synthetic data in all non-production environments where agents operate or learn from context.
+- **Secure the agentic toolchain (IDE extensions, MCP servers, developer tools) against weaponization as a primary attack vector.** The AI-driven shift in software supply chain security has turned agentic development tools like IDE extensions and MCP servers into high-value targets for attackers. Implement stringent security controls and continuous monitoring specifically for these components on developer workstations, treating them as critical attack surfaces that can be weaponized for instantaneous attacks. This includes rigorous vetting of open-source binaries and all developer-facing AI tools.
 
 ## Enforcement (the frontier)
 
@@ -118,6 +123,11 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 - **Seven questions decide whether your AI agent ships. Most teams can answer two.** (Nate Jones) — comprehensive control layer with multi-layered kill switches. Digest: 2026-05-20.
 - **Anthropic debuts MCP tunnels and self-hosted sandboxes to lock down AI agent infrastructure** (The New Stack) — self-hosted sandboxes for agent runtime isolation. Digest: 2026-05-19.
 - **HTML is the new Markdown: How Anthropic engineers are building with Claude Code | Thariq Shihipar** (Lenny's Newsletter) — interactive HTML artifacts for human-agent collaboration. Digest: 2026-05-18.
+- **Why enterprise AI keeps stalling — and how data streaming could unlock it** (The New Stack) — real-time data streaming for live business context. Digest: 2026-05-22.
+- **JFrog report recaps a tumultuous year in supply chain security** (The New Stack) — securing the agentic toolchain against weaponization. Digest: 2026-05-22.
+- **How MCP and synthetic data are reshaping compliance in the agentic era** (The New Stack) — synthetic data in non-production environments. Digest: 2026-05-23.
+- **OpenClaw passed 300,000 GitHub stars. Then Google launched Spark.** (The New Stack) — agent deployment substrate for security. Digest: 2026-05-23.
+- **When $8 Becomes $240** (AI Engineering) — trust boundary for context elements. Digest: 2026-05-24.
 
 ## Where Used
 
