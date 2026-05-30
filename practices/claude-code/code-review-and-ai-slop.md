@@ -47,41 +47,59 @@ Behavior: 3 attempts, exponential backoff (1s,2s,4s), retry only on 429/5xx,
 Done when: tests/test_qbo_client.py::test_retry_* pass; no change to call sites.
 ```
 
-### 2. Formally validate AI-generated or human-authored requirements for contradictions and ambiguities using logic engines before code generation begins.
+### 2. Require human developers to deeply understand the generated code and the underlying system architecture, not just the prompts.
+While AI can generate code rapidly, human developers bear the ultimate responsibility for the robustness and maintainability of the entire system. This practice emphasizes that reviewers must fully comprehend how AI-generated code integrates and impacts the broader architecture, ensuring it aligns with long-term design principles and prevents hidden technical debt.
+
+### 3. Formally validate AI-generated or human-authored requirements for contradictions and ambiguities using logic engines before code generation begins.
 Before an agent generates code, ensure its underlying requirements are precise and consistent. Use specialized tools (e.g., SMT solvers) that convert natural language requirements into formal logic and prove their soundness, surfacing any contradictions or ambiguities for human resolution. This prevents downstream 'slop' and rework by catching fundamental issues at the earliest stage.
 
-### 3. Brief agents like a senior partner, providing goals, context, constraints, and quality bars, rather than explicit step-by-step instructions.
+### 4. Brief agents like a senior partner, providing goals, context, constraints, and quality bars, rather than explicit step-by-step instructions.
 As AI agents become more capable, treat them like a senior partner instead of a junior employee. Provide a comprehensive brief with the goal, context, constraints, and desired quality bar, allowing the agent room to reason and operate autonomously within those bounds, rather than micromanaging with detailed prompts.
 
-### 4. Leverage richer visual formats, like HTML artifacts, for agent communication and planning, generating interactive specs and living design systems before producing final code.
+### 5. Encourage the use of agentic reasoning patterns like 'tree-of-thought with cognitive-frame branching' for complex planning and brainstorming tasks.
+To proactively improve the quality of AI-generated code and reduce 'slop', agents should be designed to employ advanced reasoning techniques. Patterns like 'tree-of-thought with cognitive-frame branching' allow agents to explore multiple divergent ideas, evaluate their promise, and deepen promising paths during the planning phase, leading to more robust and reasoned pre-code generation output.
+
+### 6. Leverage richer visual formats, like HTML artifacts, for agent communication and planning, generating interactive specs and living design systems before producing final code.
 Encourage agents to produce HTML-based interactive plans, mockups, or living design systems instead of just raw code or plain text. This facilitates better human understanding, collaboration, and feedback in the planning stage, significantly reducing 'slop' by catching issues earlier and ensuring alignment before code generation. This also suggests that a large portion of AI's output should be in planning artifacts rather than production-ready code.
 
-### 5. Provide AI agents with a permanent, comprehensive context foundation detailing business operations, brand voice, and historical decisions to ensure domain-specific, high-quality code generation.
+### 7. Adopt a structured Agent-Centric Development Cycle (AC/DC) framework (Guide, Generate, Verify, Solve) for continuous, integrated verification.
+Managing the rapid pace of AI-generated code requires a holistic governance model, not just isolated checks. The AC/DC framework guides the entire agentic development lifecycle, ensuring that verification is not a late-stage checkpoint but a continuous, integrated activity woven throughout guiding, generation, and problem-solving stages, building trust at speed.
+
+### 8. Provide AI agents with a permanent, comprehensive context foundation detailing business operations, brand voice, and historical decisions to ensure domain-specific, high-quality code generation.
 Implement a 'CLAUDE.md'-like file or similar mechanism within projects to serve as a persistent 'Business Snapshot.' This ensures the agent consistently generates code that aligns with the organization's unique context, reducing the need for repeated explanations and improving code relevance and quality across sessions.
 
-### 6. Before commencing complex agentic tasks, particularly code generation, utilize agents to first organize and validate their input context by building a source inventory, identifying duplicate or conflicting information, and flagging missing context.
+### 9. Before commencing complex agentic tasks, particularly code generation, utilize agents to first organize and validate their input context by building a source inventory, identifying duplicate or conflicting information, and flagging missing context.
 Providing a messy, unverified context to an AI agent often leads to 'slop' in its output. Leverage agents' improved ability to perform file-level operations (e.g., walking folder trees, comparing metadata) to systematically prepare a clean, authoritative 'project room' of source materials, preventing bad synthesis before code generation begins.
 
-### 7. Make the agent defend its reasoning
+### 10. Develop a centralized 'Context Lake' or semantic knowledge base for AI agents to store and retrieve domain-specific knowledge efficiently.
+Beyond basic context provision, scaling AI agents requires an architectural solution to manage vast amounts of domain-specific knowledge effectively. A 'Context Lake' provides structured, semantically rich information (e.g., service ownership, architectural decisions), overcoming limitations of context windows and tool sprawl by ensuring agents have deep, relevant knowledge without overwhelming their working memory.
+
+### 11. Make the agent defend its reasoning
 In review, prompt the agent to explain *why* it chose this design, what it ruled out,
 and what it's unsure about. This directly attacks "wrote code but didn't think"
 (digest 2026-05-18) and forces the latent reasoning into the open where a human can
 challenge it. If it can't defend a choice, that's a finding.
 
-### 8. When agents generate issue reports or problem descriptions, mandate that they stick to observable facts (commands, expected outcome, actual outcome, exact errors/logs) rather than inferring root causes or suggesting solutions.
+### 12. Prioritize using AI models that are designed to proactively flag uncertainties or potential flaws in their own generated code and reasoning.
+Instead of confidently fabricating or requiring explicit prompts to defend reasoning, advanced AI models can now surface their internal uncertainties. Selecting and leveraging models with this 'honesty' feature allows human reviewers to focus more efficiently on areas the AI itself deems less reliable, thereby reducing 'confident fabrication' risks.
+
+### 13. When agents generate issue reports or problem descriptions, mandate that they stick to observable facts (commands, expected outcome, actual outcome, exact errors/logs) rather than inferring root causes or suggesting solutions.
 AI-generated issue reports often present confident but inaccurate conclusions, leading to wasted human effort and misdiagnosis. By restricting agents to factual observations, teams can avoid acting on fabricated root causes or irrelevant implementation suggestions, thus preventing a new form of 'slop' in issue tracking.
 
-### 9. Validate in a real environment — "looks done" is not done
+### 14. Validate in a real environment — "looks done" is not done
 The validation loop is central to agentic dev: code should be run, tested, and where
 relevant deployed to an ephemeral environment before it's trusted (digest 2026-04-26;
 "81% PR acceptance" came from environment-based validation, not better prompts).
 Don't accept an agent's claim that it tested something — require evidence (CI green +
 the actual diff read). Agents will confidently assert success they didn't achieve.
 
-### 10. Design small, agent-executable, end-to-end validation checks that run quickly in a real environment to provide immediate feedback to coding agents.
+### 15. Design small, agent-executable, end-to-end validation checks that run quickly in a real environment to provide immediate feedback to coding agents.
 Traditional CI is too slow for agents. Create 'plans' – compact, end-to-end validation units that agents can author, select, and run within their session in seconds. This provides rapid, real-environment feedback crucial for iterative agent development and preventing slop.
 
-### 11. Use a written AI-code-review checklist
+### 16. Invest in robust 'harness engineering' and integrated evaluation loops for coding agents, combining model outputs, runtime feedback, and continuous validation to drive self-improvement.
+Achieving high-quality AI-generated code requires more than just a strong base model; it demands sophisticated 'harness engineering.' This involves building an integrated system that continuously feeds back runtime results and validation against benchmarks to the agent, enabling it to self-correct and improve its outputs iteratively, thereby preventing the accumulation of 'AI slop'.
+
+### 17. Use a written AI-code-review checklist
 Beyond the generic review, check the things slop hides behind (the "$1M incident"
 checklist, digest 2026-05-16):
 - **Readability/maintainability** — could a human own this in 6 months?
@@ -91,7 +109,7 @@ checklist, digest 2026-05-16):
 - **Real APIs** — no hallucinated methods, params, or imports.
 - **Blast radius** — what's the worst case if this is subtly wrong?
 
-### 12. Automated review as a gate, not a replacement
+### 18. Automated review as a gate, not a replacement
 Layered/multi-agent review (e.g., Claude Code Review) examines diffs within the full
 codebase, ranks findings by severity, and catches subtle bugs at a low false-positive
 rate (digest 2026-03-27). Use it as a *first-pass gate* — it raises signal — but keep
@@ -99,42 +117,75 @@ a human accountable for merge. Two cheap, high-leverage gates:
 - A second model/agent reviews the diff (dual-model, like this repo's review system).
 - The author-agent must address each finding or explain why it's a false positive.
 
-### 13. Secure the entire AI-driven development toolchain, including IDE extensions, agent platforms, and developer workstations, as part of the critical software supply chain.
+### 19. Integrate AI-powered offensive security tools, such as continuous penetration testing, specifically designed for AI-generated code.
+Traditional security testing struggles to keep pace with the velocity and unique vulnerabilities of AI-generated code. AI-powered penetration testing offers a continuous, offensive approach to actively find and exploit weaknesses, rather than just passively scanning, providing a proactive defense against agentic attackers.
+
+### 20. Secure the entire AI-driven development toolchain, including IDE extensions, agent platforms, and developer workstations, as part of the critical software supply chain.
 The software attack surface has fundamentally shifted upstream, with malicious actors actively weaponizing IDE extensions, agent servers, and developer tools to inject harmful code or compromise systems. Treat all components of the AI development environment as high-value targets, implementing robust security controls to prevent supply chain attacks before code is generated.
 
-### 14. Implement robust, machine-speed data governance and sensitive data redaction, including the use of synthetic data, across the entire AI-driven SDLC.
+### 21. Implement automated pre-installation scanning and blocking for all packages, plugins, and extensions introduced or proposed by AI agents.
+AI agents can autonomously pull and install dependencies, leading to the introduction of unowned, unvetted, or malicious packages. To counter this, security teams must deploy real-time scanning and blocking mechanisms that inspect all proposed installations from agents *before* they are integrated into the development environment, closing a critical supply chain gap.
+
+### 22. Implement robust, machine-speed data governance and sensitive data redaction, including the use of synthetic data, across the entire AI-driven SDLC.
 AI agents interact with sensitive data in development sandboxes, CI/CD pipelines, training datasets, and agent memory, often without explicit instruction or human oversight, at speeds that traditional governance struggles to match. Proactively redact or replace sensitive information with synthetic data in all non-production environments to prevent data leaks and ensure compliance.
 
-### 15. Implement strict credential brokering and isolation for AI agents, treating all external data sources (e.g., GitHub issues, web pages) as potentially malicious.
+### 23. Implement strict credential brokering and isolation for AI agents, treating all external data sources (e.g., GitHub issues, web pages) as potentially malicious.
 AI agents cannot distinguish between instructions from their operator and those embedded in external data they process, making them vulnerable to indirect prompt injection and credential leaks. Isolate agents, broker credentials carefully, and assume all external inputs can be weaponized to prevent sensitive data exposure.
 
-### 16. Human-in-the-loop for irreversible / high-blast-radius actions
+### 24. Implement a dedicated Identity and Access Management (IAM) framework for AI agents, treating each agent as an individual entity with granular, least-privilege permissions.
+AI agents are proliferating rapidly, often inheriting broad permissions from human users or service accounts, creating an 'Identity Vacuum' and a significant attack surface. A dedicated IAM for agents ensures each is treated as a distinct identity with granular, least-privilege access, mitigating risks from action-based threats and indirect prompt injection at scale.
+
+### 25. Implement secrets management solutions that default to least privilege access for AI agents within CI/CD pipelines.
+The 'AI paradox' means increased AI code leads to more workflow credentials to secure. Counter this by configuring secrets management in CI/CD pipelines to default to least privilege for AI agents. This automatically restricts agent access to specific credentials for only the jobs or contexts where they are strictly necessary, significantly reducing the blast radius of compromised agents.
+
+### 26. Utilize managed agent runtime platforms that provide isolated, sandboxed environments for agent execution, reasoning, tool calling, and code running.
+To enhance security and prevent unintended side effects from highly autonomous agents, deploy them within managed runtime platforms that offer robust isolation. These platforms, often using remote Linux sandboxes, contain agent actions, tool calls, and code execution, effectively limiting their blast radius and protecting underlying infrastructure from agent-induced vulnerabilities.
+
+### 27. Scrutinize all agent output channels for potential data exfiltration vectors, ensuring agents cannot create or transmit pre-authenticated links or render malicious content.
+AI agents' ability to generate and send content through various output channels (e.g., email, messaging, rendered interfaces) presents a critical exfiltration risk. This practice requires meticulous review of how agent outputs could be leveraged to leak sensitive data, such as through embedded pre-authenticated download links or malicious content designed to bypass security controls in client applications.
+
+### 28. Implement governance mechanisms for AI agents that dynamically create tools or access device file systems at runtime.
+As 'claw-style' agents gain the ability to self-modify by creating tools or directly interacting with device file systems, static security policies are insufficient. New governance frameworks are needed to log, review, and control these emergent capabilities, ensuring that dynamic actions align with pre-defined security policies and organizational intent.
+
+### 29. Human-in-the-loop for irreversible / high-blast-radius actions
 The data-loss catastrophe happened because an agent took a destructive action without
 a gate (digest 2026-03-27). Never let an agent run migrations, deletes, prod writes,
 or money movement unsupervised. Externalize operational knowledge (what's destructive,
 what's load-bearing) into `CLAUDE.md` / `knowledge/` so the agent has the context it
 otherwise lacks — and still gate the action.
 
-### 17. Keep diffs small and scoped
+### 30. Establish clear accountability for compliance with external regulations, including specific documentation requirements for AI-generated code.
+As AI-generated code proliferates, organizations face increasing legal accountability under regulations like the EU's Cyber Resilience Act. This mandates defining clear roles for compliance and a significant, structured documentation burden for all software, regardless of generation method, to demonstrate due diligence and manage risks.
+
+### 31. Define clear policies on whether to accept AI-generated code contributions and what formats are acceptable from external sources or other internal teams.
+Organizations must establish explicit guidelines for handling AI-generated code submissions, particularly from external contributors or different internal teams. This includes deciding whether to accept full AI-generated code, or only specific artifacts like reproducible bug reports and test cases, to manage review burden and maintain code quality standards.
+
+### 32. Keep diffs small and scoped
 Big-bang AI diffs are unreviewable, so they get rubber-stamped — that's how slop
 merges. Constrain each change to one concern, fitting existing conventions. Small
-diffs make the checklist (#11) and reasoning review (#7) actually tractable.
+diffs make the checklist (#17) and reasoning review (#11) actually tractable.
 
-### 18. Stop the self-correction spiral
+### 33. Stop the self-correction spiral
 When a model starts re-fixing its own output in a loop (digest 2026-04-26), it rarely
 recovers in-context and it burns tokens while drifting. Cut it: `Esc Esc` / `/rewind`
 to before the spiral, re-spec, and retry — don't keep arguing with it. (See
 [token-efficiency.md](token-efficiency.md) session moves.)
 
-### 19. Implement comprehensive observability for AI agent execution, tracking internal steps, model calls, tool usage, and decision paths to quickly identify inefficiency, looping behavior, and subtle failures.
+### 34. Implement comprehensive observability for AI agent execution, tracking internal steps, model calls, tool usage, and decision paths to quickly identify inefficiency, looping behavior, and subtle failures.
 Unlike traditional software, AI agent failures often manifest as subtle drifts, excessive loops, or inefficient resource consumption without crashing or explicit alerts. Establish granular monitoring of agent processes to understand their reasoning and resource consumption, ensuring operational efficiency and correct outcomes rather than just measuring final output or overall cost.
 
-### 20. Measure the cleanup tax, not just velocity
+### 35. Shift debugging strategy from log-based thinking to observability-driven engineering for AI systems, specifically addressing non-deterministic outputs and hidden reasoning steps.
+Unlike traditional software, AI systems exhibit non-deterministic behavior, silent failures, and opaque reasoning, rendering traditional log-based debugging ineffective. A robust observability strategy, encompassing tracing, granular logging, and token estimation, is crucial for understanding internal steps, identifying subtle failures, and debugging probabilistic AI systems effectively.
+
+### 36. Measure the cleanup tax, not just velocity
 "2x velocity" is meaningless if rework doubles too. Intercom paired Claude Code with
 deep telemetry — invocations, sessions, dashboards (digest 2026-04-26). Track rework:
 how often AI-authored code is reverted, hot-fixed, or refactored shortly after merge.
 Treat **reducing maintenance cost** as a first-class goal (digest 2026-05-18, ref.),
 not a side effect — prefer the simplest solution a human can maintain.
+
+### 37. Implement 'AI business observability' to clearly connect AI agent activities and associated costs to measurable business outcomes.
+Bridging the gap between engineering efforts and business value requires a new dimension of observability. 'AI business observability' moves beyond technical metrics to directly track how AI agent activities, their resource consumption, and costs contribute to specific business goals and KPIs, ensuring investments deliver tangible value and combatting 'tokenmaxxing' behaviors.
 
 ## Anti-Patterns
 
@@ -178,11 +229,28 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **How MCP and synthetic data are reshaping compliance in the agentic era** (The New Stack) — machine-speed data governance and redaction. Digest: 2026-05-23.
 - **When $8 Becomes $240** (AI Engineering) — credential brokering and isolation for agents. Digest: 2026-05-24.
 - **Who’s monitoring the agents?** (The New Stack) — comprehensive observability for agent execution. Digest: 2026-05-24.
+- **Why Linux creator Linus Torvalds gets angry hearing “99% of code is AI”** (The New Stack) — deep understanding. Digest: 2026-05-29.
+- **“The AI did it” won’t save you when EU regulators come knocking** (The New Stack) — external regulations. Digest: 2026-05-29.
+- **AI is shipping code faster than security was built to handle** (The New Stack) — offensive security tools. Digest: 2026-05-29.
+- **Claude Opus 4.8: "a modest but tangible improvement"** (Simon Willison) — models flag uncertainties. Digest: 2026-05-28.
+- **Claw-style AI agents are coming to the enterprise. The governance infrastructure is still catching up.** (The New Stack) — dynamic tool/filesystem access governance. Digest: 2026-05-28.
+- **The agentic identity crisis: Why your security isn’t ready for the AI revolution** (The New Stack) — dedicated IAM for agents. Digest: 2026-05-28.
+- **Debugging the undebuggable: building observability into probabilistic AI systems** (The New Stack) — observability-driven debugging. Digest: 2026-05-28.
+- **sqlite AGENTS.md** (Simon Willison) — policies for AI code contributions. Digest: 2026-05-27.
+- **[AINews] New AI Infra decacorns: Fireworks, Baseten (with OpenRouter on the way)** (Latent Space [ai_engineering]) — harness engineering. Digest: 2026-05-27.
+- **Researcher “gave Claude Code ‘ADHD’… and it thinks 2x better now.” Outside experts want more proof.** (The New Stack) — tree-of-thought reasoning. Digest: 2026-05-27.
+- **“There is no accountability”: AI coding agents are installing packages no one owns** (The New Stack) — pre-installation scanning for packages. Digest: 2026-05-27.
+- **With Google’s debut, the most important AI agent feature is now the most boring one** (The New Stack) — sandboxed agent runtimes. Digest: 2026-05-27.
+- **Why AI agents need a Context Lake** (The New Stack) — Context Lake. Digest: 2026-05-27.
+- **Microsoft Copilot Cowork Exfiltrates Files** (Simon Willison) — agent output channels exfiltration. Digest: 2026-05-26.
+- **Taming the agentic influx: a blueprint for AI business observability** (The New Stack) — AI business observability. Digest: 2026-05-26.
+- **How the AC/DC framework helps teams govern AI coding agents** (The New Stack) — AC/DC framework. Digest: 2026-05-26.
+- **GitLab 19.0 trades its string section for a full DevSecOps orchestra** (The New Stack) — least privilege for agents in CI/CD. Digest: 2026-05-25.
 - Referenced-only (title in recommendations, no full summary saved): **We Taught AI to Write Code But We Forgot to Teach It to Think**, **You Need AI That Reduces Maintenance Costs**, **Beyond prompting: How KubeStellar reached 81% PR acceptance with AI agents**, **Are AI agents actually slowing us down?**, **Your Agent Can Code. It Just Can't See.**
 
 ## Where Used
 
-- **best-practices**: dual-model review system in [`reviews/`](../../reviews/) (Gemini + Claude → synthesis → deduped GitHub issue) is this doc's #12 in practice.
+- **best-practices**: dual-model review system in [`reviews/`](../../reviews/) (Gemini + Claude → synthesis → deduped GitHub issue) is this doc's #18 in practice.
 - **crumbl-ops**: Claude Code for all development with a single engineer — primary consumer of the checklist, validation loop, and destructive-action gating (payroll, QBO writes).
-- **command-center**: Scheduled agents taking outbound actions — #16 (human-in-the-loop) and reasoning-defense matter most.
+- **command-center**: Scheduled agents taking outbound actions — #29 (human-in-the-loop) and reasoning-defense matter most.
 - **wealth-mgmt**: "Fortress" software in a regulated context — spec-first + maintenance-cost discipline are load-bearing.
