@@ -11,12 +11,6 @@
 name: Weekly Digests
 
 on:
-  schedule:
-    # Sat 01:00 UTC — ~3h before the crumbl-ops weekly-review cron ('15 4 * * 6')
-    # so data/digest_knowledge/ is fresh when that review fetches it. Scheduled
-    # runs have no inputs, so "Determine contexts to run" defaults to 'all'
-    # (crumbl-ops command-center wealth-mgmt). See crumbl-ops #542 (Q5).
-    - cron: '0 1 * * 6'
   workflow_dispatch:
     inputs:
       context:
