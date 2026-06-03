@@ -1,7 +1,9 @@
 # Weekly digest pipeline — manual dispatch only.
 #
 # Primary execution is local via scripts/run_weekly_digest.sh registered with
-# Windows Task Scheduler. Local execution uses local gh auth + GCP Secret
+# Windows Task Scheduler as CC-WeeklyDigest (Friday 6pm ET / 22:00 UTC).
+# Runs Friday so digest_knowledge is fresh for the crumbl-ops Saturday
+# weekly-review cron (Sat 04:15 UTC). Uses local gh auth + GCP Secret
 # Manager — no PAT stored in this public repo.
 #
 # This workflow stays available for manual re-runs. It does not create issues
