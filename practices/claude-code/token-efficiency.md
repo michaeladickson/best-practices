@@ -67,6 +67,7 @@ Note: Opus 4.7 delegates to smaller models less often than 4.6 — you need to e
 **Fixes:**
 - Use [`vercel-labs/agent-browser`](https://github.com/vercel-labs/agent-browser) instead of Chrome MCP (accessibility tree, not screenshots — 82% fewer tokens than Playwright MCP)
 - For PDFs in repo: run `pdftotext`, not `Read` — Read rasterizes pages (~3K tokens each)
+- **Sharing files — point, don't upload (PDFs/images).** `@`-mentioning or uploading a PDF/image makes the app rasterize every page (~3K tokens/page) *before* Claude can act on it. Instead, name the file + folder on disk and let Claude `pdftotext`/extract it (≈ text size, a fraction of the cost). Text files (code, `.md`, `.csv`, `.json`) are fine to upload — they cost only their text. **Exception:** scanned PDFs with no text layer, or when the *visual* matters (charts, diagrams, signatures) — those genuinely need the image, so upload them.
 - For mixed-format docs (PDF, .docx, .pptx, .xlsx, images): [`microsoft/markitdown`](https://github.com/microsoft/markitdown) converts to clean markdown. Drop-in for invoice processing, contract review, anything beyond pure PDF.
 - For large repos: [`tirth8205/code-review-graph`](https://github.com/tirth8205/code-review-graph) — AST map so Claude reads only affected files (6.8× fewer tokens on reviews)
 - For one-shot repo analysis without spawning a session: [`mufeedvh/code2prompt`](https://github.com/mufeedvh/code2prompt) — turns a repo into a single prompt-friendly file with up-front token counts
