@@ -28,7 +28,15 @@ GCP_PROJECT="hybrid-elysium-471814-p2"
 # account's creds for non-interactive use (it broke this job repeatedly); the
 # SA key is immune. The SA is pre-credentialed in gcloud and has
 # secretmanager.secretAccessor on both secrets.
-SA_ACCOUNT="crumbl-ops-dev@hybrid-elysium-471814-p2.iam.gserviceaccount.com"
+#
+# DEDICATED SA -- DO NOT point this at a shared SA. cc-digest@ is private to this
+# digest and scoped to secretAccessor on ONLY gemini-api-key + smtp-password.
+# It was previously crumbl-ops-dev@, but that SA is shared with crumbl-ops; a
+# crumbl-ops security sweep (their #665) deleted its key on 2026-06-05 during a
+# keyless-ADC migration, silently breaking this digest (command-center #216).
+# A private, minimal-scope SA decouples the two repos so neither breaks the other.
+# See command-center decisions/2026-06-15-digest-service-account.md.
+SA_ACCOUNT="cc-digest@hybrid-elysium-471814-p2.iam.gserviceaccount.com"
 
 # Use Windows-side gcloud (via cmd.exe) instead of WSL gcloud. WSL gcloud auth
 # silently expires after a few weeks of inactivity; Windows-side stays fresh
