@@ -69,7 +69,7 @@ The asymmetry drives the rule: a paragraph in root `CLAUDE.md` is paid in every 
 -   **Implement dynamic workflows with parallel subagents for tackling large-scale, complex coding tasks.** For complex projects like codebase-scale migrations, design agent workflows that dynamically plan the work and then execute hundreds of parallel subagents. Ensure a verification step is included to validate the outputs of these concurrent subagents before integrating them, enabling efficient and scalable problem-solving.
 -   **Utilize agent 'effort controls' to balance response quality, speed, and token cost.** Leverage model-level effort controls (e.g., Anthropic's 'elbow grease' settings) to dynamically adjust the agent's internal processing depth. Increase effort for critical tasks requiring deep reasoning and high accuracy, and reduce it for routine tasks where speed and lower token consumption are prioritized, thereby optimizing overall context budget and operational costs.
 -   **Shift focus from maximizing token usage ('tokenmaxxing') to optimizing token consumption for desired outcomes.** Guard against the 'tokenmaxxing' trap where token usage is mistakenly equated with productivity, leading to exploding AI budgets. Instead, tie token consumption directly to measurable outcomes and the delivery of useful features. Continuously evaluate the cost-effectiveness of context assembly and processing to ensure AI investments yield tangible value rather than just increased token volume.
-
+-   **Optimize agent token usage and latency through inference engineering techniques, including prompt structure optimization for prefix caching.** A significant portion of AI costs comes from resending redundant system prompts, tool lists, and static documents on every agent call. By strategically structuring prompts to maximize prefix caching, input token usage can be dramatically reduced (e.g., up to 90%), leading to lower inference bills and improved response times for agents.
 -   **Protect the cache.** Lock `--model` and the MCP set at session start; adding an MCP or swapping models mid-session rebuilds the prefix (~10× per miss). See [Token Efficiency](token-efficiency.md).
 -   **Curate the harness footprint.** Every tool from every connected MCP sits in context *every* turn — the same always-loaded tax as a fat `CLAUDE.md`. Prefer narrow, single-purpose MCP servers; disable unused ones.
 
@@ -116,6 +116,7 @@ When surfaced context is **AI-generated** (a model-written summary, a classifica
 
 ## Observability & Debugging
 -   **Implement comprehensive observability (tracing, logging, token estimation) for AI agent systems to debug non-deterministic behaviors and context-related failures.** Given the non-deterministic nature of AI agents, traditional debugging is insufficient. Instrument agent workflows, including retrieval, tool calls, LLM reasoning, and output validation, with tracing to visualize execution paths, detailed logging for inputs/outputs at each step, and token estimation to understand context usage. This allows for identifying issues like low-quality context retrieval or hidden reasoning steps.
+-   **Adopt a new debugging paradigm for probabilistic AI systems to effectively diagnose 'gradients of wrong' in context and memory usage.** Traditional debugging fails when AI systems produce confident but incorrect outputs (hallucinations, reasoning omission) without classic error messages. Implement tools and methods to identify probabilistic errors stemming from poor retrieval, ambiguous context, or data drift, which are direct failures in context and memory management.
 
 ## Security & Isolation
 
@@ -167,6 +168,8 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 -   **AI Agents of the Week: Papers You Should Know About** (Pascal Biese (LLM Watch)) — structured intermediate representations ('blueprints') as explicit context artifacts. Digest: 2026-06-01.
 -   **Your AI agent is going to hallucinate at scale** (Ruben Dominguez (The AI Corner)) — mitigate inherent scaling limitations of embedding-proximity-based retrieval systems. Digest: 2026-06-04.
 -   **Google Gemma 4 12B nearly matches 26B benchmarks — and runs on your laptop** (The New Stack) — local/on-device memory tiers for agents. Digest: 2026-06-05.
+-   **Inference engineering is the 80% cost cut most teams miss** (Ruben Dominguez (The AI Corner)) — optimize agent token usage and latency through inference engineering techniques including prefix caching. Digest: 2026-06-16.
+-   **Your AI pipeline is broken, and your dashboards don’t know it** (The New Stack [devops]) — debugging probabilistic AI systems and 'gradients of wrong'. Digest: 2026-06-18.
 
 ## Where Used
 
