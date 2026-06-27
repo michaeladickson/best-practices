@@ -41,6 +41,7 @@ Needs:
   - active rules for this domain         (source: knowledge/<domain>/rules.md)
 Format: pre-assembled markdown brief, newest-first, each fact tagged with its source.
 ```
+-   **Define and implement structured 'agent handoff records' to convey state, sources, and limits when work moves between different AI tools or agents.** Instead of relying on humans as the 'integration layer,' formalize the handoff process. An agent's output should serve as a structured task record for the next agent, carrying essential metadata like original sources and operational constraints to maintain context and traceability across systems and diverse agents.
 -   **Implement runtime validation of retrieved context quality and completeness at production scale to prevent confident, incorrect answers.** Beyond defining retrieval contracts, actively monitor and validate the relevance, accuracy, and completeness of retrieved context during live agent operations, especially in RAG systems. This proactively addresses the problem of retrieval degradation at scale, preventing agents from generating fluent but incorrect outputs based on incomplete or irrelevant information.
 -   **Design large-scale agent memory architectures to explicitly mitigate inherent scaling limitations of embedding-proximity-based retrieval systems.** Acknowledge the fundamental proof that embedding-proximity-based memory systems (e.g., RAG, vector databases) are prone to hallucination and forgetting as memory scale increases. When designing for extensive agent memory, implement alternative or hybrid architectural approaches and strict guardrails to prevent these systems from degrading reliability and inventing facts at large scale.
 -   **Implement declarative blueprint languages and standardized orchestration patterns for governable multi-agent systems.** Moving beyond ad-hoc prompt chaining, define agent interactions and context flows using declarative languages like ABL. Incorporate built-in orchestration patterns (e.g., supervisor, delegation, fan-out, agent-to-agent federation) to ensure structured, predictable, and governable context management across complex multi-agent workflows.
@@ -72,6 +73,7 @@ The asymmetry drives the rule: a paragraph in root `CLAUDE.md` is paid in every 
 -   **Optimize agent token usage and latency through inference engineering techniques, including prompt structure optimization for prefix caching.** A significant portion of AI costs comes from resending redundant system prompts, tool lists, and static documents on every agent call. By strategically structuring prompts to maximize prefix caching, input token usage can be dramatically reduced (e.g., up to 90%), leading to lower inference bills and improved response times for agents.
 -   **Protect the cache.** Lock `--model` and the MCP set at session start; adding an MCP or swapping models mid-session rebuilds the prefix (~10× per miss). See [Token Efficiency](token-efficiency.md).
 -   **Curate the harness footprint.** Every tool from every connected MCP sits in context *every* turn — the same always-loaded tax as a fat `CLAUDE.md`. Prefer narrow, single-purpose MCP servers; disable unused ones.
+-   **Utilize explicit 'rules files' or policies within agent harnesses to prioritize and enforce the agent's use of external context and skills over its internal model knowledge.** Agents may default to internal training data even when external tools or knowledge bases are configured. A dedicated 'rules file' or similar mechanism provides explicit instructions to the agent to reliably access and apply external context and skills first, ensuring consistent, correct, and current behavior by overriding potential internal model biases.
 
 ## Cross-Boundary Duplication Is Allowed
 
@@ -170,6 +172,8 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 -   **Google Gemma 4 12B nearly matches 26B benchmarks — and runs on your laptop** (The New Stack) — local/on-device memory tiers for agents. Digest: 2026-06-05.
 -   **Inference engineering is the 80% cost cut most teams miss** (Ruben Dominguez (The AI Corner)) — optimize agent token usage and latency through inference engineering techniques including prefix caching. Digest: 2026-06-16.
 -   **Your AI pipeline is broken, and your dashboards don’t know it** (The New Stack [devops]) — debugging probabilistic AI systems and 'gradients of wrong'. Digest: 2026-06-18.
+-   **Grab the Open Engine guide: the copy-paste task record that makes one AI's work the next AI's job, with receipts** (Nate Jones) — Define and implement structured 'agent handoff records'. Digest: 2026-06-26.
+-   **Agent Toolkit for AWS includes 20+ agent skills, but your agent might not load them without this one file** (The New Stack) — Utilize explicit 'rules files' or policies within agent harnesses. Digest: 2026-06-25.
 
 ## Where Used
 
