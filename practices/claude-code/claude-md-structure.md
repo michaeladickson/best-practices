@@ -57,8 +57,8 @@ Every project should have a root `CLAUDE.md` that gives Claude Code full context
 
 ## Learning
 
-Track knowledge in `knowledge/INDEX.md` → category files.
-Route corrections to their home: behavior → cross-session memory, architecture → `decisions/`, a failed hypothesis → demote in `hypotheses.md`.
+Track knowledge in `knowledge/INDEX.md` → domain files.
+Route corrections to their home: behavior → cross-session memory, architecture → `decisions/`, domain facts and confirmed rules → `knowledge/<domain>/knowledge.md`.
 ```
 
 ## Module-Level CLAUDE.md
@@ -88,29 +88,32 @@ For complex subsystems, add a local `CLAUDE.md` in the module directory:
 
 ```
 knowledge/
-  INDEX.md        # Links to all knowledge files
-  domain/         # What things are (accounts, tax rules, etc.)
-  procedural/     # How to do things (data import, analysis, etc.)
-  pricing/        # Example domain folder
-    knowledge.md  # facts and patterns
-    hypotheses.md # need more data
-    rules.md      # confirmed — apply by default
+  INDEX.md        # Links to domain files, plus routing / dating notes
+  FILE_MAP.md     # Codebase layout, agent schedule, dev conventions
+  <domain>/
+    knowledge.md  # Facts + confirmed rules + open questions, one file per domain
 ```
 
-Principles:
+**Principles:**
 - Progressive disclosure: read top-down, load only what you need
-- Separate domain knowledge (what) from procedural (how)
-- Route corrections to their home (decisions / hypotheses.md / memory), not a catch-all error log
-- Review and merge/split files regularly
+- One `knowledge.md` per domain — facts, rules-in-effect, and open tuning questions live together
+- Time-sensitive entries carry an inline date (e.g. `(2026-05-20)`); stable reference facts don't need one
+- Git history + inline dates are the freshness signal; no separate curation lifecycle
+- Route corrections to their home: architecture → `decisions/`, behavior → cross-session memory, domain facts → `knowledge/<domain>/knowledge.md`
 
-**Hypothesis → Rule promotion** (paste into CLAUDE.md):
-```
-Before starting a new task, review existing rules and hypotheses for this domain.
-Apply rules by default. Check if any hypothesis can be tested with today's work.
-At the end of each task, extract insights and store in domain folders.
-When a hypothesis is confirmed 5+ times, promote it to a rule.
-When a rule is contradicted by new data, demote it back to a hypothesis.
-```
+**One file per domain — not three.**
+
+An earlier version of this doc described a three-file lifecycle per domain (`knowledge.md` for facts, `hypotheses.md` for tentative observations, `rules.md` for confirmed patterns, with a 5+ confirmations → promote rule). It was retired after two months of use — hypotheses files stayed empty, no one wrote hypotheses during sessions, and the cross-session memory system already covered the same role for a small team.
+
+**When the three-file lifecycle might still fit:**
+- A team of several engineers actively debating conventions, where the state of a rule is genuinely contested
+- A domain where explicit "we tested this N times and it held" evidence is the deliverable (research, safety-critical systems)
+
+**When it will not fit** (which was the honest read on most personal / small-team projects):
+- Solo or two-person teams
+- Projects where cross-session memory (`feedback_*`, `reference_*`) already captures confirmed rules and domain facts
+
+If in doubt, start with one `knowledge.md` per domain and split only if a domain genuinely accumulates unresolved hypotheses that would be lost otherwise. Adding structure later is cheaper than removing it once dead files exist.
 
 ## Decision Journal
 
