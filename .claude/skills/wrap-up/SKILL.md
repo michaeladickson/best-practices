@@ -1,0 +1,93 @@
+---
+name: wrap-up
+description: End-of-session in best-practices — verify all three git refs (worktree, origin/main, main checkout) match; trace cross-repo tangents (issues filed in crumbl-ops / command-center / wealth-mgmt, prompts handed off); flag digest-pipeline watch-items for Friday's run; save any genuinely-surprising insight to cross-session memory; present a terse summary. No parking, no PROJECT_STATUS — this repo is a catalog, not a delivery tracker.
+user_invocable: true
+---
+
+# /wrap-up — End-of-Session (best-practices)
+
+Best-practices is a docs + digest catalog, not a delivery repo — sessions are usually terminal (build a doc, ship a feature, run an assessment) rather than multi-day. This is the whole ritual; there is no `/wrap-up-eod` variant like crumbl-ops has.
+
+Run in order. Terse bullets in the summary; don't ask permission for git or memory steps that surface obvious candidates.
+
+## Steps
+
+### 1. Verify clean git state (REQUIRED — don't skip, don't ask)
+
+The direct-to-main pattern this repo uses means every push in the session should already have synced. Confirm it did:
+
+```bash
+git status --short
+git rev-parse --short HEAD
+git rev-parse --short origin/main
+git -C C:/Users/micha/best-practices rev-parse --short HEAD
+```
+
+Handle any drift:
+- **Uncommitted changes in the worktree** → commit + push using the one-shot identity override + `Co-Authored-By` footer pattern this repo uses. Never leave the session with a dirty tree.
+- **Worktree ahead of origin/main** → `git push origin HEAD:main`.
+- **Main checkout behind origin/main** → `git -C C:/Users/micha/best-practices merge --ff-only origin/main`.
+- **Worktree diverged from origin/main** → do NOT force-push. Fetch, rebase onto origin/main, resolve any conflicts (usually trivial — this session's edits vs. the weekly `[automated]` commits from the scheduled Friday runs), push. Match the pattern the session already used.
+- **Stray temp files** — check for `_tmp_*`, `*.bak`, or scratchpad artifacts that shouldn't be tracked and remove them.
+
+Do not proceed past this step until all three refs match and the working tree is clean.
+
+### 2. Trace cross-repo tangents
+
+Sessions here often file issues or hand off artifacts to other repos. Note in the summary:
+
+- **GH issues filed** in `michaeladickson/crumbl-ops`, `command-center`, or `wealth-mgmt` — link by number so there's a trail (`gh issue view <n> -R michaeladickson/<repo>` if uncertain).
+- **Commits pushed to another repo** — rare from a best-practices session, but possible (e.g., `feedback_*.md` memory files on the crumbl-ops side, or a `decisions/` entry).
+- **Prompts or docs handed off** for use elsewhere — e.g., a Fable prompt authored here meant to be pasted into a crumbl-ops session. Name the file path so the user can find it Monday.
+
+### 3. Flag digest-pipeline watch-items
+
+The weekly digest + `practice_updater` runs Friday 6pm ET via the `CC-WeeklyDigest` Windows Task Scheduler task. If this session changed anything the next run will exercise, name it in the summary — the goal is a short "look at this on Saturday" list, not a full changelog.
+
+- **New practice doc registered** in `digest/config/practice-docs.yaml` → *"first `practice_updater` run against this doc will be Friday; skim the auto-commit."*
+- **`digest/practice_updater.py` edits** (extract/integrate prompts, `_validate` rules) → *"monitor the first affected doc's diff for the failure mode you were defending against."*
+- **New feed** in `digest/config/feeds.yaml` → *"starts feeding Friday; expect first candidates from &lt;source&gt; the following week."*
+- **`scripts/run_weekly_digest.sh` changed** → *"next run exercises the change; check the Task Scheduler log."*
+- **`.github/workflows/weekly-digests.yml` changed** → *"manual-dispatch fallback affected — the local runner is untouched."*
+
+Do NOT invent watch-items. If the session didn't change any of these areas, say *"no digest-pipeline watch-items."*
+
+### 4. Cross-session memory (only if something surprising surfaced)
+
+If — and only if — the session surfaced a genuinely non-obvious insight about *how this repo works* (a subtle constraint, a recurring gotcha, a user preference the session confirmed for the first time), save it as its own memory file at `C:\Users\micha\.claude\projects\C--Users-micha-best-practices\memory\` following the standard frontmatter format (`name`, `description`, `metadata.type`), and add a one-line entry to `MEMORY.md` in that directory.
+
+Skip by default. Save memory only for insights that would surprise a fresh reader of the repo — never for anything derivable from the code, git log, or existing docs. Match the anti-fragmentation stance in `practices/claude-code/context-memory-management.md`.
+
+### 5. Present the summary
+
+Terse bullets, in this shape:
+
+```
+Wrapped YYYY-MM-DD.
+
+Shipped:
+- <sha> <one-line commit message>
+- <sha> <one-line commit message>
+- ...
+
+Cross-repo:
+- Filed <repo>#<num> — <one-line>
+- Handed off <path> for use in <repo>
+- (or "none")
+
+Watch next Friday's digest for:
+- <doc/feature> — <why>
+- (or "no digest-pipeline watch-items")
+
+Memory saved:
+- <slug>: <one-line>  (or "none — nothing surprising")
+
+Git: worktree = origin/main = main checkout at <sha>. Working tree clean.
+```
+
+## Rules
+- Step 1 is required, not optional — a session that leaves any of the three refs out of sync is unfinished.
+- Steps 2–3 are enumeration, not judgment: name what happened; don't editorialize.
+- Skip step 4 by default. The bar for a memory save is "would surprise a fresh reader"; anything less belongs in a doc or a commit message.
+- Bullet points over paragraphs — terse wins.
+- No emojis unless the user has explicitly asked for them.
