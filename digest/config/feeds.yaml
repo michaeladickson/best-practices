@@ -40,6 +40,9 @@ feeds:
   - name: "Ruben Dominguez (The AI Corner)"
     url: "https://theaicorner1.substack.com/feed"
     category: ai_strategy
+  - name: "Kun Chen (Kun's Field Notes)"
+    url: "https://blog.kunchenguid.com/feed"
+    category: ai_engineering
 
   # AI + Investing (cross-routed from wealth-mgmt for AI best practices)
   - name: "Compound With AI"
