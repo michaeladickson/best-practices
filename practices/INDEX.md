@@ -55,6 +55,7 @@ See [`/reviews/README.md`](../reviews/README.md) for setup instructions.
 - [Context & Memory Management](claude-code/context-memory-management.md) — Memory tiers, retrieval contracts / sources of truth, context budget & session moves, anti-fragmentation, skills as institutional memory, provenance
 - [CLI Patterns](claude-code/cli-patterns.md) — Click structure, common flags, command groups
 - [Code Review & Preventing AI Slop](claude-code/code-review-and-ai-slop.md) — Spec-first, defend-the-reasoning, real-environment validation, AI-code-review checklist, destructive-action gating, cleanup-tax telemetry
+- [Model-Hierarchy Delegation](claude-code/model-hierarchy-delegation.md) — Brain-vs-hands, tier rules (Fable/Opus/Sonnet/Haiku), when to delegate, depth cap 2, structured returns, judgment stays with the parent
 - [Token Efficiency](claude-code/token-efficiency.md) — Cache misses, context bloat, model routing, input format
 - [Remote Access](claude-code/remote-access.md) — Web Sessions, Remote Control, Dispatch, Channels
 - [Surface Guide](claude-code/surface-guide.md) — Chat vs. Cowork vs. Code Tab vs. Code CLI

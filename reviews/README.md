@@ -50,6 +50,7 @@ Each function review runs independently (Gemini + Claude → synthesis → GitHu
 | `ai-slop-review.md` | On-demand AI-slop/code-review self-assessment — spec discipline, validation loop, destructive-action gating, cleanup-tax telemetry |
 | `agent-action-safety-review.md` | On-demand agent action-safety self-assessment — action tiers, least-privilege, judge layer, human-in-the-loop, audit trail |
 | `llm-eval-review.md` | On-demand LLM-evaluation self-assessment — fixture datasets, regression gates, model-upgrade gating, drift monitoring |
+| `model-hierarchy-review.md` | On-demand model-hierarchy delegation self-assessment — tier awareness, parent-judgment/hands split, depth cap, structured returns, delegation audit trail |
 | `synthesize.md` | Instructions for merging Gemini + Claude findings |
 | `review-context-template.md` | Template for per-repo context (threat model, intentional decisions) |
 | `workflow-template.yml` | Full GitHub Actions workflow — copy to each repo |

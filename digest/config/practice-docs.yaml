@@ -142,6 +142,43 @@ docs:
       - shrinkflation
       - ground truth
 
+  - path: practices/claude-code/model-hierarchy-delegation.md
+    topic: "Routing work across model tiers (Fable/Opus/Sonnet/Haiku) via subagents"
+    scope: |
+      Getting the frontier model's judgment while cheaper models do the mechanical
+      work. Brain-vs-hands split; tier rules (Fable/Opus for planning + hard
+      trade-offs, Sonnet for substantive implementation + scoped research + focused
+      verification, Haiku for trivial/mechanical); when to delegate and when not to
+      (parent needs the reasoning, synthesis holds it together, spawn overhead
+      dominates); depth cap 2; small teams and shutdown discipline; structured
+      returns the parent can review; giving the parent a routing rule instead of a
+      rigid script; "swap on purpose for cost"; and never delegating the judgment
+      layer, money-moving actions, deletes, prod writes, or outbound sends.
+    keywords:
+      - delegate
+      - delegation
+      - subagent
+      - orchestrat
+      - hierarchy
+      - route
+      - routing
+      - tier
+      - model picker
+      - model selection
+      - model choice
+      - cheaper model
+      - lower power
+      - haiku
+      - sonnet
+      - opus
+      - fable
+      - swap on purpose
+      - spawn
+      - parallel
+      - shutdown
+      - teammate
+      - depth cap
+
 # Anchors every doc must still contain after an auto-edit, else the write is rejected.
 required_anchors:
   - "## Sources"

@@ -183,8 +183,27 @@ At the end, produce a summary in chat (not a file) with:
 - Budget-aware. Read the specific files in the map. Do not explore the repo
   broadly. Batch reads.
 - Do not touch anything outside `.claude/skills/`.
-- Do not spawn subagents — your reasoning is the value. Sequential authoring
-  is fine; keep it linear.
+- Delegate mechanical work; keep judgment in this session. Your reasoning is
+  the value — but knowing what NOT to think through is part of that judgment
+  (Jesse Vincent, Claude Code team, via Simon Willison: *"Tell Fable to use
+  other models for smaller tasks, applying its own judgement about which model
+  to use"*).
+  - Delegate to **Sonnet subagents**: batch reads of the scar-tissue map;
+    git-log lookups for specific incidents; verifying that commands, paths,
+    function names, DB columns, and line numbers exist exactly as cited;
+    "does this candidate skill duplicate an existing one" checks.
+  - Delegate to **Haiku subagents**: trivial mechanical checks (file-exists,
+    line-count, directory listing, format normalization).
+  - Keep in **this Fable loop**: which skills to author, sibling relationships,
+    "When NOT to use" clauses, Origin scars, self-review, drop-candidate
+    decisions, and the final coverage-map summary. Every judgment call.
+  - Depth cap: 2 (this session → one subagent tier; no further nesting).
+  - Team cap: ≤ 5 concurrent subagents. Shut each one down as soon as its
+    structured return is in.
+  - Require structured returns (JSON or terse markdown) — not free-form prose
+    — so you can review each without re-reading the raw material.
+  - Never delegate: authoring decisions, drop decisions, sibling relationships,
+    or anything that writes into `.claude/skills/`.
 - Do not invent capabilities Opus and Sonnet lack. Skills bridge process,
   not capability.
 - Every claim carries a source and a date. No stats without evidence.
