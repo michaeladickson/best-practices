@@ -25,6 +25,7 @@ Usage:
 import difflib
 import json
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -239,6 +240,46 @@ Editing rules — follow exactly:
     return _unwrap_markdown_fence(resp.text)
 
 
+_MD_LINK_RE = re.compile(r"\[[^\]]+\]\([^)]+\)")
+_PRACTICE_HEADING_RE = re.compile(r"^###\s+\d+\.\s+(.+?)\s*$")
+_HEADING_STOP = frozenset({
+    "a", "an", "the", "of", "to", "for", "and", "or", "in", "on", "at", "by",
+    "with", "from", "into", "not", "no", "it", "is", "be", "as", "via",
+    "own", "use", "your", "you", "this", "that", "then", "when", "if", "but",
+    "so", "just", "any", "all", "each", "one", "two",
+})
+
+
+def _count_md_links(text: str) -> int:
+    return len(_MD_LINK_RE.findall(text))
+
+
+def _heading_key(title: str) -> tuple[str, ...]:
+    """First 3 content tokens of a heading, lowercased and stop-word-stripped.
+    Empty tuple if fewer than 3 content tokens (too short to compare)."""
+    words = re.sub(r"[^\w\s]", " ", title.lower()).split()
+    content = [w for w in words if w not in _HEADING_STOP and len(w) > 2]
+    return tuple(content[:3]) if len(content) >= 3 else ()
+
+
+def _duplicate_heading_pairs(text: str) -> list[tuple[str, str]]:
+    """Pairs of numbered `### N. Title` headings sharing the same 3-content-word key."""
+    by_key: dict[tuple[str, ...], list[str]] = {}
+    for ln in text.splitlines():
+        m = _PRACTICE_HEADING_RE.match(ln.strip())
+        if not m:
+            continue
+        k = _heading_key(m.group(1))
+        if k:
+            by_key.setdefault(k, []).append(m.group(1))
+    pairs: list[tuple[str, str]] = []
+    for hs in by_key.values():
+        for i, h1 in enumerate(hs):
+            for h2 in hs[i + 1:]:
+                pairs.append((h1, h2))
+    return pairs
+
+
 def _validate(old: str, new: str, required_anchors: list[str]) -> tuple[bool, str]:
     if not new or not new.strip():
         return False, "empty response"
@@ -253,6 +294,18 @@ def _validate(old: str, new: str, required_anchors: list[str]) -> tuple[bool, st
         return False, f"suspiciously short ({len(new)} < {MIN_LEN_RATIO}*{len(old)})"
     if len(new) > MAX_LEN_RATIO * len(old):
         return False, f"suspiciously long ({len(new)} > {MAX_LEN_RATIO}*{len(old)})"
+    # Structural defenses against the specific failure modes seen in the
+    # 2026-07-05 dry-run (URL flattening in Sources; duplicate practice
+    # headings). Both are "new-only" — pre-existing baseline issues don't
+    # cause perpetual rejects.
+    old_links = _count_md_links(old)
+    new_links = _count_md_links(new)
+    if new_links < old_links:
+        return False, f"markdown links dropped ({old_links} -> {new_links})"
+    fresh_dupes = set(_duplicate_heading_pairs(new)) - set(_duplicate_heading_pairs(old))
+    if fresh_dupes:
+        h1, h2 = next(iter(fresh_dupes))
+        return False, f"new duplicate practice heading: {h1!r} vs {h2!r}"
     return True, "ok"
 
 
