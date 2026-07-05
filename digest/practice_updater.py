@@ -208,12 +208,28 @@ Editing rules — follow exactly:
 - Preserve the document's structure, voice, and ALL existing sections and headings,
   including the H1 title, the "## Self-Assessment" pointer, "## Sources", and
   "## Where Used". Do not delete existing content.
-- Integrate each new practice into the most fitting place: add a new numbered practice
-  under "## Best Practices", add a row to the failure-mode or anti-pattern table if it
-  fits, and/or refine an adjacent existing practice. Keep numbering consistent.
+- **Preserve markdown links exactly.** Every `[label](url)` in the current document
+  must remain `[label](url)` in your output. Never flatten a link to `[label]`,
+  strip its URL, or alter its bracket / parenthesis syntax. This applies to every
+  link in "## Sources", inline links, and anywhere else.
+- **Check for duplication BEFORE adding a numbered practice.** For each candidate,
+  scan the existing "## Best Practices" section for a practice covering the same
+  IDEA (not the same wording — match on substance). If one exists, DO NOT add a
+  new numbered practice; instead add ONLY a bullet to "## Sources" attributing the
+  new article. Splitting one clear practice into two overlapping ones is worse
+  than adding nothing. When in doubt, prefer a Sources-only addition.
+- **No cosmetic churn on unchanged content.** Do not alter whitespace, list-marker
+  spacing (e.g. `1. ` vs `1.  `), capitalization, or ordering of any line whose
+  meaning you are not directly changing. If a line is unchanged in meaning, output
+  it byte-for-byte.
+- Integrate each GENUINELY-NEW practice into the most fitting place: add a new
+  numbered practice under "## Best Practices", add a row to the failure-mode or
+  anti-pattern table if it fits, and/or refine an adjacent existing practice.
+  Keep numbering consistent.
 - Be surgical and concise. Do not pad. Match the existing formatting exactly.
-- For EVERY new practice you add, append a matching bullet to the "## Sources" section
-  in the existing format: **Title** (source) — one phrase. Digest: YYYY-MM-DD.
+- For EVERY article you draw from — whether it produces a new numbered practice
+  OR a Sources-only addition — append a matching bullet to the "## Sources"
+  section in the existing format: **Title** (source) — one phrase. Digest: YYYY-MM-DD.
 - Do not invent sources, URLs, or claims beyond what the new practices state.
 - Return only the full Markdown document.
 """
