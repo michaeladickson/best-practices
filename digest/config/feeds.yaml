@@ -43,6 +43,9 @@ feeds:
   - name: "Kun Chen (Kun's Field Notes)"
     url: "https://blog.kunchenguid.com/feed"
     category: ai_engineering
+  - name: "Matt Pocock (AI Hero)"
+    url: "https://www.aihero.dev/rss.xml"
+    category: ai_engineering
 
   # AI + Investing (cross-routed from wealth-mgmt for AI best practices)
   - name: "Compound With AI"
