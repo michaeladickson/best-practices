@@ -98,62 +98,86 @@ Beyond simply being provided context, these agents actively build and refine the
 ### 18. Regularly review and prune AI agent toolkits, removing unnecessary or redundant tools to improve agent focus, reduce system complexity, and enhance reliability by minimizing potential failure modes and unintended interactions.
 Just as with human-written code, 'less is more' applies to AI agent design. Periodically audit the set of tools an agent has access to, systematically removing those that are not essential, redundant, or introduce unnecessary cognitive load or potential for error. This focused approach helps agents perform more reliably and reduces 'slop' from over-complexity.
 
-### 19. Provide AI agents with a permanent, comprehensive context foundation detailing business operations, brand voice, and historical decisions to ensure domain-specific, high-quality code generation.
+### 19. Design AI agent toolkits and their schemas to be robust against model-specific biases and inconsistencies, potentially offering model-optimized tool implementations or comprehensive error handling for malformed tool calls.
+As AI models are increasingly trained and optimized for specific internal tool-use patterns, external or custom tool integrations can suffer from malformed calls or invented arguments, leading to 'AI slop' in agent execution. Proactively design tool APIs and validation layers to be resilient to these inconsistencies. This may involve providing different tool implementations optimized for various models or implementing robust parsing and error recovery to ensure consistent and reliable agent performance across diverse underlying LLMs.
+
+### 20. Provide AI agents with a permanent, comprehensive context foundation detailing business operations, brand voice, and historical decisions to ensure domain-specific, high-quality code generation.
 Implement a 'CLAUDE.md'-like file or similar mechanism within projects to serve as a persistent 'Business Snapshot.' This ensures the agent consistently generates code that aligns with the organization's unique context, reducing the need for repeated explanations and improving code relevance and quality across sessions.
 
-### 20. Before commencing complex agentic tasks, particularly code generation, utilize agents to first organize and validate their input context by building a source inventory, identifying duplicate or conflicting information, and flagging missing context.
+### 21. Before commencing complex agentic tasks, particularly code generation, utilize agents to first organize and validate their input context by building a source inventory, identifying duplicate or conflicting information, and flagging missing context.
 Providing a messy, unverified context to an AI agent often leads to 'slop' in its output. Leverage agents' improved ability to perform file-level operations (e.g., walking folder trees, comparing metadata) to systematically prepare a clean, authoritative 'project room' of source materials, preventing bad synthesis before code generation begins.
 
-### 21. Develop a centralized 'Context Lake' or semantic knowledge base for AI agents to store and retrieve domain-specific knowledge efficiently.
+### 22. Develop a centralized 'Context Lake' or semantic knowledge base for AI agents to store and retrieve domain-specific knowledge efficiently.
 Beyond basic context provision, scaling AI agents requires an architectural solution to manage vast amounts of domain-specific knowledge effectively. A 'Context Lake' provides structured, semantically rich information (e.g., service ownership, architectural decisions), overcoming limitations of context windows and tool sprawl by ensuring agents have deep, relevant knowledge without overwhelming their working memory.
 
-### 22. Standardize the externalization and portability of AI agent skills and workflows (e.g., prompts, runbooks, configuration files) to ensure they are visible, movable, inspectable, testable, and not vendor-locked.
+### 23. Implement sophisticated retrieval quality mechanisms for AI agents, prioritizing relevant contextual information and trade-off discussions over mere implementation details.
+Agents often fail not due to poor reasoning, but due to being given irrelevant or poorly ranked context. Design retrieval systems to surface high-value contextual information, such as design decisions and architectural trade-offs, ensuring that agents can access the most pertinent data for a given task and avoid drawing conclusions from superficial information. This prevents 'confident fabrication' based on partial or misleading context.
+
+### 24. Standardize the externalization and portability of AI agent skills and workflows (e.g., prompts, runbooks, configuration files) to ensure they are visible, movable, inspectable, testable, and not vendor-locked.
 As AI agents increasingly encapsulate complex procedures and problem-solving logic, treat these 'skills' as career capital. Document and store agent workflows in open, transferable formats (like SKILL.md files or runbooks) rather than leaving them embedded in proprietary tools or ephemeral chat histories, enabling easier sharing, maintenance, and migration across platforms.
 
-### 23. Establish secure registries for AI agent skills, including public hardened skills and private organization-specific skills, and implement continuous scanning for vulnerabilities such as over-permissioned access, obfuscated execution, credential harvesting, or untrusted dependencies.
+### 25. Establish secure registries for AI agent skills, including public hardened skills and private organization-specific skills, and implement continuous scanning for vulnerabilities such as over-permissioned access, obfuscated execution, credential harvesting, or untrusted dependencies.
 Treat AI agent skills as critical software supply chain components requiring rigorous security. Leverage public registries of continuously maintained and hardened skills, and develop private registries for internal skills, both subject to automated scanning against specific attack patterns. This proactively insulates development pipelines from compromised skills that could introduce vulnerabilities or exfiltrate data.
 
-### 24. Implement processes to actively manage and cleanse enterprise data, systematically identifying and removing redundant, obsolete, and trivial (ROT) information to prevent it from poisoning AI models and leading to flawed conclusions or 'slop' at the source.
+### 26. Implement processes to actively manage and cleanse enterprise data, systematically identifying and removing redundant, obsolete, and trivial (ROT) information to prevent it from poisoning AI models and leading to flawed conclusions or 'slop' at the source.
 Poor data quality is a primary cause of AI project failure. Establish a continuous data governance and cleansing strategy focused on eliminating Data ROT across all enterprise data sources. This ensures that the foundational information feeding AI models is clean, relevant, and accurate, directly preventing 'garbage in, garbage out' and improving the reliability of AI-generated outputs.
 
-### 25. Make the agent defend its reasoning
+### 27. Make the agent defend its reasoning
 In review, prompt the agent to explain *why* it chose this design, what it ruled out,
 and what it's unsure about. This directly attacks "wrote code but didn't think"
 (digest 2026-05-18) and forces the latent reasoning into the open where a human can
 challenge it. If it can't defend a choice, that's a finding.
 
-### 26. Prioritize using AI models that are designed to proactively flag uncertainties or potential flaws in their own generated code and reasoning.
+### 28. Prioritize using AI models that are designed to proactively flag uncertainties or potential flaws in their own generated code and reasoning.
 Instead of confidently fabricating or requiring explicit prompts to defend reasoning, advanced AI models can now surface their internal uncertainties. Selecting and leveraging models with this 'honesty' feature allows human reviewers to focus more efficiently on areas the AI itself deems less reliable, thereby reducing 'confident fabrication' risks.
 
-### 27. When agents generate issue reports or problem descriptions, mandate that they stick to observable facts (commands, expected outcome, actual outcome, exact errors/logs) rather than inferring root causes or suggesting solutions.
+### 29. Design AI-driven data pipelines to explicitly handle the probabilistic nature of AI outputs, treating extraction and transformation processes as non-deterministic rather than assuming perfect accuracy.
+A common source of 'AI slop' and data poisoning is treating AI's probabilistic outputs as deterministic, especially in autonomous data ingestion or extraction. Implement robust error handling, validation, and uncertainty flagging mechanisms within data pipelines. This ensures that when an LLM cannot confidently extract or transform information, it flags the uncertainty or throws an exception, preventing silent hallucinations from corrupting downstream data stores and leading to flawed conclusions.
+
+### 30. When agents generate issue reports or problem descriptions, mandate that they stick to observable facts (commands, expected outcome, actual outcome, exact errors/logs) rather than inferring root causes or suggesting solutions.
 AI-generated issue reports often present confident but inaccurate conclusions, leading to wasted human effort and misdiagnosis. By restricting agents to factual observations, teams can avoid acting on fabricated root causes or irrelevant implementation suggestions, thus preventing a new form of 'slop' in issue tracking.
 
-### 28. Validate in a real environment — "looks done" is not done
+### 31. Prohibit or strictly regulate the use of AI for generating change descriptions (e.g., PR and commit messages, issues) that lack higher-level context and reasoning, emphasizing human authorship for these critical artifacts.
+AI-generated change descriptions often provide verbose low-level detail visible in the code itself, but fail to articulate the strategic purpose, architectural implications, or broader context of a change. Human developers must retain responsibility for crafting these summaries to ensure they offer essential 'higher-level framing' necessary for effective code review, maintainability, and organizational understanding, preventing documentation slop that hinders collaboration and future debugging.
+
+### 32. Validate in a real environment — "looks done" is not done
 The validation loop is central to agentic dev: code should be run, tested, and where
 relevant deployed to an ephemeral environment before it's trusted (digest 2026-04-26;
 "81% PR acceptance" came from environment-based validation, not better prompts).
 Don't accept an agent's claim that it tested something — require evidence (CI green +
 the actual diff read). Agents will confidently assert success they didn't achieve.
 
-### 29. Design small, agent-executable, end-to-end validation checks that run quickly in a real environment to provide immediate feedback to coding agents.
+### 33. Design small, agent-executable, end-to-end validation checks that run quickly in a real environment to provide immediate feedback to coding agents.
 Traditional CI is too slow for agents. Create 'plans' – compact, end-to-end validation units that agents can author, select, and run within their session in seconds. This provides rapid, real-environment feedback crucial for iterative agent development and preventing slop.
 
-### 30. Implement comprehensive re-validation and regression testing for AI agent workflows and code generation when upgrading underlying AI models.
+### 34. Implement comprehensive re-validation and regression testing for AI agent workflows and code generation when upgrading underlying AI models.
 Anticipate non-deterministic behavior changes and potential regressions even when new model versions report improved benchmarks. Thoroughly re-verify existing functionalities and critical pathways to mitigate the 'AI Upgrade Trap' and ensure stability of systems built with these models.
 
-### 31. Invest in robust 'harness engineering' and integrated evaluation loops for coding agents, combining model outputs, runtime feedback, and continuous validation to drive self-improvement.
+### 35. Employ hostile simulations and adversarial testing environments to verify the robustness and correctness of AI-generated systems and agentic workflows.
+Beyond standard validation, actively subject entire AI-driven systems to simulated hostile conditions and adversarial inputs. This approach, which involves observing system behavior in non-ideal or deliberately challenging scenarios, helps uncover subtle bugs, edge cases, and vulnerabilities that traditional testing might miss, ensuring resilience and preventing unexpected failures or 'slop' in complex AI deployments.
+
+### 36. Develop and maintain comprehensive, language-independent test suites to serve as conformance criteria for AI-generated code, especially when considering language migrations or substantial refactoring.
+Large-scale code generation or migration by AI agents requires robust verification that is decoupled from the implementation language. A language-independent test suite acts as a critical conformance benchmark, allowing teams to confidently validate the functional correctness of AI-authored code, even when the underlying programming language or internal structure changes. This enables safe, rapid iteration and integration of AI-generated components.
+
+### 37. Invest in robust 'harness engineering' and integrated evaluation loops for coding agents, combining model outputs, runtime feedback, and continuous validation to drive self-improvement.
 Achieving high-quality AI-generated code requires more than just a strong base model; it demands sophisticated 'harness engineering.' This involves building an integrated system that continuously feeds back runtime results and validation against benchmarks to the agent, enabling it to self-correct and improve its outputs iteratively, thereby preventing the accumulation of 'AI slop'.
 
-### 32. Implement meta-harnesses or orchestration layers to combine, control, and standardize the behavior of diverse AI agents and agent harnesses from different vendors.
+### 38. Implement meta-harnesses or orchestration layers to combine, control, and standardize the behavior of diverse AI agents and agent harnesses from different vendors.
 This architectural approach addresses challenges inherent in multi-agent ecosystems, such as ensuring portability, facilitating collaboration, maintaining consistent session history, applying uniform security controls, and managing spend across heterogeneous AI agent platforms.
 
-### 33. Employ 'trajectory-aware' evaluation metrics for AI agents, moving beyond outcome-only assessments to detect hidden behaviors like fabricated evidence, hard-coded metrics, or shortcut-taking that mask genuine capability gaps and produce superficial 'slop'.
+### 39. Implement a centralized governance layer over diverse AI tools and agents to ensure consistent application of organizational best practices, shared context, reusable agentic processes, and cost controls across development teams.
+As teams adopt various AI coding tools and agents, a unified governance layer becomes essential to prevent fragmentation and ensure quality. This layer should provide mechanisms for sharing critical operational context, standardizing agentic workflows, and enforcing organizational policies and quality gates irrespective of the underlying AI vendor. This approach helps maintain consistency, reduce 'AI slop,' and optimize resource utilization across the entire AI-augmented development lifecycle.
+
+### 40. Employ 'trajectory-aware' evaluation metrics for AI agents, moving beyond outcome-only assessments to detect hidden behaviors like fabricated evidence, hard-coded metrics, or shortcut-taking that mask genuine capability gaps and produce superficial 'slop'.
 Traditional pass/fail evaluations can be misleading, as agents may achieve correct outcomes through unreliable or 'slop'-producing means (e.g., memorization, fabricating intermediate steps). Implement evaluation methodologies that scrutinize the agent's entire 'trajectory'—its reasoning steps, tool usage, and internal thought process—to ensure that successful outcomes are based on genuine understanding and robust problem-solving, rather than superficial 'shortcuts'.
 
-### 34. Implement stateful, interactive execution environments for AI agents (e.g., a Python kernel for cell-by-cell code execution), enabling agents to dynamically write and execute code, adapt to intermediate observations, and refine their actions for improved task completion and reasoning quality.
+### 41. Develop and utilize enterprise-specific AI agent benchmarks that prioritize real-world tasks and the agent's ability to operate effectively within large context windows, making evaluation data and methodology transparent and auditable.
+Standard benchmarks often fail to capture an AI agent's performance on the complex, large-context tasks common in enterprise environments. Implement benchmarks that reflect actual employee workflows and leverage extensive context windows, providing open access to the dataset, evaluation harness, judging criteria, results, and raw traces. This ensures that agents are assessed against relevant criteria for preventing slop and delivering value in specific organizational contexts.
+
+### 42. Implement stateful, interactive execution environments for AI agents (e.g., a Python kernel for cell-by-cell code execution), enabling agents to dynamically write and execute code, adapt to intermediate observations, and refine their actions for improved task completion and reasoning quality.
 Enhance agent capabilities by providing dynamic, interactive execution environments rather than static tool calls. For coding tasks, allow agents to operate within a stateful kernel (like Python REPL), where they can write and execute code in an iterative, cell-by-cell manner. This enables agents to observe the real-time effects of their code, adapt their subsequent actions, and refine their reasoning based on intermediate results, leading to more robust and less 'sloppy' solutions.
 
-### 35. Automated review as a gate, not a replacement
+### 43. Automated review as a gate, not a replacement
 Layered/multi-agent review (e.g., Claude Code Review) examines diffs within the full
 codebase, ranks findings by severity, and catches subtle bugs at a low false-positive
 rate (digest 2026-03-27). Use it as a *first-pass gate* — it raises signal — but keep
@@ -161,107 +185,122 @@ a human accountable for merge. Two cheap, high-leverage gates:
 - A second model/agent reviews the diff (dual-model, like this repo's review system).
 - The author-agent must address each finding or explain why it's a false positive.
 
-### 36. Design LLM-specific release gates for CI/CD pipelines that incorporate baseline evaluations, drift detection, shadow validation, and cost/latency guardrails.
+### 44. Design LLM-specific release gates for CI/CD pipelines that incorporate baseline evaluations, drift detection, shadow validation, and cost/latency guardrails.
 Traditional CI/CD is often insufficient for managing the probabilistic behaviors of LLMs. These advanced release gates specifically address gradual performance degradation (eval drift) and unexpected shifts in real-world user input (distribution shift) by continuously comparing against established baselines, running new models in shadow modes, and monitoring operational metrics to prevent subtle failures from reaching production.
 
-### 37. Implement a multi-engine static analysis approach, combining deterministic rules with AI-powered engines and a dedicated false-positive classification layer to improve accuracy and reduce developer fatigue from noise.
+### 45. Implement a multi-engine static analysis approach, combining deterministic rules with AI-powered engines and a dedicated false-positive classification layer to improve accuracy and reduce developer fatigue from noise.
 To overcome the 'noise problem' of traditional static analysis and prevent high false-positive rates from leading to ignored findings, integrate multiple types of scanning engines (e.g., rule-based, LLM-trained) with a Findings Analysis Engine. This third layer intelligently classifies findings as true or false positives before they reach development teams, making automated security review more effective and trustworthy.
 
-### 38. Utilize a multi-component AI agent pipeline for bug finding, integrating an 'LLM judge' for intelligent pre-screening and dedicated 'verifier subagents' to eliminate false positives.
+### 46. Utilize a multi-component AI agent pipeline for bug finding, integrating an 'LLM judge' for intelligent pre-screening and dedicated 'verifier subagents' to eliminate false positives.
 An LLM judge can efficiently score and prioritize code artifacts for agent review, optimizing compute spend by focusing efforts on high-likelihood areas. Verifier subagents are specifically designed to scrutinize initial agent findings, catching instances where the agent 'cheats' or confidently fabricates, ensuring higher accuracy through automated retry loops.
 
-### 39. Integrate an AI agent into the merge queue to perform autonomous release readiness reviews and testing, evaluating code changes against production requirements, cross-repository dependencies, access controls, and plain-English internal standards, providing explicit gating decisions (BLOCK, Proceed with Caution, Safe to Release).
+### 47. Integrate an AI agent into the merge queue to perform autonomous release readiness reviews and testing, evaluating code changes against production requirements, cross-repository dependencies, access controls, and plain-English internal standards, providing explicit gating decisions (BLOCK, Proceed with Caution, Safe to Release).
 Shift the bottleneck from code writing to safe deployment by deploying an AI agent specifically at the merge queue. This agent should conduct comprehensive pre-merge reviews, checking for compliance with architecture frameworks (e.g., AWS Well-Architected), cross-service dependency risks, and internal quality standards defined in plain language. It must issue clear, actionable gating decisions to prevent 'slop' from reaching production.
 
-### 40. Establish an 'AI Slop Registry' to systematically identify, classify, and track common AI-generated code anti-patterns and subtle errors.
+### 48. Establish an 'AI Slop Registry' to systematically identify, classify, and track common AI-generated code anti-patterns and subtle errors.
 This registry should serve as a feedback loop for automated and human review, explicitly detailing recurring issues like over-engineering, misaligned architecture, or non-existent API calls. It requires a dedicated, deterministic verification system separate from the generating agent to ensure consistent detection.
 
-### 41. Deploy dedicated verifier agents to act as an independent acceptance function for AI-generated artifacts.
+### 49. Deploy dedicated verifier agents to act as an independent acceptance function for AI-generated artifacts.
 Implement specialized verifier agents whose sole purpose is to serve as an 'acceptance function' for AI-generated code or other artifacts. These agents should enforce specific quality criteria such as factual grounding, citation fidelity, and cross-modal consistency, operating independently of the primary reasoning model to ensure objective validation before acceptance.
 
-### 42. Integrate AI-powered offensive security tools, such as continuous penetration testing, specifically designed for AI-generated code.
+### 50. Integrate AI-powered offensive security tools, such as continuous penetration testing, specifically designed for AI-generated code.
 Traditional security testing struggles to keep pace with the velocity and unique vulnerabilities of AI-generated code. AI-powered penetration testing offers a continuous, offensive approach to actively find and exploit weaknesses, rather than just passively scanning, providing a proactive defense against agentic attackers.
 
-### 43. Mandate multi-turn evaluation of AI models and agents to assess resilience against iterative attacks.
+### 51. Mandate multi-turn evaluation of AI models and agents to assess resilience against iterative attacks.
 Recognize that single-turn performance is often a poor predictor of an AI model's resilience to attacks. Implement rigorous multi-turn security evaluations that simulate iterative attacker behavior, as real adversaries decompose tasks and reframe refusals across dialogue turns, revealing vulnerabilities missed by single-turn assessments in AI-generated code and agentic operations.
 
-### 44. Secure the entire AI-driven development toolchain, including IDE extensions, agent platforms, and developer workstations, as part of the critical software supply chain.
+### 52. Secure the entire AI-driven development toolchain, including IDE extensions, agent platforms, and developer workstations, as part of the critical software supply chain.
 The software attack surface has fundamentally shifted upstream, with malicious actors actively weaponizing IDE extensions, agent servers, and developer tools to inject harmful code or compromise systems. Treat all components of the AI development environment as high-value targets, implementing robust security controls to prevent supply chain attacks before code is generated.
 
-### 45. Implement automated pre-installation scanning and blocking for all packages, plugins, and extensions introduced or proposed by AI agents.
+### 53. Implement automated pre-installation scanning and blocking for all packages, plugins, and extensions introduced or proposed by AI agents.
 AI agents can autonomously pull and install dependencies, leading to the introduction of unowned, unvetted, or malicious packages. To counter this, security teams must deploy real-time scanning and blocking mechanisms that inspect all proposed installations from agents *before* they are integrated into the development environment, closing a critical supply chain gap.
 
-### 46. Implement robust, machine-speed data governance and sensitive data redaction, including the use of synthetic data, across the entire AI-driven SDLC.
+### 54. Generate and maintain Software Bill of Materials (SBOMs) for all AI-generated code and dependencies, ensuring 'no minimum depth' coverage that includes all transitive dependencies and configuration files.
+With AI agents potentially introducing complex dependency trees, it's critical to have a comprehensive, machine-readable inventory of every component in the software supply chain. Implement automated processes to continuously generate and validate SBOMs, cross-referencing them against vulnerability databases and applying VEX advisories, to ensure full transparency and identify hidden risks in AI-generated artifacts.
+
+### 55. Implement robust, machine-speed data governance and sensitive data redaction, including the use of synthetic data, across the entire AI-driven SDLC.
 AI agents interact with sensitive data in development sandboxes, CI/CD pipelines, training datasets, and agent memory, often without explicit instruction or human oversight, at speeds that traditional governance struggles to match. Proactively redact or replace sensitive information with synthetic data in all non-production environments to prevent data leaks and ensure compliance.
 
-### 47. Implement strict credential brokering and isolation for AI agents, treating all external data sources (e.g., GitHub issues, web pages) as potentially malicious.
+### 56. Implement strict credential brokering and isolation for AI agents, treating all external data sources (e.g., GitHub issues, web pages) as potentially malicious.
 AI agents cannot distinguish between instructions from their operator and those embedded in external data they process, making them vulnerable to indirect prompt injection and credential leaks. Isolate agents, broker credentials carefully, and assume all external inputs can be weaponized to prevent sensitive data exposure.
 
-### 48. Architect agent authentication flows to be fully isolated from the agent's context window and primary harness, leveraging dedicated auth gateways.
+### 57. Architect agent authentication flows to be fully isolated from the agent's context window and primary harness, leveraging dedicated auth gateways.
 This architectural pattern provides maximal security for credentials and sensitive access information by preventing them from residing in potentially compromised or exposed agent contexts. Solutions like Model Context Protocol (MCP) can facilitate this isolation, ensuring that agents only receive temporary, least-privilege access when explicitly authorized.
 
-### 49. Implement a dedicated Identity and Access Management (IAM) framework for AI agents, treating each agent as an individual entity with granular, least-privilege permissions.
+### 58. Implement a dedicated Identity and Access Management (IAM) framework for AI agents, treating each agent as an individual entity with granular, least-privilege permissions.
 AI agents are proliferating rapidly, often inheriting broad permissions from human users or service accounts, creating an 'Identity Vacuum' and a significant attack surface. A dedicated IAM for agents ensures each is treated as a distinct identity with granular, least-privilege access, mitigating risks from action-based threats and indirect prompt injection at scale.
 
-### 50. Implement enterprise-managed authorization for AI agent tool connections, leveraging existing identity providers to enforce centralized policy, ensure comprehensive auditability, and prevent ad-hoc or personal account connections.
+### 59. Implement enterprise-managed authorization for AI agent tool connections, leveraging existing identity providers to enforce centralized policy, ensure comprehensive auditability, and prevent ad-hoc or personal account connections.
 For enterprise-scale agent deployments, move beyond individual OAuth prompts for tool access. Integrate AI agent tool connections with the organization's existing identity provider (IdP) to centralize access control, enable consistent policy enforcement, generate a single audit trail, and eliminate the risk of employees connecting personal accounts to work tools.
 
-### 51. Implement secrets management solutions that default to least privilege access for AI agents within CI/CD pipelines.
+### 60. Implement secrets management solutions that default to least privilege access for AI agents within CI/CD pipelines.
 The 'AI paradox' means increased AI code leads to more workflow credentials to secure. Counter this by configuring secrets management in CI/CD pipelines to default to least privilege for AI agents. This automatically restricts agent access to specific credentials for only the jobs or contexts where they are strictly necessary, significantly reducing the blast radius of compromised agents.
 
-### 52. Utilize managed agent runtime platforms that provide isolated, sandboxed environments for agent execution, reasoning, tool calling, and code running.
+### 61. Managed agent runtime platforms that provide isolated, sandboxed environments for agent execution, reasoning, tool calling, and code running.
 To enhance security and prevent unintended side effects from highly autonomous agents, deploy them within managed runtime platforms that offer robust isolation. These platforms, often using remote Linux sandboxes, contain agent actions, tool calls, and code execution, effectively limiting their blast radius and protecting underlying infrastructure from agent-induced vulnerabilities.
 
-### 53. Scrutinize all agent output channels for potential data exfiltration vectors, ensuring agents cannot create or transmit pre-authenticated links or render malicious content.
+### 62. Implement granular permission encoding directly within AI agent harnesses to explicitly define and enforce authorized actions and resource access.
+To prevent unauthorized or high-blast-radius actions by AI agents and mitigate security risks, design harnesses to integrate specific permission definitions. This ensures that agents operating within the harness can only perform actions and access resources strictly necessary for their assigned tasks, adhering to least-privilege principles and providing a clear audit trail of their operational boundaries.
+
+### 63. Scrutinize all agent output channels for potential data exfiltration vectors, ensuring agents cannot create or transmit pre-authenticated links or render malicious content.
 AI agents' ability to generate and send content through various output channels (e.g., email, messaging, rendered interfaces) presents a critical exfiltration risk. This practice requires meticulous review of how agent outputs could be leveraged to leak sensitive data, such as through embedded pre-authenticated download links or malicious content designed to bypass security controls in client applications.
 
-### 54. Implement governance mechanisms for AI agents that dynamically create tools or access device file systems at runtime.
+### 64. Implement governance mechanisms for AI agents that dynamically create tools or access device file systems at runtime.
 As 'claw-style' agents gain the ability to self-modify by creating tools or directly interacting with device file systems, static security policies are insufficient. New governance frameworks are needed to log, review, and control these emergent capabilities, ensuring that dynamic actions align with pre-defined security policies and organizational intent.
 
-### 55. Human-in-the-loop for irreversible / high-blast-radius actions
+### 65. Institute an organizational framework for managing fleets of AI agents, incorporating meta-level checks and balances such as agent 'audition processes,' internal review boards, and structured appeals mechanisms.
+To effectively leverage untrustworthy AI agents, establish a 'company' or system of agents where individual agents are subject to an internal governance structure. This includes processes for 'auditioning' new agents, formalizing internal 'review boards' to assess agent outputs, and creating 'appeals processes' to address detected errors or fabrications. This systemic approach builds confidence in the overall AI-driven workflow by ensuring self-correction and quality control across multiple agent components, preventing slop at scale.
+
+### 66. Human-in-the-loop for irreversible / high-blast-radius actions
 The data-loss catastrophe happened because an agent took a destructive action without
 a gate (digest 2026-03-27). Never let an agent run migrations, deletes, prod writes,
 or money movement unsupervised. Externalize operational knowledge (what's destructive,
 what's load-bearing) into `CLAUDE.md` / `knowledge/` so the agent has the context it
 otherwise lacks — and still gate the action.
 
-### 56. Design human-in-the-loop interaction patterns for AI agents to prevent approval fatigue, ensuring that humans are only prompted for high-impact, non-routine decisions to maintain effective oversight without rubber-stamping.
+### 67. Design human-in-the-loop interaction patterns for AI agents to prevent approval fatigue, ensuring that humans are only prompted for high-impact, non-routine decisions to maintain effective oversight without rubber-stamping.
 Recognize that continuous, trivial human approvals for agent actions can lead to 'approval fatigue,' rendering the human-in-the-loop ineffective. Design interfaces and workflows where agents handle the vast majority of routine, low-risk decisions autonomously, surfacing only critical, high-impact, or truly ambiguous choices to human reviewers. This preserves the value of human judgment and prevents unintentional 'slop' from being approved by reflex.
 
-### 57. Establish clear accountability for compliance with external regulations, including specific documentation requirements for AI-generated code.
+### 68. Establish clear accountability for compliance with external regulations, including specific documentation requirements for AI-generated code.
 As AI-generated code proliferates, organizations face increasing legal accountability under regulations like the EU's Cyber Resilience Act. This mandates defining clear roles for compliance and a significant, structured documentation burden for all software, regardless of generation method, to demonstrate due diligence and manage risks.
 
-### 58. Proactively engage with and adopt open, modular specifications and standards (e.g., from Appia Foundation) to provide a consistent and verifiable way to demonstrate that AI systems meet trust and compliance obligations across the entire AI supply chain.
+### 69. Proactively engage with and adopt open, modular specifications and standards (e.g., from Appia Foundation) to provide a consistent and verifiable way to demonstrate that AI systems meet trust and compliance obligations across the entire AI supply chain.
 Beyond internal accountability, collaborate with industry efforts to establish and utilize common technical specifications and standards for AI system trust and compliance. This helps ensure that AI-generated code and agent behaviors are verifiable against external regulations, customer expectations, and international standards, fostering a more secure and reliable AI supply chain.
 
-### 59. Define clear policies on whether to accept AI-generated code contributions and what formats are acceptable from external sources or other internal teams.
+### 70. Define clear policies on whether to accept AI-generated code contributions and what formats are acceptable from external sources or other internal teams.
 Organizations must establish explicit guidelines for handling AI-generated code submissions, particularly from external contributors or different internal teams. This includes deciding whether to accept full AI-generated code, or only specific artifacts like reproducible bug reports and test cases, to manage review burden and maintain code quality standards.
 
-### 60. Keep diffs small and scoped
+### 71. Keep diffs small and scoped
 Big-bang AI diffs are unreviewable, so they get rubber-stamped — that's how slop
 merges. Constrain each change to one concern, fitting existing conventions. Small
 diffs make the checklist (#17) and reasoning review (#11) actually tractable.
 
-### 61. Stop the self-correction spiral
+### 72. Stop the self-correction spiral
 When a model starts re-fixing its own output in a loop (digest 2026-04-26), it rarely
 recovers in-context and it burns tokens while drifting. Cut it: `Esc Esc` / `/rewind`
 to before the spiral, re-spec, and retry — don't keep arguing with it. (See
 [token-efficiency.md](token-efficiency.md) session moves.)
 
-### 62. Implement comprehensive observability for AI agent execution, tracking internal steps, model calls, tool usage, and decision paths to quickly identify inefficiency, looping behavior, and subtle failures.
+### 73. Establish a feedback loop that explicitly connects AI-generated code changes and agent actions to their downstream production outcomes (e.g., bugs, performance, maintenance costs) to inform decisions about effective AI tool and agent usage.
+Merely tracking AI usage (e.g., percentage of AI-generated code) is insufficient for improving engineering judgment or preventing slop. Instead, link specific AI contributions to their actual impact in production environments, using this data to identify when and where AI agents are genuinely additive or introduce hidden costs, allowing teams to refine their AI integration strategies.
+
+### 74. Implement comprehensive observability for AI agent execution, tracking internal steps, model calls, tool usage, and decision paths to quickly identify inefficiency, looping behavior, and subtle failures.
 Unlike traditional software, AI agent failures often manifest as subtle drifts, excessive loops, or inefficient resource consumption without crashing or explicit alerts. Establish granular monitoring of agent processes to understand their reasoning and resource consumption, ensuring operational efficiency and correct outcomes rather than just measuring final output or overall cost.
 
-### 63. Shift debugging strategy from log-based thinking to observability-driven engineering for AI systems, specifically addressing non-deterministic outputs and hidden reasoning steps.
+### 75. Shift debugging strategy from log-based thinking to observability-driven engineering for AI systems, specifically addressing non-deterministic outputs and hidden reasoning steps.
 Unlike traditional software, AI systems exhibit non-deterministic behavior, silent failures, and opaque reasoning, rendering traditional log-based debugging ineffective. A robust observability strategy, encompassing tracing, granular logging, and token estimation, is crucial for understanding internal steps, identifying subtle failures, and debugging probabilistic AI systems effectively.
 
-### 64. Measure the cleanup tax, not just velocity
+### 76. Measure the cleanup tax, not just velocity
 "2x velocity" is meaningless if rework doubles too. Intercom paired Claude Code with
 deep telemetry — invocations, sessions, dashboards (digest 2026-04-26). Track rework:
 how often AI-authored code is reverted, hot-fixed, or refactored shortly after merge.
 Treat **reducing maintenance cost** as a first-class goal (digest 2026-05-18, ref.),
 not a side effect — prefer the simplest solution a human can maintain.
 
-### 65. Implement 'AI business observability' to clearly connect AI agent activities and associated costs to measurable business outcomes.
+### 77. Implement a multi-model AI routing strategy that defaults to the most cost-efficient capable models for routine tasks, using higher-cost frontier models only when their superior reasoning or specialized capabilities are demonstrably required.
+To manage costs and optimize resource allocation in AI-driven development, establish an internal LLM gateway or routing layer. This system should intelligently direct tasks to different AI models based on their cost-performance profile, ensuring that expensive frontier models are reserved for complex problems where their advanced capabilities prevent costly 'AI slop' or deliver unique value, while more affordable models handle the bulk of standard code generation and analysis.
+
+### 78. Implement 'AI business observability' to clearly connect AI agent activities and associated costs to measurable business outcomes.
 Bridging the gap between engineering efforts and business value requires a new dimension of observability. 'AI business observability' moves beyond technical metrics to directly track how AI agent activities, their resource consumption, and costs contribute to specific business goals and KPIs, ensuring investments deliver tangible value and combatting 'tokenmaxxing' behaviors.
 
 ## Anti-Patterns
@@ -272,7 +311,7 @@ Bridging the gap between engineering efforts and business value requires a new d
 - **No spec** — vague request in, slop out; nothing to validate against.
 - **Arguing with a spiraling model in-context** — rewind and re-spec instead.
 - **Velocity-only metrics** — ignores the rework/maintenance tax that lands later.
-- **Unsupervised destructive actions** — migrations/deletes/prod writes with no human gate.
+- **Unsupervised destructive actions** — migrations/delates/prod writes with no human gate.
 - **Parallel-pattern invention** — agent reimplements something the repo already has.
 
 ## Self-Assessment
@@ -286,6 +325,19 @@ repo, or wire it into the shared review workflow.
 
 Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 
+- **Why retrieval quality is becoming the defining challenge in AI agent architecture** (The New Stack) — Retrieval quality mechanisms. Digest: 2026-07-10.
+- **Anthropic wants you to use AI to decide whether or not you should use AI.** (The New Stack) — Feedback loop for AI-generated code to production outcomes. Digest: 2026-07-10.
+- **Why zero vulnerability code packages could still be your biggest software supply chain risk** (The New Stack) — SBOMs with no minimum depth. Digest: 2026-07-10.
+- **Rewriting Bun in Rust** (Simon Willison) — Language-independent test suites as conformance criteria. Digest: 2026-07-09.
+- **Quoting Kenton Varda** (Simon Willison) — Prohibit AI for change descriptions lacking higher-level context. Digest: 2026-07-09.
+- **Enterprise AI benchmarks are broken** (The New Stack) — Enterprise-specific AI agent benchmarks. Digest: 2026-07-09.
+- **The “silent hallucination” loop: how our autonomous data pipeline poisoned its own vector store** (The New Stack) — Design data pipelines for probabilistic AI outputs. Digest: 2026-07-09.
+- **Stop waiting for AI you can trust. Borrow the 500-year-old trick that made untrustworthy agents useful anyway. (Yes, there's a no-code guide!)** (Nate Jones) — Organizational framework for managing fleets of AI agents. Digest: 2026-07-08.
+- **The Pragmatic Engineer AMA** (The Pragmatic Engineer) — Hostile simulations and adversarial testing. Digest: 2026-07-08.
+- **What a harness is and how to build one with Claude Agent SDK** (Lenny's Newsletter) — Granular permission encoding in AI agent harnesses. Digest: 2026-07-08.
+- **JetBrains’ next move isn’t a better IDE — it’s a governance layer over Claude Code, Codex, and Gemini CLI** (The New Stack) — Centralized governance layer over diverse AI tools and agents. Digest: 2026-07-08.
+- **Coinbase runs 1,200 agents and just slashed its AI bill in half** (The New Stack) — Multi-model AI routing strategy for cost efficiency. Digest: 2026-07-08.
+- **Better Models: Worse Tools** (Simon Willison) — Design AI agent toolkits robust against model-specific biases. Digest: 2026-07-05.
 - **Why traditional CI/CD fails for LLMs (and the release gates we built to fix it)** (The New Stack) — LLM-specific release gates. Digest: 2026-07-02.
 - **“The harness is where the hard work is”: Harness bets on agents that enterprises can trust in production** (The New Stack) — integrate autonomous agents into CI/CD. Digest: 2026-06-30.
 - **Your engineering org needs an AI slop registry** (The New Stack) — systematic tracking of AI slop anti-patterns. Digest: 2026-06-26.
