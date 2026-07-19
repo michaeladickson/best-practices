@@ -106,15 +106,55 @@ def _save_archive(archive: dict):
     log.info("archive_saved", posts=len(archive))
 
 
-def _fetch_recent_posts(feeds: list[dict], days: int = 7) -> list[dict]:
+# Fraction of feeds that must fail before a run is treated as broken rather
+# than quiet. Every historical run fetched 100-129 posts across 33 feeds, so a
+# majority-failure is an outage, not a slow news week.
+FEED_FAILURE_THRESHOLD = float(os.environ.get("FEED_FAILURE_THRESHOLD", "0.5"))
+
+
+def _feed_failure_reason(parsed) -> Optional[str]:
+    """Return a failure reason for a parsed feed, or None if it looks healthy.
+
+    feedparser.parse() does NOT raise on HTTP or DNS errors — it returns a
+    result object with `bozo` set and `entries` empty. Verified 2026-07-19:
+      404 on a live host  -> bozo=1,    status=404,  entries=0
+      unresolvable host   -> bozo=True, status=None, entries=0 (URLError)
+      HTML instead of XML -> bozo=1,    status=200,  entries=0
+    So a try/except around parse() detects essentially nothing, which is why
+    a total feed outage previously looked identical to a quiet week.
+
+    A feed that returned entries is healthy even if bozo is set — bozo fires on
+    benign encoding quirks in feeds that parse fine.
+    """
+    if parsed.entries:
+        return None
+    status = getattr(parsed, "status", None)
+    if status is not None and status >= 400:
+        return f"http_{status}"
+    if getattr(parsed, "bozo", False):
+        exc = getattr(parsed, "bozo_exception", None)
+        return f"parse_error:{type(exc).__name__}" if exc is not None else "parse_error"
+    # 200, well-formed, genuinely no entries — unusual but not a failure.
+    return None
+
+
+def _fetch_feeds(feeds: list[dict], days: int = 7) -> tuple[list[dict], dict]:
+    """Fetch feeds. Returns (posts, stats) where stats reports per-feed health."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     posts = []
     archive = _load_archive()
     new_archived = 0
+    failed: list[dict] = []
+    ok = 0
 
     for feed_info in feeds:
         try:
             feed = feedparser.parse(feed_info["url"])
+            reason = _feed_failure_reason(feed)
+            if reason:
+                failed.append({"source": feed_info["name"], "reason": reason})
+                log.warning("feed_fetch_failed", source=feed_info["name"], reason=reason)
+                continue
             for entry in feed.entries:
                 published = None
                 if hasattr(entry, "published_parsed") and entry.published_parsed:
@@ -159,7 +199,9 @@ def _fetch_recent_posts(feeds: list[dict], days: int = 7) -> list[dict]:
 
             source_count = len([p for p in posts if p["source"] == feed_info["name"]])
             log.info("feed_fetched", source=feed_info["name"], posts_found=source_count)
+            ok += 1
         except Exception as e:
+            failed.append({"source": feed_info["name"], "reason": type(e).__name__})
             log.warning("feed_fetch_failed", source=feed_info["name"], error=str(e))
 
     # Persist archive
@@ -168,7 +210,16 @@ def _fetch_recent_posts(feeds: list[dict], days: int = 7) -> list[dict]:
         log.info("new_posts_archived", count=new_archived)
 
     posts.sort(key=lambda p: p["published"], reverse=True)
-    log.info("total_posts_fetched", count=len(posts))
+    stats = {"total": len(feeds), "ok": ok, "failed": failed}
+    log.info("total_posts_fetched", count=len(posts),
+             feeds_ok=ok, feeds_failed=len(failed), feeds_total=len(feeds))
+    return posts, stats
+
+
+def _fetch_recent_posts(feeds: list[dict], days: int = 7) -> list[dict]:
+    """Posts-only wrapper. Kept for callers that don't inspect feed health
+    (practice_updater, backfill)."""
+    posts, _ = _fetch_feeds(feeds, days=days)
     return posts
 
 
@@ -594,6 +645,7 @@ def main(days: int, dry_run: bool, context_path: Optional[str],
 
     log.info("digest_start", project=project_name, days=days, feeds=len(feeds))
 
+    fetch_stats = None
     if all_history:
         # Use archived posts, capped at 8 weeks
         all_posts = fetch_all_archived_posts()
@@ -602,9 +654,28 @@ def main(days: int, dry_run: bool, context_path: Optional[str],
         week_label = f"Full Review (last 8 weeks as of {today})"
         log.info("using_archive", total_archived=len(all_posts), within_window=len(posts))
     else:
-        posts = _fetch_recent_posts(feeds, days=days)
+        posts, fetch_stats = _fetch_feeds(feeds, days=days)
+
+    # Distinguish "no news" from "no fetch". Both used to exit 0 having sent
+    # nothing, so a total feed outage was indistinguishable from a quiet week
+    # and run_weekly_digest.sh — which counts a context as failed via the exit
+    # status — never reported it.
+    if fetch_stats and fetch_stats["total"]:
+        failed, total = len(fetch_stats["failed"]), fetch_stats["total"]
+        if failed > total * FEED_FAILURE_THRESHOLD:
+            sources = ", ".join(f["source"] for f in fetch_stats["failed"][:10])
+            log.error("feed_fetch_majority_failed", failed=failed, total=total)
+            print(f"Feed fetch failed for {failed}/{total} sources: {sources}",
+                  file=sys.stderr)
+            sys.exit(1)
+        if not posts and fetch_stats["ok"] == 0:
+            log.error("feed_fetch_total_failure", total=total)
+            print(f"No posts and no feed fetched successfully ({total} configured).",
+                  file=sys.stderr)
+            sys.exit(1)
 
     if not posts:
+        # Feeds fetched fine, nothing new in the window — a genuinely quiet week.
         print("No new posts found.")
         return
 
