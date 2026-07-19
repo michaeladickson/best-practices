@@ -13,9 +13,18 @@ feeds:
   - name: "The Pragmatic Engineer"
     url: "https://newsletter.pragmaticengineer.com/feed"
     category: engineering
-  - name: "Anthropic Blog"
-    url: "https://www.anthropic.com/rss.xml"
+  # Anthropic publishes NO official RSS feed — anthropic.com/rss.xml has been 404
+  # for some time, as are /news/rss.xml, /feed.xml, /index.xml and /engineering/rss.xml
+  # (all re-checked 2026-07-19). These are community-maintained scrapes. That is a
+  # third-party dependency: if the repo is renamed or deleted these 404, which the
+  # feed-health check in ai_digest.py will now surface rather than silently skip.
+  - name: "Anthropic News"
+    url: "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml"
     category: ai_models
+  - name: "Anthropic Engineering"
+    url: "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_engineering.xml"
+    category: ai_engineering
+    description: "Low volume, high signal — often quiet for weeks at a time"
   - name: "OpenAI Blog"
     url: "https://openai.com/blog/rss.xml"
     category: ai_models
@@ -54,32 +63,50 @@ feeds:
     description: "Claude-based investment analysis workflows — annual reports, earnings calls, business deep-dives"
 
   # Finance & AI
-  - name: "The Financial Revolutionist"
-    url: "https://thefr.com/feed"
-    category: ai_finance
-  - name: "Finimize"
-    url: "https://finimize.com/wp/feed/"
-    category: investing
+  # DROPPED 2026-07-19 — both publications are alive, but neither offers a usable feed.
+  # The Financial Revolutionist: thefr.com/{feed,rss,feed.xml,rss.xml} all 404 and the
+  #   homepage carries no <link rel="alternate"> autodiscovery tag. No feed to point at.
+  # Finimize: returns 405 to feedparser and a 202 bot-challenge with an empty body to a
+  #   browser UA; curl gets 0 bytes. Hard-blocked, not moved.
+  # Re-add if either ships a real feed — don't just retry the old URLs.
+  # - name: "The Financial Revolutionist"
+  #   url: "https://thefr.com/feed"
+  #   category: ai_finance
+  # - name: "Finimize"
+  #   url: "https://finimize.com/wp/feed/"
+  #   category: investing
   - name: "CFO Dive"
     url: "https://www.cfodive.com/feeds/news/"
     category: cfo
-  - name: "The Diff"
-    url: "https://www.thediff.co/feed"
-    category: finance_strategy
+  # DROPPED 2026-07-19 — The Diff's public feed is frozen. Every variant
+  # (/feed, /rss, /feed/, thediff.co/feed) returns the same 5 posts, newest
+  # "Money, Credit, Trust, and FTX" from Nov 2022. It resolves and returns
+  # entries, so the feed-health check correctly calls it healthy — it was
+  # contributing nothing for ~3.7 years and nobody could see that.
+  # The Diff is paywalled; a subscriber-specific feed URL may exist.
+  # - name: "The Diff"
+  #   url: "https://www.thediff.co/feed"
+  #   category: finance_strategy
   - name: "Net Interest (Marc Rubinstein)"
     url: "https://www.netinterest.co/feed"
     category: finance_strategy
   - name: "Kyla Scanlon"
-    url: "https://kylascanlon.substack.com/feed"
+    # Moved: kylascanlon.substack.com still resolves but serves a single post
+    # from 2020. The live publication is kyla.substack.com.
+    url: "https://kyla.substack.com/feed"
     category: macro
   - name: "The Macro Compass"
     url: "https://themacrocompass.substack.com/feed"
     category: macro
   - name: "Accounting Today"
-    url: "https://www.accountingtoday.com/feed"
+    # Bare /feed returns 200 with non-XML; the ?rss=true form is the real feed.
+    url: "https://www.accountingtoday.com/feed?rss=true"
     category: accounting
   - name: "FinTech Takes (Alex Johnson)"
-    url: "https://fintechascend.substack.com/feed"
+    # Moved off Substack. Note: newsletter.fintechtakes.com and
+    # fintechtakes.substack.com still resolve and return 20 entries, but the newest
+    # is from 2022 — they are the abandoned archive, not the live feed.
+    url: "https://www.fintechtakes.com/feed"
     category: fintech
 
   # DevOps, SRE & Infrastructure
@@ -101,7 +128,8 @@ feeds:
     url: "https://lethain.com/feeds/"
     category: eng_management
   - name: "Software Testing Weekly"
-    url: "https://softwaretestingweekly.com/feed.xml"
+    # Found via <link rel="alternate"> autodiscovery on the homepage.
+    url: "https://softwaretestingweekly.com/issues/rss/"
     category: testing
 
   # Database & Cloud
@@ -109,5 +137,6 @@ feeds:
     url: "https://postgresweekly.com/rss/"
     category: database
   - name: "Google Cloud Blog"
-    url: "https://cloud.google.com/blog/rss"
+    # cloud.google.com/blog/rss now serves HTML; the feed lives on cloudblog.
+    url: "https://cloudblog.withgoogle.com/rss/"
     category: cloud
