@@ -69,6 +69,15 @@ def healthy(when=RECENT, n=1):
     return FakeParsed(entries=[_entry(when, n)])
 
 
+def _fetch_one(feed_info, parsed, monkeypatch):
+    """Run _fetch_feeds over a single feed and return its stats."""
+    monkeypatch.setattr(ai_digest, "_load_archive", lambda: {})
+    monkeypatch.setattr(ai_digest, "_save_archive", lambda a: None)
+    monkeypatch.setattr(ai_digest.feedparser, "parse", lambda url: parsed)
+    _, stats = ai_digest._fetch_feeds([feed_info], days=7)
+    return stats
+
+
 @pytest.fixture
 def run_digest(monkeypatch):
     """Invoke main() against a scripted set of feed results."""
@@ -130,6 +139,51 @@ def test_quiet_week_still_exits_zero(run_digest):
     res = run_digest([healthy(OLD, 1), healthy(OLD, 2), healthy(OLD, 3)])
     assert res.exit_code == 0
     assert "No new posts found." in res.output
+
+
+# --- stale-but-resolving feeds ------------------------------------------
+# The Diff resolved and returned entries for ~3.7 years after its public feed
+# froze. A fetch-level check calls that healthy and always will; only entry
+# recency catches it.
+
+FEED = {"name": "f0", "url": "u", "category": "c"}
+LONG_DEAD = time.gmtime(time.time() - 1342 * 86400)  # The Diff, frozen Nov 2022
+
+
+def test_stale_feed_is_flagged(monkeypatch):
+    stats = _fetch_one(FEED, healthy(LONG_DEAD), monkeypatch)
+    assert len(stats["stale"]) == 1
+    assert stats["stale"][0]["source"] == "f0"
+    assert stats["stale"][0]["days"] >= 1300
+    # Still counts as a successful fetch — stale is not failed.
+    assert stats["ok"] == 1
+    assert stats["failed"] == []
+
+
+def test_fresh_feed_not_flagged(monkeypatch):
+    stats = _fetch_one(FEED, healthy(RECENT), monkeypatch)
+    assert stats["stale"] == []
+
+
+def test_stale_feed_does_not_change_exit_code(run_digest):
+    """A low-cadence source is legitimate; staleness warns, never fails."""
+    res = run_digest([healthy(LONG_DEAD, 1), healthy(LONG_DEAD, 2)])
+    assert res.exit_code == 0
+
+
+def test_per_feed_max_quiet_days_override(monkeypatch):
+    """Feeds that are quiet by nature can opt out of the warning."""
+    quiet_ok = dict(FEED, max_quiet_days=3000)
+    assert _fetch_one(quiet_ok, healthy(LONG_DEAD), monkeypatch)["stale"] == []
+    strict = dict(FEED, max_quiet_days=1)
+    assert len(_fetch_one(strict, healthy(OLD), monkeypatch)["stale"]) == 1
+
+
+def test_staleness_measured_across_all_entries_not_just_window(monkeypatch):
+    """Newest entry governs, even when nothing falls inside the lookback window."""
+    parsed = FakeParsed(entries=[_entry(OLD, 1), _entry(RECENT, 2)])
+    stats = _fetch_one(FEED, parsed, monkeypatch)
+    assert stats["stale"] == []  # RECENT entry keeps it fresh despite the OLD one
 
 
 # --- analysis failures must be loud -------------------------------------

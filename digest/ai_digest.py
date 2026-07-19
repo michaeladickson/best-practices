@@ -111,6 +111,15 @@ def _save_archive(archive: dict):
 # majority-failure is an outage, not a slow news week.
 FEED_FAILURE_THRESHOLD = float(os.environ.get("FEED_FAILURE_THRESHOLD", "0.5"))
 
+# Days since a feed's newest entry before we call it stale. A fetch-level check
+# cannot tell a dead feed from a quiet one — The Diff resolved fine and returned
+# entries for ~3.7 years after its public feed froze in Nov 2022, and an
+# abandoned Substack archive for FinTech Takes looked equally healthy. Only
+# entry recency separates the two. This warns; it never fails the run, because a
+# low-cadence source is legitimate. Feeds that are genuinely quiet by nature can
+# set `max_quiet_days` in feeds.yaml to opt out of the noise.
+FEED_STALE_DAYS = int(os.environ.get("FEED_STALE_DAYS", "90"))
+
 
 def _feed_failure_reason(parsed) -> Optional[str]:
     """Return a failure reason for a parsed feed, or None if it looks healthy.
@@ -145,9 +154,12 @@ def _fetch_feeds(feeds: list[dict], days: int = 7) -> tuple[list[dict], dict]:
     archive = _load_archive()
     new_archived = 0
     failed: list[dict] = []
+    stale: list[dict] = []
     ok = 0
+    now = datetime.now(timezone.utc)
 
     for feed_info in feeds:
+        newest = None
         try:
             feed = feedparser.parse(feed_info["url"])
             reason = _feed_failure_reason(feed)
@@ -168,6 +180,11 @@ def _fetch_feeds(feeds: list[dict], days: int = 7) -> tuple[list[dict], dict]:
 
                 if not published:
                     continue
+
+                # Track across ALL entries, not just those inside the lookback
+                # window — that's the whole point of the staleness check.
+                if newest is None or published > newest:
+                    newest = published
 
                 content = ""
                 if hasattr(entry, "content") and entry.content:
@@ -200,6 +217,16 @@ def _fetch_feeds(feeds: list[dict], days: int = 7) -> tuple[list[dict], dict]:
             source_count = len([p for p in posts if p["source"] == feed_info["name"]])
             log.info("feed_fetched", source=feed_info["name"], posts_found=source_count)
             ok += 1
+
+            # Resolving is not the same as alive. Warn only — a low-cadence
+            # source is legitimate, so this never changes the exit code.
+            limit = feed_info.get("max_quiet_days", FEED_STALE_DAYS)
+            if newest is not None:
+                age = (now - newest).days
+                if age > limit:
+                    stale.append({"source": feed_info["name"], "days": age})
+                    log.warning("feed_stale", source=feed_info["name"],
+                                days_since_newest=age, threshold=limit)
         except Exception as e:
             failed.append({"source": feed_info["name"], "reason": type(e).__name__})
             log.warning("feed_fetch_failed", source=feed_info["name"], error=str(e))
@@ -210,9 +237,10 @@ def _fetch_feeds(feeds: list[dict], days: int = 7) -> tuple[list[dict], dict]:
         log.info("new_posts_archived", count=new_archived)
 
     posts.sort(key=lambda p: p["published"], reverse=True)
-    stats = {"total": len(feeds), "ok": ok, "failed": failed}
+    stats = {"total": len(feeds), "ok": ok, "failed": failed, "stale": stale}
     log.info("total_posts_fetched", count=len(posts),
-             feeds_ok=ok, feeds_failed=len(failed), feeds_total=len(feeds))
+             feeds_ok=ok, feeds_failed=len(failed), feeds_stale=len(stale),
+             feeds_total=len(feeds))
     return posts, stats
 
 
@@ -673,6 +701,14 @@ def main(days: int, dry_run: bool, context_path: Optional[str],
             print(f"No posts and no feed fetched successfully ({total} configured).",
                   file=sys.stderr)
             sys.exit(1)
+
+        # Informational only — a stale feed still fetches, so the run proceeds.
+        stale = fetch_stats.get("stale") or []
+        if stale:
+            worst = ", ".join(f"{s['source']} ({s['days']}d)"
+                              for s in sorted(stale, key=lambda s: -s["days"])[:5])
+            print(f"{len(stale)} feed(s) stale >{FEED_STALE_DAYS}d — may be dead "
+                  f"rather than quiet: {worst}", file=sys.stderr)
 
     if not posts:
         # Feeds fetched fine, nothing new in the window — a genuinely quiet week.
