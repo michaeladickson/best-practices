@@ -60,16 +60,29 @@ The owner is interested in:
 """
 
 
+# Per-request cap on Gemini calls. A hung generate_content() has no client-side
+# timeout by default, so on 2026-07-17 the command-center analysis stalled
+# indefinitely and Task Scheduler's ExecutionTimeLimit killed the whole run —
+# taking the wealth-mgmt digest, the practice update, and the git commit with it.
+# Observed analysis times are 40-105s (209s worst case), so 5 min is generous
+# while still bounded. Set on the client, so practice_updater's calls inherit it.
+GEMINI_TIMEOUT_MS = int(os.environ.get("GEMINI_TIMEOUT_MS", 5 * 60 * 1000))
+
+
 def _get_gemini_client():
     from google import genai
+    from google.genai import types
+
+    http_options = types.HttpOptions(timeout=GEMINI_TIMEOUT_MS)
 
     api_key = os.environ.get("GEMINI_API_KEY", "")
     if api_key:
-        return genai.Client(api_key=api_key)
+        return genai.Client(api_key=api_key, http_options=http_options)
     project = os.environ.get("GCP_PROJECT_ID", "")
     if not project:
         raise ValueError("Set GCP_PROJECT_ID in .env or provide GEMINI_API_KEY")
-    return genai.Client(vertexai=True, project=project, location="us-central1")
+    return genai.Client(vertexai=True, project=project, location="us-central1",
+                        http_options=http_options)
 
 
 ARCHIVE_DIR = Path(__file__).parent.parent / "data" / "feed_archive"
@@ -225,10 +238,17 @@ Rules:
 - For where_it_fits, first_step, risks: be concrete but acknowledge uncertainty
 - Be honest — if nothing is relevant this week, return empty arrays"""
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+    except Exception as e:
+        # Timeout (GEMINI_TIMEOUT_MS) or transport error. Return None so main()
+        # exits non-zero and the wrapper counts this context as failed, rather
+        # than raising a traceback through click.
+        log.error("analysis_request_failed", error=str(e), error_type=type(e).__name__)
+        return None
 
     text = response.text
     if "```json" in text:
@@ -592,8 +612,11 @@ def main(days: int, dry_run: bool, context_path: Optional[str],
     context_prompt = _build_context_prompt(ctx)
     analysis = _analyze_posts(posts, context_prompt, project_name)
     if not analysis:
-        print("Failed to analyze posts.")
-        return
+        # Must be non-zero: run_weekly_digest.sh counts a failed context via the
+        # exit status and alerts on it. A bare `return` here exits 0, which is why
+        # the 2026-07-03 wealth-mgmt json_parse_failed went out silently.
+        print("Failed to analyze posts.", file=sys.stderr)
+        sys.exit(1)
 
     top_count = len(analysis.get("top_posts", []))
     rec_count = len(analysis.get("project_recommendations", []))

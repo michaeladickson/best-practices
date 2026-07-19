@@ -2,7 +2,7 @@
 # scripts/run_weekly_digest.sh
 #
 # Local weekly digest runner. Registered with Windows Task Scheduler as
-# CC-WeeklyDigest (Sunday 6pm ET). Runs all three contexts, sends emails,
+# CC-WeeklyDigest (Friday 6pm ET). Runs all three contexts, sends emails,
 # creates GH issues in target repos using local gh auth, then commits +
 # pushes the digest knowledge files back to best-practices.
 #
@@ -120,35 +120,62 @@ for CTX in crumbl-ops command-center wealth-mgmt; do
   if ! python3 -m digest --context "digest/config/context-${CTX}.yaml" --days 7; then
     echo "WARNING: $CTX digest failed" >&2
     FAILED=$((FAILED + 1))
+    continue
+  fi
+
+  # Commit each context's knowledge file as soon as it lands, rather than once
+  # at the end. This run is a long serial chain (3 digests + a 5-doc practice
+  # update); when it was killed mid-run on 2026-07-17 the completed crumbl-ops
+  # knowledge file was left uncommitted because the batch commit never ran.
+  git add data/digest_knowledge/
+  if ! git diff --cached --quiet; then
+    git commit -q -m "Weekly digest: ${CTX} knowledge file [automated]"
+    echo "Committed $CTX knowledge file"
   fi
 done
 
+# Push the digest commits before the practice update, so a hang there can't
+# strand them locally.
+git push -q origin main || echo "WARNING: push of digest knowledge failed" >&2
+
 echo ""
 echo "=== Updating living practice docs from this week's articles ==="
-# Auto-edits practices/claude-code/{context-memory-management,code-review-and-ai-slop}.md
-# from the same archived articles. Dedup ledger + structural validation guard the writes.
+# Auto-edits every doc listed in digest/config/practice-docs.yaml from the same
+# archived articles. Dedup ledger + structural validation guard the writes.
 if ! python3 -m digest.practice_updater --days 7; then
   echo "WARNING: practice-doc update failed" >&2
   FAILED=$((FAILED + 1))
 fi
 
 echo ""
-echo "=== Committing knowledge files ==="
-git add data/digest_knowledge/
-if git diff --cached --quiet; then
-  echo "No new digest knowledge to commit"
-else
-  COUNT=$(git diff --cached --name-only | wc -l)
-  git commit -m "Weekly digest: ${COUNT} knowledge files updated [automated]"
-  git push origin main
-  echo "Committed and pushed $COUNT files"
-fi
-
-echo ""
 echo "=== Committing practice-doc updates ==="
-git add practices/claude-code/context-memory-management.md \
-        practices/claude-code/code-review-and-ai-slop.md \
-        data/practice_updates/
+# Stage every doc the updater is configured to touch, read from the same config
+# it uses. This list was previously hardcoded to 2 of the 5 configured docs, so
+# edits to the other 3 were made and silently never committed — while the
+# incorporated.json dedup ledger WAS committed, which would make the lost
+# content unregenerable. Deriving from config keeps the two in sync.
+PRACTICE_DOCS=$(python3 -c "
+import sys, yaml
+from pathlib import Path
+with open('digest/config/practice-docs.yaml') as f:
+    cfg = yaml.safe_load(f) or {}
+for d in cfg.get('docs', []):
+    p = d.get('path')
+    if not p:
+        continue
+    # Skip paths that don't exist rather than aborting the run on 'git add' —
+    # a stale config entry shouldn't cost us the commit of the real edits.
+    if Path(p).exists():
+        print(p)
+    else:
+        print(f'WARNING: configured practice doc missing: {p}', file=sys.stderr)
+")
+if [ -z "$PRACTICE_DOCS" ]; then
+  echo "WARNING: no practice-doc paths read from config; nothing staged" >&2
+  FAILED=$((FAILED + 1))
+fi
+# shellcheck disable=SC2086
+git add -- $PRACTICE_DOCS data/practice_updates/
 if git diff --cached --quiet; then
   echo "No practice-doc updates to commit"
 else
