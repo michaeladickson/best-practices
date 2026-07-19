@@ -7,7 +7,7 @@ covers the code an agent *writes*; this covers what an agent *does at runtime*.
 
 Related: [Prompt-Injection Mitigation](prompt-injection-mitigation.md) (untrusted input
 that hijacks an agent), and the destructive-action gating practice in
-[Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md#best-practices).
+[Code Review & AI Slop](../cla Claude-code/code-review-and-ai-slop.md#best-practices).
 
 For a ready-to-run audit, see [`reviews/agent-action-safety-review.md`](../../reviews/agent-action-safety-review.md).
 
@@ -31,7 +31,22 @@ layer it's missing / the Judge Layer," digest 2026-05-16).
 
 ## Best Practices
 
-### 1. Classify every action by reversibility and blast radius
+### 1. Treat agent capabilities and procedures as first-class, inspectable software artifacts.
+Instead of allowing agent skills (e.g., prompts, runbooks, scripts, permission boundaries) to be proprietary to a vendor or trapped in chat histories, export and manage them as visible and inspectable assets. This ensures continuity, facilitates auditing, and prevents critical operational knowledge from being lost or hidden.
+
+### 2. Establish a secure supply chain for all agent skills and tools, actively scanning them for vulnerabilities, over-permissioned scopes, and malicious behavior before deployment.
+Treat agent skills (e.g., functions, prompts, configuration files) as software components requiring supply chain security. Implement automated scanning for common attack patterns, such as obfuscated commands, credential harvesting, or excessive permissions, to harden agent capabilities at rest and prevent the introduction of vulnerabilities into the agent's logic.
+
+### 3. Implement prescriptive guidance mechanisms to explicitly direct agents on when and how to invoke their available tools and skills.
+Agents should not merely have access to tools; they must be predictably guided to use them in appropriate contexts. Configure 'rules files' or similar explicit instructions that dictate the conditions, priority, and strategy for tool invocation. This ensures agents reliably leverage their intended capabilities and external data sources, preventing reliance on potentially outdated internal knowledge or 'hallucinations' when accurate tools are available.
+
+### 4. Construct a comprehensive 'agent harness' that explicitly defines the operational context, governance, and boundaries for all AI agents.
+This harness should encompass the agent's access to external systems, data, and documents, alongside clear review standards, budgetary limits, defined decision rights, and accountability frameworks. This structural layer provides the necessary human judgment and organizational context that cannot be outsourced to the agent itself.
+
+### 5. Embed specific, granular authorization rules directly within agent harnesses to enforce permissions relevant to their defined workflows.
+For each structured workflow managed by an agent harness, define and enforce the precise set of permissions required for its operations directly within the harness's configuration or code. This ensures that the harness itself acts as a gatekeeper, restricting agent actions to only those authorized for that specific workflow context.
+
+### 6. Classify every action by reversibility and blast radius
 Before wiring a tool, tier it. This single classification drives every gate below.
 
 | Tier | Examples | Default gate |
@@ -40,14 +55,14 @@ Before wiring a tool, tier it. This single classification drives every gate belo
 | **Reversible write** | draft, label, create-then-delete | log + post-hoc review |
 | **Irreversible / high-blast** | money movement, GL/prod-DB writes, deletes, outbound messages, deploys | **explicit human approval** |
 
-### 2. Least privilege — read-only by default
+### 7. Least privilege — read-only by default
 An agent gets the *minimum* capability for its job; write capability is a separate,
 explicitly-granted path. The strongest version is enforced in code, not prompts: e.g.,
 expose only read tools on the agent-facing MCP so a write is structurally impossible,
 and route the rare write through a separate non-interactive, gated job. (crumbl-ops does
 exactly this — its agent MCP has zero write tools; see Where Used.)
 
-### 3. A Judge Layer gates the action, not the prose
+### 8. A Judge Layer gates the action, not the prose
 Put a gatekeeper between "agent proposes X" and "X executes" that returns an explicit
 *approve / reject / escalate* — never let execution proceed on implied approval. The
 judge can be deterministic (policy rules: amount thresholds, allow-lists, business-hours)
@@ -55,45 +70,87 @@ or a separate model with a narrow rubric. Key parts (from the Judge Layer guide)
 **action classification → policy/specialist check → memory-governed write-back →
 structured, logged decision.**
 
-### 4. Human-in-the-loop for the irreversible
+### 9. Human-in-the-loop for the irreversible
 For Tier-3 actions, require a human's explicit yes — a mobile approve/deny, a PR
 checkbox, a confirmation step that prints exactly what will happen. Design against
-**alert fatigue**: gate only what truly needs it (driven by #1), so approvals stay
+**alert fatigue**: gate only what truly needs it (driven by #6), so approvals stay
 meaningful instead of being rubber-stamped.
 
-### 5. Write an authorization spec per high-stakes action
+### 10. Implement remote and asynchronous human-in-the-loop (HITL) mechanisms to manage oversight for long-running or delegated agent tasks.
+For agents performing extended, autonomous tasks, integrate notification systems (e.g., mobile alerts) and remote interfaces that allow humans to review diffs, provide steering input, and approve actions without being tethered to a workstation. This shifts HITL from synchronous blocking to asynchronous oversight, reducing bottlenecks and approval fatigue.
+
+### 11. Write an authorization spec per high-stakes action
 Name *who/what* may do the action, under *what limits*, with *what evidence*. For
 agentic-commerce-style actions this means identity, authorization, fraud/abuse checks,
 and liability — not just "call the payments API." A one-paragraph spec per action beats
 a vague "the agent handles payments."
 
-### 6. Fail safe — stop and ask on uncertainty
+### 12. Fail safe — stop and ask on uncertainty
 An agent that can't verify a precondition must **halt and escalate**, not guess. The
 data-deletion catastrophe was a confident guess. Bake in: "if you cannot confirm X, do
 not proceed — surface the ambiguity." Externalize what's load-bearing/destructive into
 `CLAUDE.md` / rules so the agent *has* the operational context it otherwise lacks — but
 still gate the action.
 
-### 7. Never trust the agent's self-report
+### 13. Never trust the agent's self-report
 Agents fabricate success ("I tested it," "I recovered the data"). Verify the action's
 effect from an independent source (the actual row count, the API's returned status, a
 re-query) before believing it — and especially before reporting success to a human.
 
-### 8. Provenance and an audit trail for every action
+### 14. Implement trajectory-aware and shortcut-resistant evaluation frameworks to verify agent reasoning and prevent exploitation of evaluation gaps.
+Beyond simply verifying the final outcome, assess the agent's entire execution trajectory and ensure it achieves results through genuine reasoning, rather than fabricating evidence or exploiting dataset artifacts. This higher-fidelity verification method helps detect brittle or unintended solution paths that might pose risks in real-world scenarios.
+
+### 15. Implement an independent, deterministic verification system for AI-generated artifacts to detect 'AI slop' and ensure alignment with quality standards.
+AI agents can produce 'slop'—artifacts that appear plausible but are subtly flawed, bloated, or misaligned with organizational patterns. Relying solely on the generating agent's prompts or instructions is insufficient. Establish a separate, deterministic verification system, potentially using a different agent or traditional analysis, to independently check outputs for correctness, adherence to standards, and quality, producing consistent results.
+
+### 16. Implement robustness testing for prompt injection across all agent interaction surfaces, especially when interacting with untrusted external content.
+Actively test agents for susceptibility to prompt injection, including when they process data from external sources like websites or user-generated content. This requires dedicated adversarial testing to ensure agents do not misinterpret or act upon malicious instructions embedded in their operational context.
+
+### 17. Employ adversarial evaluation methods to detect covert agent behavior and the pursuit of hidden objectives.
+Use specialized evaluation environments and adversarial testing (e.g., SHADE-Arena, LinuxArena) to actively search for instances where agents may attempt to act covertly, deviate from their explicit instructions to pursue hidden objectives, or exploit systemic vulnerabilities while appearing to be compliant.
+
+### 18. Utilize shadow validation as a release gate for probabilistic agent updates to detect silent regressions.
+When deploying updates to agent components, run the new version alongside the current production version ('shadow mode') to compare real-world performance, outputs, and user interactions. This allows for detection of silent regressions or unexpected behavioral changes before full deployment.
+
+### 19. Implement continuous drift detection for agent behavior and underlying models.
+Continuously monitor agent performance metrics, model outputs, and embedding spaces to detect gradual degradation (eval drift) or changes in data distribution (distribution shift) that may lead to suboptimal or incorrect agent actions without triggering hard failure thresholds.
+
+### 20. Provenance and an audit trail for every action
 Log each agent action with its inputs, the judge's decision + reason, who/what approved,
 and the result. This is what makes an agent action auditable (essential for financial /
 regulated workflows) and debuggable after the fact. Keep AI-proposed vs. human-approved
 distinguishable.
 
+### 21. Architect agent executions as durable workflows that checkpoint each step to ensure resilience, recoverability, and atomic operations.
+Design agent tasks to create checkpoints after each significant step, allowing an agent session to pause, gracefully survive crashes, and resume from the last validated state. This prevents partial, unrecoverable actions and ensures the overall integrity and audibility of complex, multi-step agent processes.
+
+### 22. Design agent systems using an 'interconnected loops' architecture to manage complex, recurring tasks and their dependencies autonomously.
+For systems with multiple ongoing obligations, structure agents as a network of narrow, recurring 'loops,' each with its own memory, information sources, and safe actions. These loops are specifically designed to observe and react to changes or outputs from other interconnected loops, enabling the system to autonomously manage complex interdependencies and adapt to evolving conditions, moving beyond isolated, durable workflows.
+
+### 23. Isolate agent-generated code execution within hardened sandboxes.
+When an AI agent generates and executes code, this execution must occur within strictly isolated environments such as process sandboxes, virtual machines, or WebAssembly runtimes. Implement tight filesystem boundaries and egress controls to prevent unauthorized access to the host system, exfiltration of sensitive data, or unintended network activity, even if the agent's code is buggy or malicious.
+
+### 24. Assign a distinct, verifiable identity to every AI agent, and explicitly manage its dynamically acquired permissions throughout its lifecycle.
+Every AI agent, regardless of its function, must operate under a unique, authenticated identity. This foundation enables granular least-privilege enforcement, clear accountability, and a comprehensive audit trail for all actions. Crucially, the system must also manage and log how agents dynamically request and acquire new tool access or roles during their operation, ensuring these transitions are authorized and traceable.
+
+### 25. Isolate each agent's execution within a dedicated session, leveraging session-aware runtimes for state, identity, and lifecycle management.
+AI agents are often long-running and stateful, requiring robust isolation beyond single requests. Implement session-aware execution environments, such as dedicated microVMs or sandboxes per agent session, to manage an agent's state, identity, and lifecycle independently, preventing cross-contamination and enhancing security. This ensures that an agent's memory, tools, and ongoing processes are confined, even when user input influences code or actions.
+
+### 26. Implement explicit user consent and granular access controls for agent interactions with local files and desktop applications.
+When an agent operates in a desktop environment, require explicit, runtime user permission before allowing access to local files, other desktop applications, or system resources. This ensures users retain ultimate control over local data and system integrity.
+
+### 27. Establish a distinct, authenticated identity layer for AI agents performing financial transactions.
+For agents authorized to manage money, spend, or interact with financial systems, implement a robust identity layer that includes unique authentication, tokenization capabilities, and secure wallet management. This ensures that each agent's financial actions are traceable, adhere to defined limits, and are independently verifiable as originating from a securely identified entity.
+
 ## Anti-Patterns
 
-- **Acting on implied approval** — execution proceeds because nothing said no.
-- **Over-broad tools** — a write/delete tool exposed "just in case," reachable by any inference.
-- **Unsupervised irreversible actions** — money/deletes/prod-writes/sends with no human gate.
-- **Trusting "I did it / I recovered it"** — no independent verification of effect.
-- **Guessing through ambiguity** — proceeding when a precondition couldn't be confirmed.
-- **No audit trail** — can't reconstruct what the agent did, why, or who approved.
-- **Gate everything → alert fatigue** — so many approvals that humans rubber-stamp them.
+-   **Acting on implied approval** — execution proceeds because nothing said no.
+-   **Over-broad tools** — a write/delete tool exposed "just in case," reachable by any inference.
+-   **Unsupervised irreversible actions** — money/deletes/prod-writes/sends with no human gate.
+-   **Trusting "I did it / I recovered it"** — no independent verification of effect.
+-   **Guessing through ambiguity** — proceeding when a precondition couldn't be confirmed.
+-   **No audit trail** — can't reconstruct what the agent did, why, or who approved.
+-   **Gate everything → alert fatigue** — so many approvals that humans rubber-stamp them.
 
 ## Self-Assessment
 
@@ -106,15 +163,34 @@ shared review workflow.
 
 Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 
-- **You gave your AI agent real tools — the 4-part control layer it's missing / the Judge Layer implementation guide** (Nate Jones) — action classification, specialist judges, memory governance, structured write-back. Digest: 2026-05-16 (command-center, crumbl-ops).
-- **Six layers your agent has to handle (+ a responsibility-layer audit)** (Nate Jones) — identity, authorization, fraud, liability for acting agents. Digest: 2026-05-18 (wealth-mgmt, crumbl-ops).
-- **Your AI coding agent deleted 2.5 years of customer data in minutes** (Nate Jones) — "locally correct, organizationally catastrophic"; fail-safe + human oversight. Digest: 2026-03-27 (crumbl-ops).
-- **The AI code review checklist that prevents the next $1M production incident** (Ruben Dominguez) — agent dropped prod DB and lied about recovery; accountability. Digest: 2026-05-16 (command-center).
-- **The hidden cost of build vs. buy for agentic AI in regulated industries** (The New Stack) — orchestration, governance, compliance for agent platforms. Digest: 2026-05-18 (wealth-mgmt).
-- **Why agent harnesses fail inside cloud-native systems** (The New Stack) — context policies, sandboxes, feedback loops. Digest: 2026-05-18 (command-center).
+-   **Your skills are leaving your hands. Don't let a rent-a-brain keep them.** (Nate Jones [ai_strategy]) — export and manage agent skills as inspectable assets. Digest: 2026-06-19.
+-   **Chainguard Agent Skills matures** (The New Stack [devops]) — implement automated scanning for common attack patterns in agent skills. Digest: 2026-06-17.
+-   **Agent Toolkit for AWS includes 20+ agent skills, but your agent might not load them without this one file** (The New Stack) — prescriptive guidance. Digest: 2026-06-25.
+-   **Executive Briefing: Your company is about to get cheap intelligence. That is not the same as being able to use it.** (Nate Jones [ai_strategy]) — define operational context, governance, and boundaries with a structural layer. Digest: 2026-06-14.
+-   **What a harness is and how to build one with Claude Agent SDK** (Lenny's Newsletter [product]) — embed specific, granular authorization rules directly within agent harnesses. Digest: 2026-07-08.
+-   **You gave your AI agent real tools — the 4-part control layer it's missing / the Judge Layer implementation guide** (Nate Jones) — action classification, specialist judges, memory governance, structured write-back. Digest: 2026-05-16 (command-center, crumbl-ops).
+-   **Six layers your agent has to handle (+ a responsibility-layer audit)** (Nate Jones) — identity, authorization, fraud, liability for acting agents. Digest: 2026-05-18 (wealth-mgmt, crumbl-ops).
+-   **Your AI coding agent deleted 2.5 years of customer data in minutes** (Nate Jones) — "locally correct, organizationally catastrophic"; fail-safe + human oversight. Digest: 2026-03-27 (crumbl-ops).
+-   **The AI code review checklist that prevents the next $1M production incident** (Ruben Dominguez) — agent dropped prod DB and lied about recovery; accountability. Digest: 2026-05-16 (command-center).
+-   **Kiro goes mobile: AWS brings agentic coding supervision to the iPhone** (The New Stack [devops]) — integrate notification systems and remote interfaces for asynchronous oversight. Digest: 2026-06-17.
+-   **The hidden cost of build vs. buy for agentic AI in regulated industries** (The New Stack) — orchestration, governance, compliance for agent platforms. Digest: 2026-05-18 (wealth-mgmt).
+-   **Why agent harnesses fail inside cloud-native systems** (The New Stack) — context policies, sandboxes, feedback loops. Digest: 2026-05-18 (command-center).
+-   **AI Agents of the Week: Papers You Should Know About** (Pascal Biese (LLM Watch) [ai_engineering]) — assess the agent's entire execution trajectory, not just the final outcome. Digest: 2026-06-14.
+-   **Your engineering org needs an AI slop registry** (The New Stack) — independent, deterministic verification. Digest: 2026-06-26.
+-   **Anthropic’s Claude Sonnet 5 system card says more about the future of AI than its benchmarks do** (The New Stack) — robustness testing for prompt injection across all agent interaction surfaces, especially when interacting with untrusted external content. Digest: 2026-07-01.
+-   **Anthropic’s Claude Sonnet 5 system card says more about the future of AI than its benchmarks do** (The New Stack) — employ adversarial evaluation methods to detect covert agent behavior and the pursuit of hidden objectives. Digest: 2026-07-01.
+-   **Why traditional CI/CD fails for LLMs (and the release gates we built to fix it)** (The New Stack) — utilize shadow validation as a release gate for probabilistic agent updates to detect silent regressions. Digest: 2026-07-02.
+-   **Why traditional CI/CD fails for LLMs (and the release gates we built to fix it)** (The New Stack) — implement continuous drift detection for agent behavior and underlying models. Digest: 2026-07-02.
+-   **Vercel launches eve, an open-source framework that treats agents as directories** (The New Stack [devops]) — design agent tasks to create checkpoints after each significant step. Digest: 2026-06-17.
+-   **The Five Questions That Turn a Messy Task Into an AI Loop (+ the prompts to map yours)** (Nate Jones) — interconnected loops architecture. Digest: 2026-06-24.
+-   **How we contain Claude across products** (Simon Willison) — isolate agent-generated code execution in hardened sandboxes. Digest: 2026-05-31.
+-   **The AI agent identity problem nobody’s talking about** (The New Stack) — distinct, verifiable identity and dynamic permission management. Digest: 2026-06-26.
+-   **AWS, Microsoft, and Google agree the session is the new unit of compute. They disagree on how to isolate it.** (The New Stack) — session-aware runtimes. Digest: 2026-06-26.
+-   **Quoting OpenAI** (Simon Willison [ai_engineering]) — explicit user consent and granular access controls for local file/desktop interactions. Digest: 2026-07-10.
+-   **Replit’s vibe coding platform just got a Visa-backed identity layer for AI agents — and it changes how agents spend money** (The New Stack) — distinct, authenticated identity layer for financial transactions. Digest: 2026-05-30.
 
 ## Where Used
 
-- **crumbl-ops** — the model implementation: agent-facing MCP is read-only by construction (zero write tools); money movement happens only in a non-interactive `daily_sync` job that gates unbalanced journal entries in code, with destructive context externalized into per-module `CLAUDE.md` + path-scoped rules (validated in the #473 audit, area #6 = Good).
-- **command-center** — agents take outbound actions (digest emails, Slack, iMessage flags); highest need for a judge layer + human approval on sends, with structured logging of each action.
-- **wealth-mgmt** — any "actionable thesis" / advisory action in a regulated context needs the authorization-spec + audit-trail layers before it can move beyond information.
+-   **crumbl-ops** — the model implementation: agent-facing MCP is read-only by construction (zero write tools); money movement happens only in a non-interactive `daily_sync` job that gates unbalanced journal entries in code, with destructive context externalized into per-module `CLAUDE.md` + path-scoped rules (validated in the #473 audit, area #6 = Good).
+-   **command-center** — agents take outbound actions (digest emails, Slack, iMessage flags); highest need for a judge layer + human approval on sends, with structured logging of each action.
+-   **wealth-mgmt** — any "actionable thesis" / advisory action in a regulated context needs the authorization-spec + audit-trail layers before it can move beyond information.
