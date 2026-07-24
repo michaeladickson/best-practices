@@ -29,6 +29,7 @@ Before opening a session, ask:
 4.  **Special inputs?** Audio, screenshots, video, PDF, live web, or repo access?
 5.  **Actions?** Does the system need to act — edit files, run tests, move through a browser, generate media?
 6.  **Portable context?** Does the source material live somewhere the model can use, or are you about to spend ten minutes re-pasting yesterday's background?
+7.  **Reasoning Complexity?** Is this a 'single-pass' task (simple pattern matching) or a 'high-reasoning' task (multi-step problem-solving, chain-of-thought, error recovery)? This informs whether a cheaper, faster model or a frontier model is required.
 
 The answers route the work more reliably than the model card. **The core decision rule** (Jones): *"Use the cheap model when you know the artifact and can inspect the result. Use the frontier model when the artifact itself is part of the problem."*
 
@@ -59,40 +60,46 @@ At work, **permission comes first.** Customer data, financial data, legal drafts
 ### 1. Architect the agent system using a 'engine and steering' paradigm.
 Position cheaper, capable models as the robust 'engine' for primary execution, optimizing them rigorously, potentially with open-weights. Reserve frontier models for 'steering' functions: providing strategic planning, making high-level decisions, and orchestrating the overall workflow. This systemic architecture maximizes efficiency by leveraging cheaper models for volume work and frontier models for high-value judgment.
 
-### 2. Delegate mechanical and scoped work; keep judgment in the parent
+### 2. Leverage CPUs for the agent orchestration layer to manage state, routing, and sandbox execution.
+While high-performance accelerators are optimal for model inference and training, CPUs are ideally suited for the agentic orchestration layer. This includes managing agent state, performing semantic routing, selecting tools, and efficiently spinning up secure, isolated sandboxes for code execution. Matching these specific workloads to CPU resources optimizes cost and efficiency.
+
+### 3. Delegate mechanical and scoped work; keep judgment in the parent
 The parent decides *which* skills to author, *whether* a finding is real, *how* a change fits the architecture. A subagent does *"read these four files and return the DocNumber assertion location"* or *"verify each of these 12 commands runs without error and return `{command, ok, error}`."* If a subtask can be defined by a fixed input and a **structured** output, it can probably be delegated.
 
-### 3. Give the parent a rule, not a script
+### 4. Give the parent a rule, not a script
 Tell the parent the tier table above and let it route. Vincent's version: *"use your judgement to decide an appropriate lower power model."* Prescribing which model to spawn where kills the judgment that makes delegation win.
 
-### 4. Orchestrate multiple subagents in parallel for complex tasks.
+### 5. Orchestrate multiple subagents in parallel for complex tasks.
 For highly demanding tasks, leverage the frontier model to coordinate several subagents working simultaneously on distinct workstreams. This approach, exemplified by 'ultra' effort levels, trades higher token usage for potentially stronger results and faster time-to-result, moving beyond simple sequential delegation.
 
-### 5. Maintain continuous user interaction by delegating long-running tasks to background subagents.
+### 6. Maintain continuous user interaction by delegating long-running tasks to background subagents.
 When a task requires deeper reasoning or web search, delegate it to a subagent to execute in the background. The parent model should simultaneously maintain an active, continuous conversation with the user, only bringing the subagent's results into the foreground when ready. This prevents user idle time and improves conversational flow.
 
-### 6. Depth cap: 2. Team cap: small.
+### 7. Depth cap: 2. Team cap: small.
 One subagent tier under the parent — no nesting further. Depth-3+ orchestrations compound spawn overhead and lose reviewability. Small teams (≤ ~5 concurrent) match Anthropic's Claude Code cost docs: *"keep teams small, shut down teammates when they are done."*
 
-### 7. Shutdown discipline
+### 8. Shutdown discipline
 Every subagent shuts down as soon as its structured return lands in the parent. Long-lived teammates burn tokens and drift; short-lived ones are what make the economics work.
 
-### 8. Structured returns, never free-form prose
+### 9. Structured returns, never free-form prose
 Subagents return JSON or terse markdown against a small schema the parent can review at a glance. Free-form returns force the parent to re-read the raw material the subagent already consumed — that defeats the whole point of delegating.
 
-### 9. Never delegate the judgment layer
+### 10. Never delegate the judgment layer
 The parent keeps: authoring decisions, drop / merge / route decisions, the final synthesis, and anything touching money movement, prod writes, deletes, or outbound comms. Subagents produce inputs to the parent's judgment; they never *perform* it.
 
-### 10. Log the delegation trail
+### 11. Log the delegation trail
 Record each spawn: subagent model, task summary, structured return. That's what makes the tree auditable, and what lets you retro whether the delegation ratio is actually cost-effective for this repo instead of a comforting story.
 
-### 11. Watch for spawn-overhead-dominates
+### 12. Execute delegated agent tasks within ephemeral, isolated sandboxes.
+Implement isolated, agent-native compute environments, such as microVMs or perpetual sandboxes, for all delegated tasks. This ensures security by preventing sandbox escapes and provides a resilient environment for agents to investigate and fix issues without compromising internal systems, even for long-running or exploratory work.
+
+### 13. Watch for spawn-overhead-dominates
 Every subagent spawn has fixed cost (context load, prompt, roundtrip). For very small tasks — *does this file exist* — inline is cheaper than delegating. Rule of thumb: if the task's own tokens are less than about 10× the spawn overhead, do it inline in the parent.
 
-### 12. Swap on purpose, for cost
+### 14. Swap on purpose, for cost
 Anthropic's safety mechanism swaps a Fable session to a lower tier when it detects unsafe content. Paweł Huryn's inversion (digest 2026-06-11): *"we can swap on purpose, for cost."* Explicitly drop the session tier when the remaining work is mechanical; explicitly raise it before the next judgment-heavy stretch.
 
-### 13. The model-picker prompt — classify before executing
+### 15. The model-picker prompt — classify before executing
 Nate Jones' habit-forming prompt makes classification automatic. Paste it into any chat window for a routing call *before* you start the real work:
 
     I need to choose the right AI tool for this task.
@@ -120,19 +127,25 @@ Nate Jones' habit-forming prompt makes classification automatic. Paste it into a
 
 Quoted with attribution from Nate Jones, *"Stop paying frontier prices…"* (paid), [natesnewsletter.substack.com/p/which-ai-model-to-use](https://natesnewsletter.substack.com/p/which-ai-model-to-use). **Why it works:** it forces classification *before* execution — the habit that closes the money leak.
 
-### 14. Test the cheap route on your own work
+### 16. Test the cheap route on your own work
 Benchmarks tell you a model deserves attention; only *your* work tells you whether it should run your proposal workflow, codebase, or research process. Jones' protocol:
 
 -   **30-minute version.** Pick one recurring artifact. Run it through your daily driver *and* one cheaper route. Time the review. Mark the output usable / repairable / rejected. Write down the failure mode (missed facts, flattened voice, lost structure, hallucination, or basically-right-but-slow-to-clean).
 -   **One-week version.** Choose five recurring artifacts. Test each twice. Track model, source material, review minutes, accepted output, sensitive-data constraint, and failure mode. Promote the cheap route only where **review stays cheap** — *"a cheap model that saves money and doubles review time is expensive."*
 
-### 15. Keep context portable; separate personal memory from job context
+### 17. Keep context portable; separate personal memory from job context
 Every model has its own private history with you (Claude remembers one thing, ChatGPT another, your coding agent knows the repo for a while, your image tool knows the prompt but not the project). If all of that stays separated by product, you become the router by hand — which is exhausting. Jones' split:
 
 -   **Personal memory** — preferences, taste, standards, recurring projects.
 -   **Job context** — source material for the task (transcript, file, examples, requirements, customer notes, repo, prior decision, checklist).
 
 The more job context lives in files, folders, search, embeddings, project notes, and harnesses — not in one product's memory — the less any single model's memory dictates routing. *"Give a bounded worker the right packet of context."* Rent the intelligence you need; keep the context that makes the work yours.
+
+### 18. Pre-compile raw context data into a structured knowledge base for agents.
+Before agents operate on raw information, implement a pre-processing step using an LLM to compile it into a structured, queryable knowledge representation (e.g., a wiki with summaries and backlinks). This 'context compilation' improves agent reliability by ensuring they reason over organized, precise context, not unstructured raw data, which is critical for overcoming agent reliability bottlenecks.
+
+### 19. Avoid using negative constraints and excessive examples in prompts for the latest frontier models.
+Modern frontier models often perform better with concise, clear instructions rather than long lists of 'don't do X' or numerous examples. Such negative constraints and over-specification can sometimes reduce the quality of results from the latest models. Focus on conveying the desired outcome directly.
 
 ## Anti-Patterns
 
@@ -161,6 +174,11 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`), an
 -   **[AINews] OpenAI launches GPT 5.6 Sol/Terra/Luna, Codex becomes ChatGPT superapp** (Latent Space) — Complex tasks: coordinate multiple subagents in parallel. Digest: 2026-07-10.
 -   **Introducing GPT\u2011Live** (Simon Willison) — Long-running tasks: delegate to background subagents, maintain user interaction. Digest: 2026-07-09.
 -   **Executive Briefing: Run the $40 question on your org this week. If nobody can answer it, you've found your real AI bottleneck.** (Nate Jones) — Architect agent system using 'engine and steering' paradigm. Digest: 2026-07-05.
+-   **Arm and Google offer a smarter option to run agentic AI workloads** (The New Stack) — Orchestration layer on CPUs. Digest: 2026-07-17.
+-   **The bottleneck for AI agents isn’t the model anymore. It’s the context layer.** (The New Stack) — Pre-compile raw context data into structured knowledge. Digest: 2026-07-18.
+-   **Single-pass AI code isn’t dead, but “high-reasoning” is the next frontier** (The New Stack) — Classify tasks by reasoning complexity. Digest: 2026-07-21.
+-   **A Fireside Chat with Cat and Thariq from the Claude Code team** (Simon Willison) — Avoid negative constraints and excessive examples. Digest: 2026-07-21.
+-   **Opus 5 costs a third of the price — and that’s actually the problem** (The New Stack) — Execute delegated agent tasks in sandboxes. Digest: 2026-07-25.
 -   **Simon Willison — "Fable's judgement"** (2026-07-03) — the anchor; direct quotes from Jesse Vincent (Claude Code team) plus Cat Wu and Thariq Shihipar on Sonnet-for-implementation / Haiku-for-mechanical / Fable-keeps-judgment. [simonwillison.net/2026/Jul/3/judgement/](https://simonwillison.net/2026/Jul/3/judgement/)
 -   **Paweł Huryn — "Claude Fable 5: The Ultimate Guide for PMs v2"** (2026-06-11, The Product Compass) — depth-limit experiments, "swap on purpose for cost" pattern, delegation-and-escalation `CLAUDE.md` snippet. Free preview + paid deep-dive.
 -   **Nate Jones — "Stop paying frontier prices for work a cheaper AI would crush. Grab the model-picker prompt that routes the deck, the repo, and the call."** (2026-07-02, Nate's Newsletter, paid — read via subscriber PDF) — primary source for the "start with the job" framing, the frontier / daily-driver / workhorse / specialist split, the model-picker prompt (quoted verbatim in practice #13), the 30-minute / 1-week testing protocol, the personal-memory / job-context split, and the "permission comes first" rule for company work. Uses Coinbase (Business Insider: Armstrong on GLM 5.2 / Kimi 2.7 defaults, complexity-based routing) and Cursor Composer 2 on Kimi K2.5 as real-world routing evidence. [natesnewsletter.substack.com/p/which-ai-model-to-use](https://natesnewsletter.substack.com/p/which-ai-model-to-use)
