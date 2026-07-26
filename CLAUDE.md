@@ -47,7 +47,7 @@ Three digests, each targeted at a specific repo. Every digest:
 - Saves a knowledge file under `data/digest_knowledge/`
 - Creates a self-contained GitHub issue in the target repo (local execution only — see below)
 
-### Scheduled execution (local, Sunday 6pm ET)
+### Scheduled execution (local, Friday 6pm ET)
 
 The full pipeline runs locally as Windows Task Scheduler task `CC-WeeklyDigest`,
 not in GitHub Actions. Reasons: avoids storing a cross-repo PAT in this public

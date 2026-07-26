@@ -1,0 +1,71 @@
+# Dead-man's switch for the weekly digest.
+#
+# The digest pipeline runs on a LOCAL Windows Task Scheduler task (CC-WeeklyDigest,
+# Friday 6pm ET) — see CLAUDE.md. The in-run alert channel (alert_and_exit in
+# scripts/run_weekly_digest.sh) only fires when a run STARTS and fails; if the
+# machine is off, Task Scheduler is broken, or the push never happens, nothing
+# alerts. This workflow runs in GitHub's cloud, independent of that machine, and
+# checks that a fresh knowledge file actually landed on main.
+
+name: Digest Freshness Check
+
+on:
+  schedule:
+    - cron: '0 14 * * 6'  # Saturday ~10am ET, the morning after the Friday 6pm run
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check newest digest knowledge file
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Knowledge files are named YYYY-MM-DD_<context>.md
+          latest=$(ls data/digest_knowledge/ 2>/dev/null \
+                     | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}_' | sort | tail -1 | cut -c1-10)
+          if [ -z "$latest" ]; then
+            latest="1970-01-01"
+          fi
+          age_days=$(( ( $(date +%s) - $(date -d "$latest" +%s) ) / 86400 ))
+          echo "Newest digest knowledge file: $latest (${age_days} days old)"
+
+          if [ "$age_days" -le 8 ]; then
+            echo "Fresh — the weekly digest is landing."
+            exit 0
+          fi
+
+          TITLE_PREFIX="⚠️ Weekly digest has not landed"
+          existing=$(gh issue list --state open --search "\"$TITLE_PREFIX\" in:title" \
+                       --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            echo "Alert already open: #$existing (not duplicating)."
+            exit 0
+          fi
+
+          BODY="The newest file in \`data/digest_knowledge/\` is dated **${latest}** (${age_days} days old), so the local weekly digest has not pushed results for over a week.
+
+The in-run alert channel only covers runs that start and fail — this alert means the run likely **never happened** (machine off past StartWhenAvailable recovery, Task Scheduler broken, or git push failing silently).
+
+**Check on the local machine:**
+1. \`Get-ScheduledTaskInfo -TaskName CC-WeeklyDigest\` — LastRunTime / LastTaskResult
+2. \`logs/weekly_digest.log\` in the best-practices checkout
+3. \`git -C C:/Users/micha/best-practices log origin/main..main\` — unpushed commits?
+
+**Re-run manually:**
+\`\`\`
+bash /mnt/c/Users/micha/best-practices/scripts/run_weekly_digest.sh
+\`\`\`"
+
+          gh issue create --title "$TITLE_PREFIX — newest knowledge file is ${age_days} days old" \
+            --label automated --body "$BODY" \
+            || gh issue create --title "$TITLE_PREFIX — newest knowledge file is ${age_days} days old" \
+                 --body "$BODY"

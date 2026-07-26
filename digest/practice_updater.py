@@ -56,6 +56,13 @@ GEMINI_MODEL = "gemini-2.5-flash"
 MIN_LEN_RATIO = 0.85
 MAX_LEN_RATIO = 2.5
 
+# Absolute ceiling. The ratio bounds alone compound (each week's growth becomes next
+# week's baseline — the docs 2-4x'd in their first two months), so a doc that reaches
+# this size stops accepting auto-edits until a human consolidation pass shrinks it.
+# Checked before spending LLM calls and again on the integrated output.
+MAX_DOC_BYTES = 70_000
+NEAR_CAP_RATIO = 0.85
+
 
 def _load_doc_config(path: Optional[str] = None) -> tuple[list[dict], list[str]]:
     p = Path(path) if path else CONFIG_DIR / "practice-docs.yaml"
@@ -294,6 +301,8 @@ def _validate(old: str, new: str, required_anchors: list[str]) -> tuple[bool, st
         return False, f"suspiciously short ({len(new)} < {MIN_LEN_RATIO}*{len(old)})"
     if len(new) > MAX_LEN_RATIO * len(old):
         return False, f"suspiciously long ({len(new)} > {MAX_LEN_RATIO}*{len(old)})"
+    if len(new) > MAX_DOC_BYTES:
+        return False, f"exceeds absolute cap ({len(new)} > {MAX_DOC_BYTES}); consolidate the doc"
     # Structural defenses against the specific failure modes seen in the
     # 2026-07-05 dry-run (URL flattening in Sources; duplicate practice
     # headings). Both are "new-only" — pre-existing baseline issues don't
@@ -331,6 +340,14 @@ def _process_doc(doc: dict, required_anchors: list[str], posts: list[dict],
         return result
 
     doc_text = abs_path.read_text(encoding="utf-8")
+    if len(doc_text) >= MAX_DOC_BYTES:
+        # Don't spend LLM calls integrating into a doc that validation would reject
+        # anyway. Articles are NOT marked seen — they get another shot after a human
+        # consolidation pass brings the doc back under the cap.
+        log.warning("practice_doc_at_capacity", doc=rel_path,
+                    bytes=len(doc_text), cap=MAX_DOC_BYTES)
+        result["status"] = "at_capacity:consolidate"
+        return result
     client = get_client()
     candidates = _extract_candidates(
         client, doc["topic"], doc.get("scope", ""), _existing_headings(doc_text), new_posts
@@ -364,6 +381,9 @@ def _process_doc(doc: dict, required_anchors: list[str], posts: list[dict],
         return result
 
     abs_path.write_text(new_text, encoding="utf-8")
+    if len(new_text) > NEAR_CAP_RATIO * MAX_DOC_BYTES:
+        log.warning("practice_doc_near_capacity", doc=rel_path,
+                    bytes=len(new_text), cap=MAX_DOC_BYTES)
     # Mark the source articles (those that produced candidates) AND the rest of the
     # considered batch as incorporated/seen.
     incorporated_urls = {c.get("source_url") for c in candidates if c.get("source_url")}

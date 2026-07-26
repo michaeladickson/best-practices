@@ -15,8 +15,9 @@ if (-not (Test-Path $LogPath)) {
 # Wrapper at scripts/run_weekly_digest.cmd does the wsl call.
 $Action = New-ScheduledTaskAction -Execute "$RepoPath\scripts\run_weekly_digest.cmd" -WorkingDirectory $RepoPath
 
-# Sunday 6:00 PM local time
-$Trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At 6:00PM
+# Friday 6:00 PM local time (must match the live CC-WeeklyDigest trigger —
+# this script is the machine-rebuild recovery path)
+$Trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Friday -At 6:00PM
 
 $Settings = New-ScheduledTaskSettingsSet `
     -AllowStartIfOnBatteries `
@@ -25,7 +26,7 @@ $Settings = New-ScheduledTaskSettingsSet `
     -RunOnlyIfNetworkAvailable `
     -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
 
-# StartWhenAvailable: if machine is off Sunday 6pm, runs as soon as it wakes up
+# StartWhenAvailable: if machine is off Friday 6pm, runs as soon as it wakes up
 
 Register-ScheduledTask `
     -TaskName $TaskName `

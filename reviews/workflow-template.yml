@@ -18,6 +18,7 @@ on:
     - cron: '53 12 * * 5'  # Friday ~8am ET (QA review)
     - cron: '53 16 * * 5'  # Friday ~12pm ET (DevOps review)
     - cron: '53 14 * * 6'  # Saturday ~10am ET (CTO review — after all functions complete)
+    - cron: '53 12 1 * *'  # 1st of month ~8am ET (context & memory self-assessment)
   workflow_dispatch:
     inputs:
       review_type:
@@ -32,6 +33,7 @@ on:
           - qa
           - devops
           - cto
+          - context-memory
 
 jobs:
   review:
@@ -48,6 +50,10 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "type=${{ inputs.review_type }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.schedule }}" = "53 12 1 * *" ]; then
+            # Monthly cron fires alongside whatever weekly review shares the 1st;
+            # github.event.schedule tells us which cron this run belongs to.
+            echo "type=context-memory" >> $GITHUB_OUTPUT
           else
             DOW=$(date -u +%u)
             case $DOW in
@@ -73,7 +79,7 @@ jobs:
           TYPE="${{ steps.review-type.outputs.type }}"
           BASE="https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews"
           curl -sf "${BASE}/${TYPE}-review.md" -o review-prompt.md
-          if [ "$TYPE" != "cto" ]; then
+          if [ "$TYPE" != "cto" ] && [ "$TYPE" != "context-memory" ]; then
             curl -sf "${BASE}/synthesize.md" -o synthesize-prompt.md
           fi
 
@@ -134,9 +140,42 @@ jobs:
         if: steps.review-type.outputs.type == 'cto'
         run: echo "CTO review complete — skipping function-level review steps"
 
+      # ── Context & Memory self-assessment (monthly, Claude-only) ─────
+      - name: Run context-memory review
+        if: steps.review-type.outputs.type == 'context-memory'
+        uses: anthropics/claude-code-action@beta
+        with:
+          mode: agent
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_tools: Read,Glob,Grep,Bash,Write
+          mcp_config: '{"mcpServers":{}}'
+          direct_prompt: |
+            You are running the monthly context & memory management self-assessment.
+            Read review-prompt.md for the full instructions and grading areas.
+
+            FIRST: If .github/prompts/review-context.md exists, read it for project
+            context and intentional design decisions — do NOT flag those.
+
+            ALSO: Read existing-issues.md — do NOT report findings already tracked there.
+
+            NOTE: You are running in CI, so the cross-session memory directory
+            (~/.claude/projects/...) is not inspectable here. Grade what is visible
+            in the repo (CLAUDE.md files, knowledge/, decisions/, skills, rules,
+            workflows, scheduled-agent code) and mark machine-local areas as
+            "not inspectable from CI" rather than Missing.
+
+            Write your complete findings to review-output.md, then create a GitHub
+            issue using the gh CLI:
+            - Title: "Context & Memory Review — YYYY-MM-DD" (today's date)
+            - Labels: "context-memory-review,automated" (fall back to no labels if
+              the label doesn't exist)
+            - Body: contents of review-output.md
+          claude_env: |
+            GH_TOKEN=${{ github.token }}
+
       # ── Step 1: Gemini review (skipped for CTO) ───────────────────
       - name: Collect source files for Gemini
-        if: steps.review-type.outputs.type != 'cto'
+        if: steps.review-type.outputs.type != 'cto' && steps.review-type.outputs.type != 'context-memory'
         run: |
           {
             # Include project-specific review context if it exists
@@ -177,13 +216,13 @@ jobs:
           } > source-snapshot.md
 
       - name: Authenticate to GCP
-        if: steps.review-type.outputs.type != 'cto'
+        if: steps.review-type.outputs.type != 'cto' && steps.review-type.outputs.type != 'context-memory'
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Run Gemini review
-        if: steps.review-type.outputs.type != 'cto'
+        if: steps.review-type.outputs.type != 'cto' && steps.review-type.outputs.type != 'context-memory'
         run: |
           TYPE="${{ steps.review-type.outputs.type }}"
           PROJECT="${{ vars.GCP_PROJECT_ID || 'hybrid-elysium-471814-p2' }}"
@@ -239,7 +278,7 @@ jobs:
 
       # ── Step 2: Claude review ───────────────────────────────────────
       - name: Prepare Claude prompt
-        if: steps.review-type.outputs.type != 'cto'
+        if: steps.review-type.outputs.type != 'cto' && steps.review-type.outputs.type != 'context-memory'
         run: |
           TYPE="${{ steps.review-type.outputs.type }}"
           echo "$TYPE" > review-type.txt
@@ -247,7 +286,7 @@ jobs:
           mv .mcp.json .mcp.json.bak 2>/dev/null || true
 
       - name: Run Claude review
-        if: steps.review-type.outputs.type != 'cto'
+        if: steps.review-type.outputs.type != 'cto' && steps.review-type.outputs.type != 'context-memory'
         uses: anthropics/claude-code-action@beta
         with:
           mode: agent
@@ -271,7 +310,7 @@ jobs:
 
       # ── Step 3: Synthesize both reviews (skipped for CTO) ──────────
       - name: Synthesize reviews
-        if: steps.review-type.outputs.type != 'cto'
+        if: steps.review-type.outputs.type != 'cto' && steps.review-type.outputs.type != 'context-memory'
         uses: anthropics/claude-code-action@beta
         with:
           mode: agent
