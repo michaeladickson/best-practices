@@ -48,6 +48,7 @@ on:
 permissions:
   contents: read
   issues: write
+  id-token: write  # claude-code-action OAuth exchange requires OIDC
 
 jobs:
   review:
