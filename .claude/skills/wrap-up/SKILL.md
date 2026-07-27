@@ -49,8 +49,17 @@ The weekly digest + `practice_updater` runs Friday 6pm ET via the `CC-WeeklyDige
 - **New feed** in `digest/config/feeds.yaml` → *"starts feeding Friday; expect first candidates from &lt;source&gt; the following week."*
 - **`scripts/run_weekly_digest.sh` changed** → *"next run exercises the change; check the Task Scheduler log."*
 - **`.github/workflows/weekly-digests.yml` changed** → *"manual-dispatch fallback affected — the local runner is untouched."*
+- **Any workflow or `reviews/*.yml` template changed** → dispatch it once before wrapping (`gh workflow run …`) or name why not. GitHub treats unparseable workflow YAML as *trigger-less with no error* — the tell is the API showing the file path as the workflow name. The push-time validator gates parse errors; only a dispatch proves end-to-end (2026-07-26: the freshness dead-man's-switch shipped dead and only a manual dispatch caught it).
+- **A practice doc within ~10% of the 70KB cap** → *"consolidation pass due before the updater starts skipping it (`at_capacity:consolidate`)."*
 
 Do NOT invent watch-items. If the session didn't change any of these areas, say *"no digest-pipeline watch-items."*
+
+### 3b. Automation-parity check (only if the session touched scheduled automation)
+
+Two invariants from the 2026-07-26 audit — confirm both for anything scheduled this session touched:
+
+- **Recovery parity** — the register script (`scripts/register_*.ps1`) must produce the same trigger as the live Task Scheduler entry. Drift here means a machine rebuild silently restores the wrong schedule (the Sunday-vs-Friday class).
+- **Evidence of work** — a run that exits 0 without producing its artifact must be *detectable* (freshness workflow, output-delta guard, health-check artifact map). "Scheduler says success" is not evidence; the usage scanner logged "Done" for four weeks while processing zero files.
 
 ### 4. Cross-session memory (only if something surprising surfaced)
 
