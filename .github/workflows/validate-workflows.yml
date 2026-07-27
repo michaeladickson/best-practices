@@ -1,0 +1,53 @@
+# Validate workflow YAML before it can bite.
+#
+# Why: on 2026-07-26 a workflow with an invalid block scalar (multi-line bash
+# string with column-0 continuation lines) was pushed to main. GitHub silently
+# treats an unparseable workflow as having NO triggers — the scheduled
+# dead-man's switch would never have fired, and the only tell is the API/UI
+# showing the file PATH as the workflow name. This check makes that class of
+# mistake fail loudly at push time. It also covers reviews/*.yml — the
+# templates other repos copy from.
+
+name: Validate Workflow YAML
+
+on:
+  push:
+    paths:
+      - '.github/workflows/**'
+      - 'reviews/*.yml'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'reviews/*.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse every workflow and template
+        run: |
+          python3 - << 'EOF'
+          import glob, sys, yaml
+
+          failed = []
+          for path in sorted(glob.glob(".github/workflows/*.yml") + glob.glob("reviews/*.yml")):
+              try:
+                  with open(path) as f:
+                      doc = yaml.safe_load(f)
+              except yaml.YAMLError as e:
+                  failed.append((path, str(e).splitlines()[0]))
+                  continue
+              # Workflows must have triggers; 'on' parses as the YAML bool True.
+              if path.startswith(".github/") and not (isinstance(doc, dict) and (True in doc or "on" in doc)):
+                  failed.append((path, "no 'on:' triggers found"))
+
+          for path, err in failed:
+              print(f"INVALID: {path}: {err}")
+          if failed:
+              sys.exit(1)
+          print("All workflow YAML parses cleanly.")
+          EOF

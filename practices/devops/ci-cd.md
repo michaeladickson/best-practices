@@ -41,6 +41,27 @@ Keep them fast to avoid developer friction:
 - Type checking (mypy / tsc)
 - Secret detection (git-secrets or similar)
 
+## Workflow-File Validation
+
+GitHub silently treats an **unparseable workflow file as having no triggers** — no
+error surfaces anywhere in the UI. The only tell is the API/UI showing the file
+*path* as the workflow name (`gh api repos/OWNER/REPO/actions/workflows` → `name`
+equals `path`). A scheduled workflow in that state simply never fires; if it's a
+monitoring/dead-man's-switch workflow, the watchdog itself is dead and nothing
+tells you.
+
+- The classic trap: a multi-line shell string inside `run: |` whose continuation
+  lines sit at column 0 — they terminate the YAML block scalar and invalidate the
+  whole file. Assemble multi-line bodies with `printf '%s\n' ...` (every line
+  stays indented) instead of bare multi-line quotes. (Bit the digest-freshness
+  dead-man's switch on 2026-07-26; caught only by dispatching it.)
+- Guard: a tiny CI job that `yaml.safe_load`s every file under `.github/workflows/`
+  (plus any workflow *templates* the repo distributes) and fails the push — see
+  `best-practices/.github/workflows/validate-workflows.yml`.
+- After fixing a broken workflow, confirm GitHub reparsed it: the API `name` should
+  change from the path back to the workflow's `name:` value.
+
 ## Where Used
 
 - **crumbl-ops**: Cloud Build for API + sync jobs, GitHub Actions for weekly reviews
+- **best-practices**: `validate-workflows.yml` guards its own workflows + the `reviews/` templates
