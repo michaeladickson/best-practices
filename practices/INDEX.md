@@ -6,6 +6,7 @@ Patterns and conventions extracted from production repos. Reference these when s
 
 - [FastAPI Structure](architecture/fastapi-structure.md) — Route organization, service layers, migrations
 - [Database Patterns](architecture/database-patterns.md) — PostgreSQL, SQLite, FTS, RLS, upserts
+- [Data-Quality Checks](architecture/data-quality-checks.md) — Result contract, calibrating both directions, derived registration, write-path gate, check isolation, alert paths
 - [Pydantic & Data Models](architecture/pydantic-patterns.md) — Settings, API models, TypeScript types
 - [Resilience](architecture/resilience.md) — Circuit breaker, run governor, retry, async error gathering
 - [Logging](architecture/logging.md) — Structlog conventions, event naming
