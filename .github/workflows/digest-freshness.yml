@@ -51,19 +51,24 @@ jobs:
             exit 0
           fi
 
-          BODY="The newest file in \`data/digest_knowledge/\` is dated **${latest}** (${age_days} days old), so the local weekly digest has not pushed results for over a week.
-
-The in-run alert channel only covers runs that start and fail — this alert means the run likely **never happened** (machine off past StartWhenAvailable recovery, Task Scheduler broken, or git push failing silently).
-
-**Check on the local machine:**
-1. \`Get-ScheduledTaskInfo -TaskName CC-WeeklyDigest\` — LastRunTime / LastTaskResult
-2. \`logs/weekly_digest.log\` in the best-practices checkout
-3. \`git -C C:/Users/micha/best-practices log origin/main..main\` — unpushed commits?
-
-**Re-run manually:**
-\`\`\`
-bash /mnt/c/Users/micha/best-practices/scripts/run_weekly_digest.sh
-\`\`\`"
+          # printf-assembled: continuation lines of a plain multi-line string
+          # would sit at column 0 and terminate this YAML block scalar —
+          # exactly the parse failure that made GitHub show this workflow as
+          # trigger-less on 2026-07-26.
+          BODY=$(printf '%s\n' \
+            "The newest file in \`data/digest_knowledge/\` is dated **${latest}** (${age_days} days old), so the local weekly digest has not pushed results for over a week." \
+            "" \
+            "The in-run alert channel only covers runs that start and fail — this alert means the run likely **never happened** (machine off past StartWhenAvailable recovery, Task Scheduler broken, or git push failing silently)." \
+            "" \
+            "**Check on the local machine:**" \
+            "1. \`Get-ScheduledTaskInfo -TaskName CC-WeeklyDigest\` — LastRunTime / LastTaskResult" \
+            "2. \`logs/weekly_digest.log\` in the best-practices checkout" \
+            "3. \`git -C C:/Users/micha/best-practices log origin/main..main\` — unpushed commits?" \
+            "" \
+            "**Re-run manually:**" \
+            '```' \
+            "bash /mnt/c/Users/micha/best-practices/scripts/run_weekly_digest.sh" \
+            '```')
 
           gh issue create --title "$TITLE_PREFIX — newest knowledge file is ${age_days} days old" \
             --label automated --body "$BODY" \
