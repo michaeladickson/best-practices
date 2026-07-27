@@ -72,12 +72,42 @@ drafts against the live store:
 
 | Naive check | Why it fired on healthy data | Reshaped as |
 |---|---|---|
-| duplicate transactions: same account+date+amount+name twice | two identical coffees on one day is ordinary — 30 such pairs in 90 days | clusters of **3+** — 0 today, but the real Jan-2025 bad import made groups of 367 |
-| account silent > N days | quietest account was *savings* (27d idle, normal); next had 7 lifetime transactions | compare each account to **its own** cadence; exempt accounts with too little history |
+| duplicate rows: same entity+date+amount+description twice | two identical same-day charges are ordinary; dozens existed in a normal quarter | require clusters of **3+**, which was silent on healthy data |
+| feed silent > N days | the quietest accounts were a low-activity savings account and one with almost no history — both legitimately idle | compare each account to **its own** cadence; exempt accounts with too little history to have one |
 | every active Plaid item has a sync cursor | investment and loan items use different Plaid endpoints and correctly have none | scope to items holding a credit/depository account |
 
 Write the calibration into the docstring. It is the most perishable knowledge in the
 check and the first thing a future editor will otherwise "simplify" away.
+
+### The anomaly may be real data
+
+The most expensive version of this mistake is not a mis-tuned threshold — it is
+"cleaning up" data that was correct. A cluster of hundreds of identical-looking
+rows in one two-month window looked exactly like a duplicated import, and the
+obvious remediation was to keep one row per group. Reading the rows first told a
+different story: matched waves of charges and reversals with names like
+`SECURITY ADJUSTMENT` and `ADJUSTMENT-PURCHASES`, confined to those two months
+against a normal dozen-per-month elsewhere. It was a disputed-charge episode, and
+the "fix" would have rewritten the period by tens of thousands of dollars.
+
+So, before any dedupe or backfill that deletes rows:
+
+- **Read the rows, not just the counts.** The names and the sign pattern carried
+  the entire answer; every aggregate query was consistent with either story.
+- **Ask what the delta would be.** If a cleanup moves a financial period by a
+  material amount, it is not a cleanup — it is a restatement, and it needs the
+  source-of-truth document (a statement, an invoice) rather than a query.
+- **Check for a second source before trusting one.** Here there was none: the
+  provider feed did not reach back that far, which is exactly why it was
+  unresolvable.
+- **Scope the check to catch a recurrence, not to report the backlog.** A
+  trailing window keeps the check green on known history while still alarming if
+  it happens again; the backlog is a separate decision for a human.
+
+The durable fix was not a check at all — it was recording **provenance** on
+import (source filename per row), so the same question is answerable next time by
+a query instead of an investigation. A check that cannot be resolved when it
+fires is only half a check.
 
 ## Window and threshold traps
 
@@ -237,9 +267,10 @@ a human before you ship, and write it in the docstring.
   registered and running nightly. `@preflight` derived deploy gate, `verify_dq_coverage.py`
   write-path gate with expiring waivers, snapshot fixtures in `tests/fixtures/dq_checks/`,
   authoring guidance in the `dq-check` skill.
-- **wealth-mgmt** — 10 checks (`src/quality/`) over budget.db and investments.db: owner
+- **wealth-mgmt** — 11 checks (`src/quality/`) over budget.db and investments.db: owner
   scoping, orphan transactions, categorization coverage, duplicate clusters, cadence-relative
-  sync staleness, and deterministic-ID idempotency. `python -m src.quality.cli check`.
+  sync staleness, import provenance, and deterministic-ID idempotency.
+  `python -m src.quality.cli check`.
 - **command-center** — the four `cron_maintenance_*` jobs (doc drift, status drift, path
   integrity, memory consolidation) are DQ checks over a knowledge repo rather than a
   database; they predate this pattern and are not yet registry- or gate-backed.
