@@ -1,25 +1,37 @@
-# Dual-model review workflow (Gemini + Claude → Synthesis).
+# Claude-only, diff-scoped review workflow (rebuilt 2026-07-26).
 # Review prompts fetched from best-practices repo at runtime.
+#
+# Why this shape (evidence from the 2026-07-26 review-system audit):
+#   - The former dual-model (Gemini + Claude + synthesis) design never paid:
+#     Gemini's full-repo snapshot calls were truncated/timing out ("data caps"),
+#     ~100% of its findings were dismissed in synthesis, a curl timeout could
+#     kill the job before Claude ran, and it forced a GCP credential into every
+#     repo (an 11-day auth outage broke 10 straight runs). Claude reviews the
+#     repo agentically and needs none of that.
+#   - Weekly reviews are DIFF-SCOPED: they review the window's changes in
+#     context instead of re-reading the whole repo weekly, which had produced
+#     0-net-new-finding issues against a backlog nobody read. Quiet week -> no
+#     issue filed at all.
+#   - Full-scope judgment lives in the monthly reviews (cto, context-memory,
+#     model-hierarchy) driven by the best-practices yardstick prompts.
+#   - Every cron uses a UNIQUE fire-time: GitHub coalesces same-minute crons,
+#     which silently ate the monthly reviews in the old layout.
 #
 # Setup:
 # 1. Copy this to .github/workflows/weekly-reviews.yml in your repo
 # 2. Create .github/prompts/review-context.md from the template in best-practices/reviews/
-# 3. Set secrets: ANTHROPIC_API_KEY (or CLAUDE_CODE_OAUTH_TOKEN), GCP_SA_KEY
+# 3. Set secret: CLAUDE_CODE_OAUTH_TOKEN (that's all — no GCP anything)
 # 4. Ensure GITHUB_TOKEN has issues:write permission
 
 name: Weekly Reviews
 
 on:
   schedule:
-    - cron: '53 12 * * 1'  # Monday ~8am ET (code review)
-    - cron: '53 12 * * 2'  # Tuesday ~8am ET (security review)
-    - cron: '53 12 * * 3'  # Wednesday ~8am ET (UI review)
-    - cron: '53 12 * * 4'  # Thursday ~8am ET (data review)
-    - cron: '53 12 * * 5'  # Friday ~8am ET (QA review)
-    - cron: '53 16 * * 5'  # Friday ~12pm ET (DevOps review)
-    - cron: '53 14 * * 6'  # Saturday ~10am ET (CTO review — after all functions complete)
-    - cron: '53 12 1 * *'  # 1st of month ~8am ET (context & memory self-assessment)
-    - cron: '53 12 15 * *'  # 15th of month ~8am ET (model-hierarchy / delegation self-assessment)
+    - cron: '23 13 * * 1'   # Monday ~9:23am ET — changes review (code + security, week diff)
+    - cron: '23 13 * * 4'   # Thursday ~9:23am ET — data + QA review (week diff)
+    - cron: '51 13 22 * *'  # 22nd monthly — CTO strategic review
+    - cron: '37 13 1 * *'   # 1st monthly — context & memory self-assessment
+    - cron: '37 13 15 * *'  # 15th monthly — model-hierarchy / delegation self-assessment
   workflow_dispatch:
     inputs:
       review_type:
@@ -27,68 +39,61 @@ on:
         required: true
         type: choice
         options:
-          - code
-          - security
-          - ui
-          - data
-          - qa
-          - devops
+          - changes
+          - data-qa
           - cto
           - context-memory
           - model-hierarchy
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   review:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
-      id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Determine review type
         id: review-type
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "type=${{ inputs.review_type }}" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event.schedule }}" = "53 12 1 * *" ]; then
-            # Monthly crons fire alongside whatever weekly review shares the day;
-            # github.event.schedule tells us which cron this run belongs to.
-            echo "type=context-memory" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event.schedule }}" = "53 12 15 * *" ]; then
-            echo "type=model-hierarchy" >> $GITHUB_OUTPUT
           else
-            DOW=$(date -u +%u)
-            case $DOW in
-              1) echo "type=code" >> $GITHUB_OUTPUT ;;
-              2) echo "type=security" >> $GITHUB_OUTPUT ;;
-              3) echo "type=ui" >> $GITHUB_OUTPUT ;;
-              4) echo "type=data" >> $GITHUB_OUTPUT ;;
-              5)
-                HOUR=$(date -u +%H)
-                if [ "$HOUR" -ge 15 ]; then
-                  echo "type=devops" >> $GITHUB_OUTPUT
-                else
-                  echo "type=qa" >> $GITHUB_OUTPUT
-                fi ;;
-              6) echo "type=cto" >> $GITHUB_OUTPUT ;;
-              *) echo "type=code" >> $GITHUB_OUTPUT ;;
+            case "${{ github.event.schedule }}" in
+              '23 13 * * 1')  echo "type=changes"         >> $GITHUB_OUTPUT ;;
+              '23 13 * * 4')  echo "type=data-qa"         >> $GITHUB_OUTPUT ;;
+              '51 13 22 * *') echo "type=cto"             >> $GITHUB_OUTPUT ;;
+              '37 13 1 * *')  echo "type=context-memory"  >> $GITHUB_OUTPUT ;;
+              '37 13 15 * *') echo "type=model-hierarchy" >> $GITHUB_OUTPUT ;;
+              *)              echo "type=changes"         >> $GITHUB_OUTPUT ;;
             esac
           fi
 
-      # ── Fetch centralized prompts from best-practices repo ──────────
       - name: Fetch review prompts
         run: |
           TYPE="${{ steps.review-type.outputs.type }}"
           BASE="https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews"
-          curl -sf "${BASE}/${TYPE}-review.md" -o review-prompt.md
-          if [ "$TYPE" != "cto" ] && [ "$TYPE" != "context-memory" ] && [ "$TYPE" != "model-hierarchy" ]; then
-            curl -sf "${BASE}/synthesize.md" -o synthesize-prompt.md
-          fi
+          case "$TYPE" in
+            changes)
+              curl -sf "${BASE}/code-review.md" -o review-prompt.md
+              printf '\n\n---\n\n' >> review-prompt.md
+              curl -sf "${BASE}/security-review.md" >> review-prompt.md
+              ;;
+            data-qa)
+              curl -sf "${BASE}/data-review.md" -o review-prompt.md
+              printf '\n\n---\n\n' >> review-prompt.md
+              curl -sf "${BASE}/qa-review.md" >> review-prompt.md
+              ;;
+            *)
+              curl -sf "${BASE}/${TYPE}-review.md" -o review-prompt.md
+              ;;
+          esac
 
-      # ── Fetch existing open issues for dedup ────────────────────────
-      - name: Fetch open issues
+      - name: Fetch open issues for dedup
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -96,285 +101,86 @@ jobs:
             echo "# Existing Open Issues"
             echo ""
             echo "These issues are already tracked. Do NOT re-report findings that are"
-            echo "covered by an existing issue. If a finding is already listed below,"
-            echo "skip it entirely — even if you would phrase it differently."
+            echo "covered by an existing issue."
             echo ""
             gh issue list --state open --limit 100 --json number,title,body \
               --jq '.[] | "## #\(.number): \(.title)\n\(.body)\n"'
           } > existing-issues.md
 
-          ISSUE_COUNT=$(gh issue list --state open --limit 100 --json number --jq 'length')
-          echo "Fetched $ISSUE_COUNT open issues for dedup"
-
-      # ── CTO Review (runs instead of Gemini+Claude+Synthesis) ────────
-      - name: Run CTO review
-        if: steps.review-type.outputs.type == 'cto'
-        uses: anthropics/claude-code-action@beta
-        with:
-          mode: agent
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          allowed_tools: Read,Glob,Grep,Bash,Write
-          mcp_config: '{"mcpServers":{}}'
-          direct_prompt: |
-            You are running a CTO-level strategic review. Read review-prompt.md for full instructions.
-
-            FIRST: Use the gh CLI to fetch this week's review issues:
-              gh issue list --state all --limit 10 --label "automated" --json number,title,body,createdAt \
-                --jq '.[] | select(.createdAt > (now - 7*24*3600 | strftime("%Y-%m-%dT%H:%M:%SZ")))' \
-                > /dev/null 2>&1 || true
-
-            Actually, use this approach to get the last 7 days of review issues:
-              gh issue list --state all --limit 20 --label "automated" --json number,title,body,createdAt
-
-            Read each issue body. These are the Code, Security, UI, and QA reviews from this week.
-            Also read existing-issues.md for the full list of open issues.
-
-            If .github/prompts/review-context.md exists, read it for project context.
-
-            Perform the CTO review as specified in review-prompt.md.
-
-            Write output to review-output.md, then create a GitHub issue:
-            - Title: "Weekly CTO Review — YYYY-MM-DD" (today's date)
-            - Labels: "cto-review,automated"
-            - Body: contents of review-output.md
-          claude_env: |
-            GH_TOKEN=${{ github.token }}
-
-      - name: Skip remaining steps for CTO review
-        if: steps.review-type.outputs.type == 'cto'
-        run: echo "CTO review complete — skipping function-level review steps"
-
-      # ── Context & Memory self-assessment (monthly, Claude-only) ─────
-      - name: Run context-memory review
-        if: steps.review-type.outputs.type == 'context-memory'
-        uses: anthropics/claude-code-action@beta
-        with:
-          mode: agent
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          allowed_tools: Read,Glob,Grep,Bash,Write
-          mcp_config: '{"mcpServers":{}}'
-          direct_prompt: |
-            You are running the monthly context & memory management self-assessment.
-            Read review-prompt.md for the full instructions and grading areas.
-
-            FIRST: If .github/prompts/review-context.md exists, read it for project
-            context and intentional design decisions — do NOT flag those.
-
-            ALSO: Read existing-issues.md — do NOT report findings already tracked there.
-
-            NOTE: You are running in CI, so the cross-session memory directory
-            (~/.claude/projects/...) is not inspectable here. Grade what is visible
-            in the repo (CLAUDE.md files, knowledge/, decisions/, skills, rules,
-            workflows, scheduled-agent code) and mark machine-local areas as
-            "not inspectable from CI" rather than Missing.
-
-            Write your complete findings to review-output.md, then create a GitHub
-            issue using the gh CLI:
-            - Title: "Context & Memory Review — YYYY-MM-DD" (today's date)
-            - Labels: "context-memory-review,automated" (fall back to no labels if
-              the label doesn't exist)
-            - Body: contents of review-output.md
-          claude_env: |
-            GH_TOKEN=${{ github.token }}
-
-      # ── Model-hierarchy / delegation self-assessment (monthly, Claude-only) ─
-      - name: Run model-hierarchy review
-        if: steps.review-type.outputs.type == 'model-hierarchy'
-        uses: anthropics/claude-code-action@beta
-        with:
-          mode: agent
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          allowed_tools: Read,Glob,Grep,Bash,Write
-          mcp_config: '{"mcpServers":{}}'
-          direct_prompt: |
-            You are running the monthly model-hierarchy / delegation self-assessment.
-            Read review-prompt.md for the full instructions and grading areas.
-
-            FIRST: If .github/prompts/review-context.md exists, read it for project
-            context and intentional design decisions — do NOT flag those.
-
-            ALSO: Read existing-issues.md — do NOT report findings already tracked there.
-
-            NOTE: You are running in CI, so machine-local surfaces (usage.db, Task
-            Scheduler, cross-session memory) are not inspectable here. Grade what is
-            visible in the repo — CLAUDE.md routing/subagent guidance, .claude/agents/
-            definitions, skills that should delegate, scheduled-agent code and its
-            model choices — and mark machine-local areas as "not inspectable from CI"
-            rather than Missing.
-
-            Write your complete findings to review-output.md, then create a GitHub
-            issue using the gh CLI:
-            - Title: "Model Hierarchy Review — YYYY-MM-DD" (today's date)
-            - Labels: "model-hierarchy-review,automated" (fall back to no labels if
-              the label doesn't exist)
-            - Body: contents of review-output.md
-          claude_env: |
-            GH_TOKEN=${{ github.token }}
-
-      # ── Step 1: Gemini review (skipped for CTO) ───────────────────
-      - name: Collect source files for Gemini
-        if: steps.review-type.outputs.type != 'cto' && steps.review-type.outputs.type != 'context-memory' && steps.review-type.outputs.type != 'model-hierarchy'
+      - name: Build week diff
+        id: diff
+        if: steps.review-type.outputs.type == 'changes' || steps.review-type.outputs.type == 'data-qa'
         run: |
+          BASE_REF=$(git rev-list -1 --before="8 days ago" HEAD || true)
+          if [ -z "$BASE_REF" ]; then
+            # Repo younger than the window — diff from the root commit
+            BASE_REF=$(git rev-list --max-parents=0 HEAD | tail -1)
+          fi
+          COMMITS=$(git log --oneline "${BASE_REF}..HEAD" | wc -l)
+          echo "commits=$COMMITS" >> $GITHUB_OUTPUT
+          if [ "$COMMITS" -eq 0 ]; then
+            echo "No commits in the review window — skipping review, no issue will be filed."
+            exit 0
+          fi
           {
-            # Include project-specific review context if it exists
-            if [ -f .github/prompts/review-context.md ]; then
-              cat .github/prompts/review-context.md
-              echo ""
-            fi
-
-            echo "# Source files for review"
+            echo "# Changes under review (${COMMITS} commits since ${BASE_REF})"
             echo ""
-
-            # Python files
-            for f in $(find . -name '*.py' -not -path '*/venv/*' -not -path '*__pycache__*' -not -path '*node_modules*' -not -path '*/.venv/*' | sort); do
-              echo "## $f"
-              echo '```python'
-              cat "$f"
-              echo '```'
-              echo ""
-            done
-
-            # TypeScript/JavaScript files
-            for f in $(find . -name '*.tsx' -o -name '*.ts' | grep -v node_modules | grep -v '.d.ts' | sort); do
-              echo "## $f"
-              echo '```typescript'
-              cat "$f"
-              echo '```'
-              echo ""
-            done
-
-            # Swift files
-            for f in $(find . -name '*.swift' -not -path '*/Pods/*' -not -path '*/.build/*' | sort); do
-              echo "## $f"
-              echo '```swift'
-              cat "$f"
-              echo '```'
-              echo ""
-            done
-          } > source-snapshot.md
-
-      - name: Authenticate to GCP
-        if: steps.review-type.outputs.type != 'cto' && steps.review-type.outputs.type != 'context-memory' && steps.review-type.outputs.type != 'model-hierarchy'
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Run Gemini review
-        if: steps.review-type.outputs.type != 'cto' && steps.review-type.outputs.type != 'context-memory' && steps.review-type.outputs.type != 'model-hierarchy'
-        run: |
-          TYPE="${{ steps.review-type.outputs.type }}"
-          PROJECT="${{ vars.GCP_PROJECT_ID || 'hybrid-elysium-471814-p2' }}"
-          LOCATION="us-central1"
-          MODEL="gemini-2.5-flash"
-
-          # Build the full prompt
-          {
-            if [ -f .github/prompts/review-context.md ]; then
-              cat .github/prompts/review-context.md
-              echo ""
-            fi
-            cat existing-issues.md
+            echo "## Commits"
+            git log --oneline "${BASE_REF}..HEAD"
             echo ""
-            cat review-prompt.md
+            echo "## Stat"
+            git diff --stat "${BASE_REF}..HEAD"
             echo ""
-            echo "Here are the source files to review:"
-            echo ""
-            cat source-snapshot.md
-          } > gemini-full-prompt.txt
-
-          # Build JSON request using Python (avoids shell arg length limits)
-          python3 -c "
-          import json
-          with open('gemini-full-prompt.txt') as f:
-              text = f.read()
-          req = {
-              'contents': [{'role': 'user', 'parts': [{'text': text}]}],
-              'generationConfig': {'temperature': 0.2, 'maxOutputTokens': 8192}
-          }
-          json.dump(req, open('gemini-request.json', 'w'))
-          print(f'Request size: {len(text)//1024}KB')
-          "
-
-          ACCESS_TOKEN=$(gcloud auth print-access-token)
-          ENDPOINT="https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT}/locations/${LOCATION}/publishers/google/models/${MODEL}:generateContent"
-
-          RESP=$(curl -s -X POST "$ENDPOINT" \
-            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d @gemini-request.json \
-            --max-time 300)
-
-          echo "$RESP" | jq -r '.candidates[0].content.parts[0].text // empty' > gemini-output.md
-
-          if [ ! -s gemini-output.md ]; then
-            echo "$RESP" | jq -r '.error.message // "Unknown error"' >&2
-            echo "Gemini review produced no output. Synthesis will use Claude's review only." > gemini-output.md
+            echo "## Diff"
+          } > week-diff.md
+          # Cap the inline diff; the agent can read full files itself.
+          git diff "${BASE_REF}..HEAD" > full.diff
+          if [ "$(wc -c < full.diff)" -gt 300000 ]; then
+            echo "_Diff exceeds 300KB — file list above is authoritative; read changed files directly._" >> week-diff.md
+            head -c 300000 full.diff >> week-diff.md
+          else
+            cat full.diff >> week-diff.md
           fi
 
-          echo "--- Gemini output (first 20 lines) ---"
-          head -20 gemini-output.md
-
-      # ── Step 2: Claude review ───────────────────────────────────────
-      - name: Prepare Claude prompt
-        if: steps.review-type.outputs.type != 'cto' && steps.review-type.outputs.type != 'context-memory' && steps.review-type.outputs.type != 'model-hierarchy'
-        run: |
-          TYPE="${{ steps.review-type.outputs.type }}"
-          echo "$TYPE" > review-type.txt
-          # Hide .mcp.json so claude-code-action doesn't try to start MCP servers
-          mv .mcp.json .mcp.json.bak 2>/dev/null || true
-
-      - name: Run Claude review
-        if: steps.review-type.outputs.type != 'cto' && steps.review-type.outputs.type != 'context-memory' && steps.review-type.outputs.type != 'model-hierarchy'
-        uses: anthropics/claude-code-action@beta
+      - name: Run review
+        if: steps.diff.outputs.commits != '0'
+        uses: anthropics/claude-code-action@v1
         with:
-          mode: agent
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          allowed_tools: Read,Glob,Grep,Bash,Write
-          mcp_config: '{"mcpServers":{}}'
-          direct_prompt: |
-            FIRST: If .github/prompts/review-context.md exists, read it — it defines what
-            this app is, its threat model, intentional design decisions you must NOT flag,
-            and what makes a good vs bad finding. Follow it strictly.
+          claude_args: |
+            --model claude-sonnet-4-6
+            --allowedTools Read,Glob,Grep,Bash,Write
+            --mcp-config '{"mcpServers":{}}'
+          settings: '{"env": {"GH_TOKEN": "${{ github.token }}"}}'
+          prompt: |
+            TYPE="${{ steps.review-type.outputs.type }}" review.
 
-            THEN: Read review-prompt.md for the specific review instructions.
+            FIRST: If .github/prompts/review-context.md exists, read it — threat
+            model and intentional design decisions you must NOT flag.
+            ALSO: Read existing-issues.md — do NOT re-report anything tracked there.
+            THEN: Read review-prompt.md for review instructions and focus areas.
 
-            ALSO: Read existing-issues.md — do NOT report findings already tracked there.
+            SCOPE:
+            - If week-diff.md exists, this is a CHANGE review: review the
+              window's changes in their surrounding context (read neighboring
+              code as needed). Do NOT audit unchanged code; do NOT restate
+              old findings about files the diff doesn't touch. Where a prompt
+              says "review all source files", the diff scope overrides it.
+            - If week-diff.md does not exist, this is a monthly full-scope
+              review — follow review-prompt.md as written. Machine-local
+              surfaces (cross-session memory, Task Scheduler, usage.db) are
+              not inspectable from CI; grade repo-visible evidence and mark
+              those "not inspectable from CI" rather than Missing.
 
-            Review all source files in the repository.
-
-            When done, write your complete findings to a file called claude-output.md
-            in the repository root. Output ONLY the findings as specified in the prompt
-            file, no title or extra text.
-
-      # ── Step 3: Synthesize both reviews (skipped for CTO) ──────────
-      - name: Synthesize reviews
-        if: steps.review-type.outputs.type != 'cto' && steps.review-type.outputs.type != 'context-memory' && steps.review-type.outputs.type != 'model-hierarchy'
-        uses: anthropics/claude-code-action@beta
-        with:
-          mode: agent
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          allowed_tools: Read,Glob,Grep,Bash,Write
-          mcp_config: '{"mcpServers":{}}'
-          direct_prompt: |
-            You have two independent reviews of the same codebase — one from Claude
-            (claude-output.md) and one from Gemini (gemini-output.md).
-
-            Read both files, then read synthesize-prompt.md for detailed instructions.
-
-            If .github/prompts/review-context.md exists, read it too — it defines
-            intentional design decisions that should NOT be flagged.
-
-            CRITICAL: Also read existing-issues.md. Any finding that duplicates or overlaps
-            with an existing open issue MUST be moved to the "Dismissed" section with the
-            note "Already tracked in #<number>". Do not create duplicate work items.
-
-            Write the synthesized issue body to review-output.md in the repository root.
-            Output ONLY the synthesized issue body, no title or preamble.
-
-            After writing review-output.md, create a GitHub issue using the gh CLI:
-            - Read the TYPE from the file 'review-type.txt' (contains: code, security, ui, or qa)
-            - Title format: "Weekly {Type} Review — YYYY-MM-DD" (use today's date)
-            - Labels: "{type}-review,automated"
-            - Body: contents of review-output.md
-          claude_env: |
-            GH_TOKEN=${{ github.token }}
+            OUTPUT:
+            - If there are no findings worth a human's time, print
+              "No findings this window." and DO NOT create an issue.
+            - Otherwise write findings to review-output.md (specific: file,
+              line, why it matters, concrete fix; markdown checkboxes) and
+              create ONE GitHub issue via gh:
+              - changes         -> title "Weekly Changes Review — YYYY-MM-DD", labels "code-review,automated"
+              - data-qa         -> title "Weekly Data+QA Review — YYYY-MM-DD", labels "qa-review,automated"
+              - cto             -> title "Monthly CTO Review — YYYY-MM-DD", labels "cto-review,automated"
+              - context-memory  -> title "Context & Memory Review — YYYY-MM-DD", labels "context-memory-review,automated"
+              - model-hierarchy -> title "Model Hierarchy Review — YYYY-MM-DD", labels "model-hierarchy-review,automated"
+              (fall back to no labels if a label doesn't exist)

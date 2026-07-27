@@ -45,12 +45,12 @@ Check for:
    - Are there NULL handling gaps that could produce wrong aggregations?
    - Are unique constraints and dedup logic sufficient to prevent double-counting?
    - Are there orphaned records or referential integrity gaps?
-   - Is the cookie_forecasts → forecast_daily_revenue → labor_cache chain consistent?
-   - Are cookie lookups using `crumbl_cookie_id` (stable UUID) and NOT cookie names? Name-based lookups break when Crumbl renames cookies.
+   - Are derived-table chains (source → aggregate → cache) consistent, or can a stage go stale silently?
+   - Are entity lookups keyed on stable IDs rather than display names that an upstream system can rename?
 
 6. **Webhook & External Sync Integrity**
-   - Are there WIW time entries with NULL end_time older than 12 hours? This indicates a dropped Zapier webhook for the clock-out event.
-   - Does the gap-fill function `detect_and_fill_missing_clockouts()` in `wiw_sync.py` exist and handle the fallback to scheduled shift end times?
+   - Are there half-open records (e.g. start without end) older than the expected completion window? That usually means a dropped webhook/event.
+   - Does a gap-fill or reconciliation path exist for missed external events, and does it have a sane fallback?
    - Are there time entries where length_hours = 0 but end_time is set (corrupt data)?
    - Are there days where total labor hours are significantly below historical DOW average for a store (suggests missing punches even if entries exist)?
 
