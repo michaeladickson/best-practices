@@ -185,7 +185,8 @@ Layered/multi-agent review (e.g., Claude Code Review) examines diffs within the 
 codebase, ranks findings by severity, and catches subtle bugs at a low false-positive
 rate (digest 2026-03-27). Use it as a *first-pass gate* — it raises signal — but keep
 a human accountable for merge. Two cheap, high-leverage gates:
-- A second model/agent reviews the diff (dual-model, like this repo's review system).
+- An independent automated pass reviews the diff — a reviewer agent that didn't
+  author the change (e.g. a scheduled diff-scoped review workflow).
 - The author-agent must address each finding or explain why it's a false positive.
 
 ### 45. Design LLM-specific release gates for CI/CD pipelines that incorporate baseline evaluations, drift detection, shadow validation, and cost/latency guardrails.
@@ -420,7 +421,7 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 
 ## Where Used
 
-- **best-practices**: dual-model review system in [`reviews/`](../../reviews/) (Gemini + Claude → synthesis → deduped GitHub issue) is this doc's #19 in practice.
+- **best-practices**: Claude-only, diff-scoped review system in [`reviews/`](../../reviews/) (weekly diff reviews + monthly full-scope self-assessments → deduped GitHub issue) puts this doc's automated-review gate (#44) in practice.
 - **crumbl-ops**: Claude Code for all development with a single engineer — primary consumer of the checklist, validation loop, and destructive-action gating (payroll, QBO writes).
 - **command-center**: Scheduled agents taking outbound actions — #32 (human-in-the-loop) and reasoning-defense matter most.
 - **wealth-mgmt**: "Fortress" software in a regulated context — spec-first + maintenance-cost discipline are load-bearing.

@@ -47,11 +47,33 @@ Get-ChildItem $ProjectsRoot -Directory -ErrorAction SilentlyContinue | ForEach-O
     }
 }
 
-# 2. wealth-mgmt personal-tax analyses: gitignored by design (sensitive), markdown
-#    only — the .db files and plaid_tokens.json are intentionally NOT backed up here.
+# 2. wealth-mgmt personal-tax analyses: gitignored by design (sensitive). ALL
+#    files — the 2026-07-26 scrub sweep found the earlier *.md filter skipped
+#    6 of 13 files incl. taxprep_2025.json and the Sophie xlsx package.
 $taxSrc = "C:\Users\micha\wealth-mgmt\data\personal_tax"
 if (Test-Path $taxSrc) {
-    Copy-Tree $taxSrc (Join-Path $BackupRoot "wealth-mgmt-personal_tax") "*.md"
+    Copy-Tree $taxSrc (Join-Path $BackupRoot "wealth-mgmt-personal_tax") $null
+}
+
+# 3. wealth-mgmt core data files: gitignored, previously had NO backstop beyond
+#    ad-hoc same-disk .bak copies (2026-07-26 scrub sweep). plaid_tokens.json is
+#    deliberately EXCLUDED — access tokens don't belong in OneDrive; they are
+#    re-mintable via Plaid Link re-auth.
+$wmData = "C:\Users\micha\wealth-mgmt\data"
+if (Test-Path $wmData) {
+    $dest = Join-Path $BackupRoot "wealth-mgmt-data"
+    New-Item -ItemType Directory -Force -Path $dest | Out-Null
+    foreach ($f in @("budget.db", "investments.db", "digest.db", "category_rules.csv", "category_overrides.csv")) {
+        if (Test-Path (Join-Path $wmData $f)) {
+            robocopy $wmData $dest $f /XO /R:2 /W:5 /NP /NDL /NJH /NJS | Out-Null
+            if ($LASTEXITCODE -ge 8) {
+                $script:failed++
+                "FAIL (rc=$LASTEXITCODE): $wmData\$f" | Add-Content -Encoding utf8 $LogFile
+            } else {
+                "OK   (rc=$LASTEXITCODE): $wmData\$f" | Add-Content -Encoding utf8 $LogFile
+            }
+        }
+    }
 }
 
 if ($failed -gt 0) {

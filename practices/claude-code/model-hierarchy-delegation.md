@@ -188,6 +188,6 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`), an
 ## Where Used
 
 -   **best-practices** — the crumbl-ops Fable skill-distillation prompt at [`prompts/fable-skill-distillation-crumbl-ops.md`](../../prompts/fable-skill-distillation-crumbl-ops.md) applies this rule set to the specific case of authoring skills.
--   **crumbl-ops** — heaviest immediate impact. Fast wins: delegate the code-time reads/greps a Fable or Opus session does; downshift the tail of long sessions to Sonnet once the judgment stretch is done. The dual-model weekly review is already a delegation network — the tier rules formalize which model does which review.
+-   **crumbl-ops** — heaviest immediate impact. Fast wins: delegate the code-time reads/greps a Fable or Opus session does; downshift the tail of long sessions to Sonnet once the judgment stretch is done. The scheduled review workflow is already a delegation network — independent Claude reviewer agents (weekly diff-scoped reviews, monthly self-assessments) running apart from the authoring sessions — and the tier rules formalize which model tier each review deserves.
 -   **command-center** — the agent fleet is already a delegation network; this formalizes what's currently ad-hoc.
 -   **wealth-mgmt** — research and investment-thesis work benefit from the parent-judgment / subagent-reading split; ground-truth verification passes can go to Sonnet.

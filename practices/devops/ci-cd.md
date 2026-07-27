@@ -2,31 +2,17 @@
 
 ## GitHub Actions — Automated Code Review
 
-```yaml
-# .github/workflows/weekly-reviews.yml
-name: Weekly Reviews
-on:
-  schedule:
-    - cron: '0 13 * * 1'  # Monday 8am ET (code review)
-    - cron: '0 13 * * 3'  # Wednesday 8am ET (UI review)
-    - cron: '0 13 * * 5'  # Friday 8am ET (QA review)
+Don't hand-roll a review workflow — copy the maintained template at
+[`reviews/workflow-template.yml`](../../reviews/workflow-template.yml)
+(Claude-only, 5 scheduled review types, single `CLAUDE_CODE_OAUTH_TOKEN` secret).
+Three design rules it encodes:
 
-jobs:
-  review:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: anthropics/claude-code-action@beta
-        with:
-          prompt: |
-            Review the following files for:
-            1. Security vulnerabilities (Critical/High/Medium/Low)
-            2. Performance issues
-            3. Code quality
-            Output as GitHub issue body with checkboxes.
-```
-
-Creates GitHub issues with findings for tracking.
+- **Diff-scoped weeklies** — weekly reviews cover the week's git diff in context,
+  not a full-repo re-read; full-scope judgment lives in the monthly reviews.
+- **Unique cron fire-times** — GitHub coalesces same-minute crons into a single
+  run, silently dropping the rest; every schedule entry gets its own minute.
+- **Quiet week → no issue** — no commits in the window (or no findings) files
+  nothing, instead of an empty issue nobody reads.
 
 ## Cloud Build Triggers
 

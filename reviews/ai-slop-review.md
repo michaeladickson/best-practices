@@ -40,9 +40,10 @@ Assess against each area below. For each: state the current state, grade it
    radius — beyond the generic code review? Spot-check: do recent diffs show
    over-engineering, parallel-pattern reinvention, or unowned complexity?
 
-5. **Automated review gate** — Is there a second-model/agent review (dual-model, like
-   best-practices `reviews/`) before merge, and is a human accountable for the merge
-   decision? Or is automated/self-review the only gate?
+5. **Automated review gate** — Is there an independent automated review pass (e.g.
+   the weekly diff-scoped Claude review in best-practices `reviews/`) before merge,
+   and is a human accountable for the merge decision? Or is automated/self-review
+   the only gate?
 
 6. **Destructive-action gating** — Can an agent run migrations, deletes, prod writes,
    or money movement without a human gate? Is operational/destructive context

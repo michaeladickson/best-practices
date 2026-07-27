@@ -20,12 +20,12 @@ best-practices/
     security/          # Secrets management, auth, rate limiting
     devops/            # Cloud Run, CI/CD
     claude-code/       # CLAUDE.md templates, CLI patterns
-  reviews/             # Shared review prompts (used by all repos via GitHub Actions)
-    code-review.md     # Weekly code review prompt
-    ui-review.md       # Weekly UI review prompt
-    qa-review.md       # Weekly QA review prompt
-    security-review.md # On-demand security audit prompt
-    workflow-template.yml  # Copy to .github/workflows/ in any repo
+  reviews/             # Claude-only, diff-scoped review system — see reviews/README.md
+    workflow-template.yml  # 5 scheduled types: changes (Mon), data-qa (Thu),
+                       #   cto (22nd), context-memory (1st), model-hierarchy (15th).
+                       #   Consumed by wealth-mgmt; crumbl-ops self-hosts its own
+                       #   prompts; command-center has no review workflow.
+    *-review.md        # Scheduled prompts + on-demand audits (ui, devops, ai-slop, ...)
   digest/              # RSS digest tool (module)
     ai_digest.py       # Main logic
     config/            # feeds.yaml, 3 context files

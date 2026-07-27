@@ -1,3 +1,5 @@
+On-demand audit prompt — not in the scheduled rotation since 2026-07-26; paste into a session or dispatch manually.
+
 FIRST: If review-context.md exists, read it for project context, threat model, and
 intentional design decisions. Follow it strictly — do NOT flag intentional decisions.
 ALSO: Read existing-issues.md — do NOT report findings already tracked there.
