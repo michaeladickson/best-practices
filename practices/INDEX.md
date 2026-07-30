@@ -41,6 +41,10 @@ Patterns and conventions extracted from production repos. Reference these when s
 - [Investing Patterns](finance/investing-patterns.md) — Portfolio architecture, macro analysis, spending categories, Plaid, client-ready patterns
 - [Payroll & Labor](finance/payroll-patterns.md) — Payroll engine, OT rules, time integration, labor analytics
 
+## Writing
+
+- [Email Drafting](writing/email-drafting.md) — Voice, brevity, process exposure; range-as-floor, non-binding caps, no-summary-in-prompt, live A/B as the acceptance test
+
 ## Development
 
 - [Payroll Testing](development/payroll-testing.md) — Decimal precision, OT edge cases, tip distribution, known-good validation
