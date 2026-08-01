@@ -248,7 +248,16 @@ Editing rules — follow exactly:
 
 
 _MD_LINK_RE = re.compile(r"\[[^\]]+\]\([^)]+\)")
-_PRACTICE_HEADING_RE = re.compile(r"^###\s+\d+\.\s+(.+?)\s*$")
+# A "practice" is written two ways across these docs, so the duplicate guard has to
+# see both. It previously matched only the numbered heading form, which meant docs
+# that don't number their practices ran with the guard silently inert —
+# context-memory-management.md has zero numbered headings and was never checked at
+# all until 2026-08-01.
+#   1. `### 12. Title` or `### Title`  (numbering optional; naming a practice by
+#      number is discouraged anyway, since inserted entries rot the references)
+#   2. `- **Title.** body`             (the bold lead of a bullet)
+_PRACTICE_HEADING_RE = re.compile(r"^###\s+(?:\d+\.\s+)?(.+?)\s*$")
+_PRACTICE_BULLET_RE = re.compile(r"^[-*]\s+\*\*(.+?)\*\*")
 _HEADING_STOP = frozenset({
     "a", "an", "the", "of", "to", "for", "and", "or", "in", "on", "at", "by",
     "with", "from", "into", "not", "no", "it", "is", "be", "as", "via",
@@ -269,16 +278,37 @@ def _heading_key(title: str) -> tuple[str, ...]:
     return tuple(content[:3]) if len(content) >= 3 else ()
 
 
-def _duplicate_heading_pairs(text: str) -> list[tuple[str, str]]:
-    """Pairs of numbered `### N. Title` headings sharing the same 3-content-word key."""
-    by_key: dict[tuple[str, ...], list[str]] = {}
+def _practice_titles(text: str) -> list[str]:
+    """Every practice title in the doc BODY, from either the heading form or the
+    bold-bullet-lead form. Keyed by text, not by numbering.
+
+    Stops at `## Sources`. Everything below it is citations and usage notes, where
+    bold-bullet leads are *article titles* — and recurring publications legitimately
+    repeat ("AI Agents of the Week" appears 3x in one doc). Counting those as
+    duplicate practices would reject a whole week's update because a newsletter
+    published twice. Measured before this cutoff existed: 13 such false pairs
+    across the 5 docs, and 0 genuine ones."""
+    titles: list[str] = []
     for ln in text.splitlines():
-        m = _PRACTICE_HEADING_RE.match(ln.strip())
-        if not m:
-            continue
-        k = _heading_key(m.group(1))
+        s = ln.strip()
+        if s.lower().startswith("## sources"):
+            break
+        m = _PRACTICE_HEADING_RE.match(s) or _PRACTICE_BULLET_RE.match(s)
+        if m:
+            titles.append(m.group(1))
+    return titles
+
+
+def _duplicate_heading_pairs(text: str) -> list[tuple[str, str]]:
+    """Pairs of practice titles sharing the same 3-content-word key.
+
+    Only pairs that are NEW relative to the previous revision are rejected (see
+    _validate), so pre-existing collisions never cause a perpetual reject."""
+    by_key: dict[tuple[str, ...], list[str]] = {}
+    for title in _practice_titles(text):
+        k = _heading_key(title)
         if k:
-            by_key.setdefault(k, []).append(m.group(1))
+            by_key.setdefault(k, []).append(title)
     pairs: list[tuple[str, str]] = []
     for hs in by_key.values():
         for i, h1 in enumerate(hs):
