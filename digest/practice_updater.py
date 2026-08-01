@@ -450,6 +450,26 @@ def main(days: int, dry_run: bool, docs_path: Optional[str], feeds_path: Optiona
     else:
         print(f"\n{len(updated)} doc(s) updated.")
 
+    # A blocked doc silently discards that week's candidates and will block again
+    # next week for the same reason — it needs a human. Exit non-zero so the caller
+    # (run_weekly_digest.sh) counts it and the run reports FAILED. Before this,
+    # main() always returned None, so a doc could be rejected every week for months
+    # while the job reported success: on 2026-08-01 code-review-and-ai-slop.md was
+    # rejected over the size cap, dropping 75 candidates, and the run still exited 0.
+    #
+    # Only these statuses block. no_new_articles / no_candidates are normal weeks
+    # and must NOT fail the run.
+    blocked = [r for r in results
+               if r["status"].startswith(("rejected:", "at_capacity:", "error:"))
+               or r["status"] == "missing"]
+    if blocked:
+        print(f"\n=== {len(blocked)} doc(s) BLOCKED — candidates discarded, needs a human ===")
+        for r in blocked:
+            lost = f", {r['candidates']} candidate(s) lost" if r.get("candidates") else ""
+            print(f"  ! {r['doc']}: {r['status']}{lost}")
+        print("  These will block again next week until resolved.")
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

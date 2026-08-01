@@ -159,12 +159,15 @@ export GEMINI_API_KEY SMTP_PASS
 export SMTP_USER="michael@bluegrasscookies.com"
 
 FAILED=0
+DIGESTS_FAILED=0
+PRACTICE_FAILED=0
 for CTX in crumbl-ops command-center wealth-mgmt; do
   echo ""
   echo "=== Running $CTX digest ==="
   if ! python3 -m digest --context "digest/config/context-${CTX}.yaml" --days 7; then
     echo "WARNING: $CTX digest failed" >&2
     FAILED=$((FAILED + 1))
+    DIGESTS_FAILED=$((DIGESTS_FAILED + 1))
     continue
   fi
 
@@ -187,9 +190,15 @@ echo ""
 echo "=== Updating living practice docs from this week's articles ==="
 # Auto-edits every doc listed in digest/config/practice-docs.yaml from the same
 # archived articles. Dedup ledger + structural validation guard the writes.
+# Exits non-zero when a doc is BLOCKED (validation-rejected, at the size cap, or
+# errored) — that week's candidates are discarded and it will block again next week
+# for the same reason. It still exits 0 for a normal no-new-articles week. Any
+# partial edits it DID write are committed below regardless, so failing here never
+# strands work.
 if ! python3 -m digest.practice_updater --days 7; then
-  echo "WARNING: practice-doc update failed" >&2
+  echo "WARNING: practice-doc update reported blocked doc(s) — see the BLOCKED list above" >&2
   FAILED=$((FAILED + 1))
+  PRACTICE_FAILED=1
 fi
 
 echo ""
@@ -231,8 +240,17 @@ fi
 
 if [ "$FAILED" -gt 0 ]; then
   echo ""
-  echo "WARNING: $FAILED digest(s) failed. Re-run individually:"
-  echo "  python3 -m digest --context digest/config/context-<name>.yaml --days 7"
+  echo "WARNING: $FAILED step(s) failed."
+  if [ "$DIGESTS_FAILED" -gt 0 ]; then
+    echo "  $DIGESTS_FAILED context digest(s) failed. Re-run individually:"
+    echo "    python3 -m digest --context digest/config/context-<name>.yaml --days 7"
+  fi
+  if [ "$PRACTICE_FAILED" -gt 0 ]; then
+    echo "  Practice-doc update had blocked doc(s) — their candidates were discarded"
+    echo "  and will be discarded again next week until a human resolves them."
+    echo "  Re-run after fixing:"
+    echo "    python3 -m digest.practice_updater --days 7"
+  fi
   exit 1
 fi
 
