@@ -42,8 +42,40 @@ SA_ACCOUNT="cc-digest@hybrid-elysium-471814-p2.iam.gserviceaccount.com"
 # silently expires after a few weeks of inactivity; Windows-side stays fresh
 # through daily interactive use. The cmd.exe wrapper lets us call the
 # Windows-installed gcloud from this WSL shell.
+#
+# stderr is CAPTURED, not discarded. It used to go to /dev/null, which meant
+# every failure mode collapsed into "cannot mint a token (key missing/revoked)"
+# — a confidently wrong diagnosis. On 2026-07-31 that produced an urgent-labelled
+# issue naming a cause that did not reproduce: the SA minted a token fine the
+# next morning through this exact path. Without the real gcloud error there was
+# nothing to diagnose from. GCLOUD_ERR holds the last call's stderr.
+#
+# stderr goes to a FILE, not a shell variable. Every caller here is either
+# `X=$(gcloud_w ...)` or `gcloud_w ... | grep` — both run the function in a
+# subshell, so a variable assigned inside it is discarded before anyone can read
+# it. A file survives. (This bit the first version of this fix.)
+GCLOUD_ERR_FILE=$(mktemp)
+trap 'rm -f "$GCLOUD_ERR_FILE"' EXIT
 gcloud_w() {
-  cmd.exe /c "gcloud $*" 2>/dev/null | tr -d '\r'
+  local out rc=0
+  out=$(cmd.exe /c "gcloud $*" 2>"$GCLOUD_ERR_FILE" | tr -d '\r') || rc=$?
+  printf '%s' "$out"
+  return "$rc"
+}
+
+# Render the last gcloud call's stderr for an alert body, or say plainly that
+# there was none. Drops cmd.exe's UNC-path preamble, which it emits on every
+# call from WSL and which says nothing about the failure.
+gcloud_err_block() {
+  local err
+  err=$(tr -d '\r' <"$GCLOUD_ERR_FILE" 2>/dev/null \
+        | grep -v -e '^.\\\\wsl' -e '^CMD.EXE was started' -e '^UNC paths are not supported' \
+        | tail -n 12)
+  if [ -n "$err" ]; then
+    printf '\n**gcloud stderr:**\n```\n%s\n```\n' "$err"
+  else
+    printf '\n_gcloud wrote nothing to stderr — the call produced no output and no error. Re-run before assuming a cause._\n'
+  fi
 }
 
 ALERT_REPO="michaeladickson/command-center"
@@ -65,12 +97,18 @@ alert_and_exit() {
     body="Weekly digest run aborted at $(date -Is).
 
 **Reason:** $reason
-
-Secrets are fetched via service account \`$SA_ACCOUNT\` (key-based, normally immune to user reauth), so this usually means:
+$(gcloud_err_block)
+**Read the stderr above before assuming a cause.** Secrets are fetched via
+service account \`$SA_ACCOUNT\` (key-based, normally immune to user reauth).
+Candidate causes, only if the stderr supports one:
 1. **SA credential missing/revoked** — check \`gcloud auth list\` still shows the SA; re-activate its key if it's gone.
 2. **SA lost access** — confirm it still has \`secretmanager.secretAccessor\` on gemini-api-key + smtp-password in project $GCP_PROJECT.
+3. **Transient / no stderr at all** — re-run first. A run has aborted here once (2026-07-31) with the SA perfectly healthy.
 
-**Then re-run:**
+**Re-run (the token mint is worth testing on its own first):**
+\`\`\`
+gcloud --account=$SA_ACCOUNT auth print-access-token | wc -c
+\`\`\`
 \`\`\`
 bash /mnt/c/Users/micha/best-practices/scripts/run_weekly_digest.sh
 \`\`\`"
@@ -93,11 +131,18 @@ gh auth status >/dev/null 2>&1 || {
 }
 
 # Pre-flight: confirm the service account can mint a token before kicking off
-# three doomed digests. Token is consumed by grep and never printed.
+# three doomed digests. The token is held in a variable and never printed.
+#
+# NOT piped into grep: a pipe puts gcloud_w in a subshell and throws away the
+# GCLOUD_ERR it just captured, which is the whole point of capturing it.
 echo "=== Pre-flight: service-account access token ==="
-if ! gcloud_w "--account=$SA_ACCOUNT auth print-access-token" | grep -q .; then
-  alert_and_exit "Service account $SA_ACCOUNT cannot mint an access token (key missing/revoked, or removed from the gcloud credential store). Secret Manager access would fail, so all 3 digests would error out."
+_PREFLIGHT_TOKEN=""
+_PREFLIGHT_RC=0
+_PREFLIGHT_TOKEN=$(gcloud_w "--account=$SA_ACCOUNT auth print-access-token") || _PREFLIGHT_RC=$?
+if [ "$_PREFLIGHT_RC" -ne 0 ] || [ -z "$_PREFLIGHT_TOKEN" ]; then
+  alert_and_exit "Service account $SA_ACCOUNT returned no access token (gcloud exit $_PREFLIGHT_RC). Secret Manager access would fail, so all 3 digests would error out."
 fi
+unset _PREFLIGHT_TOKEN
 
 echo "=== Fetching secrets from GCP Secret Manager (service account) ==="
 GEMINI_API_KEY=$(gcloud_w "--account=$SA_ACCOUNT secrets versions access latest --secret=gemini-api-key --project=$GCP_PROJECT") \
