@@ -147,6 +147,15 @@ Before agents operate on raw information, implement a pre-processing step using 
 ### 19. Avoid using negative constraints and excessive examples in prompts for the latest frontier models.
 Modern frontier models often perform better with concise, clear instructions rather than long lists of 'don't do X' or numerous examples. Such negative constraints and over-specification can sometimes reduce the quality of results from the latest models. Focus on conveying the desired outcome directly.
 
+### 20. Dynamically filter context for subagents based on the current task objective.
+Avoid context bloat by ensuring tools, skills, and plugins are only passed to the subagent when directly relevant to its immediate, bounded objective within a multi-step workflow, optimizing for efficiency.
+
+### 21. Implement robust access controls and permissions for data retrieved by agents.
+Ensure agents only access and reason over data for which the requesting user is explicitly authorized, integrating role-based access controls (RBAC) into the agent's data retrieval mechanisms to maintain security and compliance.
+
+### 22. Delegate the verification of task completion to a separate, typically cheaper, subagent.
+After a working subagent completes its assigned work, route the output and the defined completion condition to a smaller, faster model (e.g., Haiku) that acts as an independent verifier, preventing the working agent from 'grading its own homework'.
+
 ## Anti-Patterns
 
 -   **Fable-does-everything** — using the frontier model for greps, reads, and verifications because the session is on it.
@@ -171,6 +180,10 @@ Use [`reviews/model-hierarchy-review.md`](../../reviews/model-hierarchy-review.m
 
 Saved articles synthesized here (full summaries in `data/digest_knowledge/`), and the Claude Code team's own guidance:
 
+-   **[AINews] GPT 5.6 price cut by 20%-80%: Cost of GPT 5.4 Intelligence dropped 13x in 4 months due to GPT 5.6 recursive self-optimization** (Latent Space [ai_engineering]) — Dynamically filter context for subagents based on the current task objective. Digest: 2026-07-31.
+-   **OpenAI and Elastic are tackling the AI problem enterprises can’t ignore** (The New Stack [devops]) — Implement robust access controls and permissions for data retrieved by agents. Digest: 2026-07-30.
+-   **Goal Engineering, or: Are We There Yet?** (Pascal Biese (LLM Watch) [ai_engineering]) — Delegate the verification of task completion to a separate, typically cheaper, subagent. Digest: 2026-07-29.
+-   **Stop guessing whether a cheaper model can do the job. Grab the bakeoff guide: the validator, the manifest, the score sheet, and the fixtures.** (Nate Jones [ai_strategy]) — Include the cost of human review and correction when evaluating model efficiency and choosing a routing path. Digest: 2026-07-27.
 -   **[AINews] OpenAI launches GPT 5.6 Sol/Terra/Luna, Codex becomes ChatGPT superapp** (Latent Space) — Complex tasks: coordinate multiple subagents in parallel. Digest: 2026-07-10.
 -   **Introducing GPT\u2011Live** (Simon Willison) — Long-running tasks: delegate to background subagents, maintain user interaction. Digest: 2026-07-09.
 -   **Executive Briefing: Run the $40 question on your org this week. If nobody can answer it, you've found your real AI bottleneck.** (Nate Jones) — Architect agent system using 'engine and steering' paradigm. Digest: 2026-07-05.

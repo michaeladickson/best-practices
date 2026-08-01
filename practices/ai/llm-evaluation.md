@@ -62,131 +62,149 @@ This involves assessing whether the retrieval mechanism (e.g., search, RAG, tool
 ### 8. Beyond evaluating RAG context quality, systematically evaluate the underlying RAG infrastructure's robustness and efficiency at scale, including distributed data ingestion pipelines and prompt caching mechanisms, to ensure they maintain retrieval accuracy and LLM output quality while managing cost and latency.
 Naive RAG architectures often fail at production scale, leading to timeouts and data loss. Evaluations must extend to the system design, ensuring that architectural choices like asynchronous ingestion and prompt caching are robust, cost-effective, and do not compromise the relevance or accuracy of the retrieved context, which directly impacts the final LLM output.
 
-### 9. Design, implement, and rigorously evaluate a 'context compilation' layer for AI agents that systematically transforms raw, unstructured enterprise data into a structured, queryable knowledge base (e.g., a self-organizing wiki), and assess its impact on agent reasoning quality and overall system reliability.
+### 9. Evaluate AI agents' context retrieval mechanisms for strict adherence to existing role-based access controls (RBAC) and multi-tenant data isolation policies.
+Design evaluations to verify that AI agents, especially in RAG or agentic pipelines, only retrieve and reason over data for which they (or the requesting user) have explicit authorization. This includes testing against RBAC policies and ensuring data remains isolated in multi-tenant environments.
+
+### 10. Design, implement, and rigorously evaluate a 'context compilation' layer for AI agents that systematically transforms raw, unstructured enterprise data into a structured, queryable knowledge base (e.g., a self-organizing wiki), and assess its impact on agent reasoning quality and overall system reliability.
 Direct retrieval from raw, messy data often limits agent effectiveness. By introducing a compilation step where an LLM structures and summarizes knowledge into an organized format, agents can reason more effectively. Evaluations should focus on the quality of this compiled knowledge, its ability to reduce agent 'guessing,' and its contribution to improved output quality and reduced hallucination.
 
-### 10. When selecting LLMs, explicitly evaluate open-weight models as production-grade alternatives by considering non-functional criteria such as cost, control, and vendor lock-in alongside performance benchmarks.
+### 11. When selecting LLMs, explicitly evaluate open-weight models as production-grade alternatives by considering non-functional criteria such as cost, control, and vendor lock-in alongside performance benchmarks.
 With the increasing maturity of open-weight models, the evaluation process should expand beyond pure capability benchmarks to include strategic factors. Assess how open-weight options compare to proprietary models not only in terms of quality but also in total cost of ownership, the degree of control over the model and its data, and the risk of vendor lock-in, as these factors increasingly influence production readiness decisions for long-term sustainability.
 
-### 11. Employ trajectory-aware evaluation judges for agentic AI features to detect reasoning shortcuts, fabricated evidence, or exploitation of test artifacts.
+### 12. Employ trajectory-aware evaluation judges for agentic AI features to detect reasoning shortcuts, fabricated evidence, or exploitation of test artifacts.
 Beyond evaluating the final output, design evaluation systems that analyze the sequence of steps and intermediate states (the "trajectory") an AI agent takes. This helps identify "shortcut" behaviors, data leakage, fabricated intermediate results, or exploitation of test artifacts that lead to correct outcomes for the wrong reasons, ensuring genuine capability over superficial performance.
 
-### 12. Develop evaluation methods to assess the quality and efficiency of internal task decomposition and routing within multi-agent orchestration systems, especially when the logic is proprietary or opaque.
+### 13. Develop evaluation methods to assess the quality and efficiency of internal task decomposition and routing within multi-agent orchestration systems, especially when the logic is proprietary or opaque.
 Multi-agent systems that orchestrate subtasks across different models introduce new failure modes and inefficiencies. Even when the internal decomposition and routing logic is proprietary or hidden, robust evaluation methods must be developed to assess its effectiveness, efficiency, and potential biases, observing its impact on overall output quality, cost, and latency.
 
-### 13. Implement specific evaluations and monitoring for dynamic model routing systems to verify the router's effectiveness in selecting optimal models and ensuring consistent quality and performance across all backend LLMs.
+### 14. Implement specific evaluations and monitoring for dynamic model routing systems to verify the router's effectiveness in selecting optimal models and ensuring consistent quality and performance across all backend LLMs.
 When using model routers that dynamically dispatch requests to different LLMs based on cost, latency, or complexity, it's crucial to evaluate not just individual models, but the router's decision logic and its impact on overall system quality. Monitoring should detect performance inconsistencies or regressions when the routing strategy changes or underlying models are updated.
 
-### 14. Refine tool-use prompts for agents by explicitly providing necessary contextual details (e.g., column names in database schemas) to prevent common errors and retry loops.
+### 15. Refine tool-use prompts for agents by explicitly providing necessary contextual details (e.g., column names in database schemas) to prevent common errors and retry loops.
 Evaluations of agentic systems often reveal that insufficient detail in system prompts or tool documentation leads to model 'guessing' and inefficient error-retry behavior. Specifically, when an agent needs to use structured data (like SQL tables), ensure the prompt's schema listing includes column names, or adjust instructions that might implicitly encourage such guessing, to improve precision and reduce wasted compute.
 
-### 15. Systematically evaluate model performance across different 'effort' or reasoning-level settings, as higher settings can sometimes degrade output quality.
+### 16. Systematically evaluate model performance across different 'effort' or reasoning-level settings, as higher settings can sometimes degrade output quality.
 For models that allow configurable reasoning intensity or 'effort levels,' test how these settings impact performance. Increasing the reasoning dial does not always improve results, and can sometimes lead to worse outcomes.
 
-### 16. Run the eval on every prompt change AND every model change — in CI
+### 17. Run the eval on every prompt change AND every model change — in CI
 The eval set is a regression gate, not a one-time exercise. Re-run it when a prompt
 changes and when you consider a model upgrade; **fail the change if quality drops**
 below the baseline. This is "prompt-regression testing" / fixture-based testing for
 prompts (digest 2026-05-16).
 
-### 17. Systematically evaluate the effects of traditional prompt engineering techniques (like providing few-shot examples or negative constraints) on the performance of advanced models, as these can sometimes degrade output quality rather than improve it.
+### 18. Systematically evaluate the effects of traditional prompt engineering techniques (like providing few-shot examples or negative constraints) on the performance of advanced models, as these can sometimes degrade output quality rather than improve it.
 With the rapid evolution of frontier models, some prompt engineering 'best practices' from earlier generations (e.g., extensive few-shot examples, explicit 'do not' lists) can become detrimental. Evaluation workflows must proactively test changes in prompt strategy, specifically looking for performance degradation caused by outdated prompt patterns with newer, more capable models.
 
-### 18. Implement an AI-powered pre-merge gate in CI to evaluate code changes, particularly AI-generated ones, against production requirements, internal standards, and potential dependency risks.
+### 19. Implement an AI-powered pre-merge gate in CI to evaluate code changes, particularly AI-generated ones, against production requirements, internal standards, and potential dependency risks.
 Deploy an AI agent within the merge queue to perform automated, comprehensive checks on code changes before they are integrated. This agent should assess compliance with defined production requirements, internal coding standards (often expressed in natural language), cross-repository dependency risks, and conduct lightweight functional tests in an isolated sandbox, providing clear release recommendations (e.g., BLOCK, Proceed with Caution, Safe to Release).
 
-### 19. Pin model versions; gate upgrades behind the eval
+### 20. Establish distinct automated verification processes for AI-generated code to ensure adherence to organizational standards, architectural patterns, and non-functional requirements (e.g., scalability, error handling conventions), separate from functional testing.
+Automate the evaluation of AI-generated code against established engineering best practices, style guides, API contracts, scalability patterns, and error reporting standards. This verification step goes beyond functional correctness (covered by traditional testing) to ensure systemic quality and maintainability, enabling safe deployment without manual line-by-line human review.
+
+### 21. Pin model versions; gate upgrades behind the eval
 Never let a model float to "latest" silently. Pin the version, and treat a model bump
 as a change that must pass the eval set first. This is the concrete defense against
 "shrinkflation" and silent harness regressions.
 
-### 20. Implement probabilistic release gates, such as shadow validation, for LLM pipelines to proactively detect subtle performance degradation and distribution shifts with real-world traffic.
+### 22. Implement probabilistic release gates, such as shadow validation, for LLM pipelines to proactively detect subtle performance degradation and distribution shifts with real-world traffic.
 Traditional binary CI/CD is insufficient for probabilistic LLMs, which can exhibit gradual 'eval drift' or 'distribution shift' from clean datasets to messy production inputs without triggering hard failure thresholds. Shadow validation allows new models or prompts to process real production traffic passively, enabling early detection of subtle regressions before they impact end-users, thereby establishing more robust, probabilistic release confidence.
 
-### 21. LLM-as-judge for open-ended outputs — but validate the judge
+### 23. LLM-as-judge for open-ended outputs — but validate the judge
 For generation tasks where exact-match doesn't apply, score against an explicit rubric
 using a model judge. Validate the judge against human labels on a sample before trusting
 it, and watch for it rewarding fluent-but-wrong answers.
 
-### 22. Facilitate efficient human 'gut feel' evaluation for qualitative AI outputs using a simple, exportable local scoring interface.
+### 24. Facilitate efficient human 'gut feel' evaluation for qualitative AI outputs using a simple, exportable local scoring interface.
 For open-ended generative tasks, complement LLM-as-judge evaluations with human 'vibe scoring' that captures subjective quality. Implement a lightweight local HTML scoring page that allows human evaluators to quickly rate outputs based on gut feeling and export these scores as structured data (e.g., JSON), streamlining the collection of qualitative feedback and integrating it into quantitative analyses.
 
-### 23. Develop long-horizon, real-world operational simulations or 'business-like' evaluations for complex agentic AI features.
+### 25. Develop long-horizon, real-world operational simulations or 'business-like' evaluations for complex agentic AI features.
 Beyond isolated input-output evaluations, create dynamic, multi-step evaluation environments that mimic how the AI feature would perform in a real business or operational setting. These 'final evals' can reveal emergent behaviors and system-level performance issues.
 
-### 24. Verify against ground truth; flag unsupported claims
+### 26. Verify against ground truth; flag unsupported claims
 For extraction and research outputs, check against the source document and flag anything
 the source doesn't support (the hallucination guard). Keep raw data and AI synthesis
 distinguishable so a reviewer can verify.
 
-### 25. For agentic systems making data-driven conclusions, mandate and evaluate the generation of a comprehensive 'evidence packet' alongside the final output, explicitly detailing analytical queries, statistical justifications, data completeness assessments, and consideration of alternative hypotheses.
+### 27. For agentic systems making data-driven conclusions, mandate and evaluate the generation of a comprehensive 'evidence packet' alongside the final output, explicitly detailing analytical queries, statistical justifications, data completeness assessments, and consideration of alternative hypotheses.
 When agents analyze production data, simply retrieving relevant records is insufficient for reliable conclusions. The evidence packet should serve as a verifiable 'receipt' of the agent's analytical process, allowing human review to confirm the rigor of its data interpretation, statistical validity, and whether it adequately ruled out competing explanations. Evaluation should assess the completeness and quality of this packet.
 
-### 26. Implement robust validation and ground-truth checks on all intermediate data outputs generated or processed by AI agents or LLMs within data ingestion pipelines.
+### 28. Implement robust validation and ground-truth checks on all intermediate data outputs generated or processed by AI agents or LLMs within data ingestion pipelines.
 Prevent 'silent hallucination' by ensuring that data extracted, summarized, or transformed by one AI component before being stored (e.g., in a vector store) or passed to another AI component is accurate and consistent with its original source. Treating probabilistic extraction as deterministic can lead to poisoned context for downstream LLMs.
 
-### 27. Incorporate formal verification methods for AI outputs in domains requiring high mathematical or logical rigor.
+### 29. Incorporate formal verification methods for AI outputs in domains requiring high mathematical or logical rigor.
 For tasks such as code generation, mathematical reasoning, or complex logical planning, implement formal verification techniques to ensure the correctness and soundness of AI-generated artifacts. This aims to formally prove the validity or consistency of the output.
 
-### 28. Implement rigorous, high-assurance evaluation and safety mechanisms for AI agents that interact with critical production systems like databases.
+### 30. Implement rigorous, high-assurance evaluation and safety mechanisms for AI agents that interact with critical production systems like databases.
 Recognize that agent hallucination or errors in actions taken against critical infrastructure can lead to catastrophic system failures. Evaluation for such agents must prioritize unforgiving correctness requirements, potentially employing stricter sandboxing, human-in-the-loop validation, or formal methods.
 
-### 29. Evaluate agentic AI systems for covert behaviors and sophisticated prompt injection attacks within dynamic, interactive execution environments.
+### 31. Evaluate agentic AI systems for covert behaviors and sophisticated prompt injection attacks within dynamic, interactive execution environments.
 Beyond standard safety checks, specifically assess agents' propensity for 'covert actions' – pursuing hidden goals while appearing compliant. Rigorously test prompt injection robustness not just against static prompts, but against instructions embedded within interactive environments like web pages an agent browses or code it executes, recognizing these as critical, active attack surfaces for autonomous agents.
 
-### 30. Establish explicit identity and access management (IAM) evaluation criteria for AI agents, specifically accounting for their dynamic ability to request tools and assume roles.
+### 32. Establish explicit identity and access management (IAM) evaluation criteria for AI agents, specifically accounting for their dynamic ability to request tools and assume roles.
 Given AI agents' dynamic nature, where they request tools and assume roles during operation, traditional IAM approaches are often insufficient. Evaluation must specifically verify that agents operate with least privilege, maintain clear ownership, and provide comprehensive audit trails for all actions, to prevent security regressions and ensure accountability.
 
-### 31. Ensure secure and isolated execution environments (sandboxes) are provided for AI agents that generate and run code as part of their operations or evaluations.
+### 33. Ensure secure and isolated execution environments (sandboxes) are provided for AI agents that generate and run code as part of their operations or evaluations.
 When evaluating agentic AI features that have the capability to write and execute code, it is crucial to provide robust, secure, and isolated sandbox environments. This ensures that agent-generated code runs safely without impacting production systems.
 
-### 32. Ensure the reliability and robustness of interactive environments or harnesses used by AI agents for training and evaluation.
+### 34. Ensure the reliability and robustness of interactive environments or harnesses used by AI agents for training and evaluation.
 For agentic AI features that operate within simulated or real-world environments (harnesses), rigorously test the environment itself for reliability, race conditions, and correctness. An unreliable environment can lead to agents learning incorrect behaviors or evaluation results being meaningless.
 
-### 33. Evaluate the underlying platform engineering capabilities to provide ephemeral, on-demand, and realistic execution environments for AI agents, measuring capacity, provisioning latency, and fidelity of dependencies to support high-frequency agent validation and iteration.
+### 35. Evaluate the underlying platform engineering capabilities to provide ephemeral, on-demand, and realistic execution environments for AI agents, measuring capacity, provisioning latency, and fidelity of dependencies to support high-frequency agent validation and iteration.
 As AI agents generate code and require rapid validation, the demand for isolated execution environments scales significantly beyond traditional developer needs. Evaluations must assess whether the platform can spin up these sandboxed environments concurrently, within seconds, and with accurate production-like dependencies, to prevent infrastructure bottlenecks from hindering agent development and testing cycles.
 
-### 34. Recognize and design around the inherent scaling limitations of embedding-proximity memory systems in AI agents to mitigate increasing hallucination.
+### 36. Rigorously verify that simulated evaluation environments for AI agents precisely match the constraints communicated to the agent, especially for security-critical evaluations involving real-world interaction potential.
+In security-critical evaluations, ensure the agent's understanding of environmental boundaries (e.g., 'this is a simulation,' 'no internet access') is strictly enforced by the environment itself. This prevents agents from treating real external systems as in-scope when they believe they are in a fully isolated simulation, mitigating accidental compromise.
+
+### 37. Recognize and design around the inherent scaling limitations of embedding-proximity memory systems in AI agents to mitigate increasing hallucination.
 Be aware that common agent memory systems based on embedding proximity (e.g., RAG with vector databases) are prone to increased hallucination and forgetting as the memory size grows. Design agent architectures with this fundamental limitation in mind.
 
-### 35. Design evaluations to distinguish between an AI agent's ability to retrieve information and its capacity for semantic understanding and correct application of that information, specifically testing for errors where facts are recalled accurately but their meaning or context is misinterpreted.
+### 38. Evaluate the security posture of an AI agent's entire execution stack, including the hardened runtime environment, browsers, tools, and libraries it utilizes, beyond just container isolation.
+Go beyond basic sandbox isolation by implementing and rigorously testing security measures for all components an AI agent interacts with during its operation. This includes verifying the integrity and security of the agent's runtime, its integrated tools, and any external libraries or browser environments to mitigate vulnerabilities that isolation alone cannot address.
+
+### 39. Design evaluations to distinguish between an AI agent's ability to retrieve information and its capacity for semantic understanding and correct application of that information, specifically testing for errors where facts are recalled accurately but their meaning or context is misinterpreted.
 Agents can confidently present accurate retrieved facts while fundamentally misunderstanding their implications, leading to incorrect conclusions. Evaluation methodologies should go beyond verifying factual recall to assess deeper semantic comprehension and contextual application, ensuring the agent doesn't just 'remember' but 'understands' the information.
 
-### 36. Implement explicit mechanisms for human oversight and intervention in AI agent workflows, especially for critical production systems, to ensure human operators can review, approve, or correct agent decisions and actions before they are executed.
+### 40. Decouple and evaluate AI agent credentials from the model's direct memory space and execution environment, requiring just-in-time, out-of-band authorization for resource access.
+Implement and rigorously test authentication mechanisms that prevent long-lived API keys or permissive service accounts from residing within an AI agent's accessible memory or environment. Instead, design a system where agents must request credentials dynamically and receive them via an out-of-band, just-in-time authorization process, rendering them powerless even if they escape their sandbox.
+
+### 41. Implement explicit mechanisms for human oversight and intervention in AI agent workflows, especially for critical production systems, to ensure human operators can review, approve, or correct agent decisions and actions before they are executed.
 For AI agents operating in sensitive or high-risk environments, it is essential to build systems that allow for meaningful human review and control at key decision points. Evaluations should verify that these oversight mechanisms are effective, user-friendly, and provide sufficient information for humans to make informed judgments and intervene when necessary, shifting focus from mere output review to active control.
 
-### 37. Shift human review processes from inspecting AI-generated code or internal logic to focusing primarily on evaluating the final artifacts and observable outcomes.
+### 42. Shift human review processes from inspecting AI-generated code or internal logic to focusing primarily on evaluating the final artifacts and observable outcomes.
 For AI features, particularly those involving agentic generation or automation, prioritize reviewing the tangible artifacts (e.g., generated documents, executed actions) rather than attempting traditional code reviews of AI-generated internals.
 
-### 38. Track production quality over time (drift detection)
+### 43. Track production quality over time (drift detection)
 Offline eval is necessary but not sufficient. Sample live outputs and track accuracy
 over time; alert on **drift** — a classifier whose precision is sliding, a forecast
 whose error is widening, an extractor failing on a new vendor's format. For ML models
 this is model-drift detection; for LLM features it's the same idea on output quality.
 
-### 39. Implement fine-grained, correlated observability for complex agentic systems by tracking multi-modal signals (e.g., correlated traces, logs, metrics) across all tool calls, intermediate steps, and fragmented execution environments.
+### 44. Implement fine-grained, correlated observability for complex agentic systems by tracking multi-modal signals (e.g., correlated traces, logs, metrics) across all tool calls, intermediate steps, and fragmented execution environments.
 Traditional log-metric-trace models often fall short in complex agentic workflows spanning multiple tools, models, and environments. Specialized observability, like OpenTelemetry with enhanced tracing for agentic actions, is crucial for gaining unified context to diagnose reasoning failures, retrieval issues, and performance bottlenecks that impact output quality.
 
-### 40. Graduate production failures into the eval set
+### 45. Graduate production failures into the eval set
 When a bad output reaches production, add that case (with its correct answer) to the
 fixture set so it can never silently regress again. The eval set should grow from real
 misses, not stay frozen.
 
-### 41. Adopt an 'eval-first workflow' where comprehensive evaluation is integrated directly into the debugging and iteration process for AI features.
+### 46. Adopt an 'eval-first workflow' where comprehensive evaluation is integrated directly into the debugging and iteration process for AI features.
 Rather than relying solely on ad-hoc testing, establish a systematic workflow where real customer bugs or identified performance gaps are immediately translated into new evaluation cases. Use these evaluations to guide LLM-driven development and prompt refinement, ensuring that fixes are rigorously validated against specific failure modes before deployment and fostering a continuous improvement loop.
 
-### 42. Implement autonomous agent-driven optimization loops (autoresearch) to continuously improve AI system performance.
+### 47. Implement autonomous agent-driven optimization loops (autoresearch) to continuously improve AI system performance.
 Define a clear metric and operational constraints, then deploy an an agent to iteratively edit, test, and update the system (e.g., code or prompts). This allows for rapid, continuous improvement and bug detection, even overnight, based on predefined evaluation signals, moving beyond passive regression detection to active self-optimization.
 
-### 43. Employ agentic systems to autonomously generate and meta-optimize synthetic training data for continuous model improvement.
+### 48. Employ agentic systems to autonomously generate and meta-optimize synthetic training data for continuous model improvement.
 Leverage an 'agentic data scientist' to convert inference compute into higher-quality training data. This agent can systematically create synthetic datasets, evaluate their impact on downstream model performance, and refine the data generation process, significantly scaling data acquisition and improving training efficiency for complex AI tasks by creating distribution-matched data.
 
-### 44. Track cost and latency alongside quality
+### 49. Quantify and track the hidden costs associated with lower-quality or cheaper models, specifically including the increased human review and correction time required per accepted output.
+When evaluating models, particularly when considering cost-performance tradeoffs, extend cost tracking beyond API token prices to include the labor cost of human intervention (e.g., review, editing, re-running) necessitated by suboptimal output quality. This provides a more accurate total cost of ownership for AI features.
+
+### 50. Track cost and latency alongside quality
 A prompt that's 3% more accurate but 2× the tokens may be a bad trade. Record token
 count and latency next to the quality score so an "improvement" that blows the budget is
 visible (ties into AI spend governance).
 
-### 45. Implement granular token usage tracking that differentiates between tokens spent on internal 'reasoning' (e.g., scratchpad, intermediate thoughts) and tokens used for the final 'output', to precisely identify cost drivers and optimize agentic workflows for efficiency.
+### 51. Implement granular token usage tracking that differentiates between tokens spent on internal 'reasoning' (e.g., scratchpad, intermediate thoughts) and tokens used for the final 'output', to precisely identify cost drivers and optimize agentic workflows for efficiency.
 For complex agentic systems, a significant portion of token spend can occur during internal reasoning and planning steps that are not part of the final user-facing output. By separately tracking these 'reasoning tokens,' teams can gain insights into the efficiency of agent logic, identify areas for prompt optimization, and make informed decisions to reduce operational costs without sacrificing quality.
 
 ## Anti-Patterns
@@ -251,6 +269,12 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **[AINews] AI Cybersecurity becomes top of mind** (Latent Space) — implement explicit mechanisms for human oversight and intervention in AI agent workflows. Digest: 2026-07-22.
 - **The bottleneck for AI agents isn’t the model anymore. It’s the context layer.** (The New Stack) — design, implement, and rigorously evaluate a 'context compilation' layer for AI agents. Digest: 2026-07-22.
 - **Why every AI agent decision needs a receipt** (The New Stack) — for agentic systems making data-driven conclusions, mandate and evaluate the generation of a comprehensive 'evidence packet'. Digest: 2026-07-22.
+- **Stop guessing whether a cheaper model can do the job. Grab the bakeoff guide: the validator, the manifest, the score sheet, and the fixtures.** (Nate Jones [ai_strategy]) — quantifying hidden costs including human review and correction time. Digest: 2026-07-27.
+- **Sam Altman on model distillation: “This is not in my top ten list of worries”** (The New Stack [devops]) — decoupling and evaluating AI agent credentials from direct memory space. Digest: 2026-07-28.
+- **The AI “vibe shift”: Why NanoClaw and Echo have teamed up to stop the next Hugging Face Breach** (The New Stack [devops]) — evaluating the security posture of an agent's entire execution stack. Digest: 2026-07-29.
+- **Shipping code without human verification** (The New Stack [devops]) — automated verification for AI-generated code against organizational standards and non-functional requirements. Digest: 2026-07-29.
+- **OpenAI and Elastic are tackling the AI problem enterprises can’t ignore** (The New Stack [devops]) — evaluating context retrieval for RBAC and multi-tenant data isolation. Digest: 2026-07-30.
+- **Investigating three real-world incidents in our cybersecurity evaluations** (Simon Willison [ai_engineering]) — verifying enforcement of simulated boundaries to match agent instructions. Digest: 2026-07-31.
 
 ## Where Used
 
