@@ -1,28 +1,73 @@
 # Crumbl-ops digest context — merges engineering + operational-finance interests.
 # Targets crumbl-ops repo: a single weekly issue covers both lenses.
+#
+# ACCURACY MATTERS MORE THAN COVERAGE HERE. The generator reasons about the
+# platform from this file alone and cannot see the code, so a wrong line becomes
+# a confidently-wrong "10/10 relevance" recommendation. This has already cost two
+# full evaluation cycles: crumbl-ops#968 (2026-07-15) and #1252 (2026-08-01) each
+# rated ideas top-relevance on "Gemini does vendor invoice extraction", which was
+# never true — invoice parsing is deterministic per-vendor code. Every idea in
+# both issues was premise-broken or already-built.
+#
+# Claims below verified against crumbl-ops @ 2026-08-01. Before editing, re-verify
+# rather than reasoning from this file's own history:
+#   grep -rln "gemini_client\|GenerativeModel" src/ --include=*.py   # real LLM sites
+#   grep -rln "gemini\|anthropic" src/invoices/                      # expect NO matches
+#   grep -E "^    name:" config/stores.yaml                          # store roster
+# Prefer naming the module. "Gemini in src/cs/" is checkable; "AI for email" is not.
 
 project_name: "crumbl-ops"
 description: |
-  Operations platform for 3+ Crumbl Cookies franchise locations in Kentucky,
-  expanding to 10 stores via two acquisitions (July 2026). Owner/operator acts
-  as both CTO and CFO — engineering AND finance workflows live in this repo.
-  Automates daily accounting, inventory, production planning, vendor invoices,
-  payroll, reporting, and a dual-model weekly review system.
+  Operations platform for 6 Crumbl Cookies franchise locations across Kentucky
+  and Ohio (Lexington, Richmond, Nicholasville, Newport, Florence KY; Western
+  Hills OH), under the Bluegrass Cookie Partners holding entity. The two 2026
+  acquisitions have CLOSED — this is a 6-store operator, not a 3-store one
+  mid-expansion. Also now serves its first external customer (a separate
+  franchisee) on an isolated instance with no data comingling.
+  Owner/operator acts as both CTO and CFO — engineering AND finance workflows
+  live in this repo. Automates daily accounting, inventory, production planning,
+  vendor invoices, payroll, reporting, and a dual-model weekly review system.
 
 tech_stack: |
   Python 3.12, FastAPI, PostgreSQL 17, React 18 + TypeScript, GCP Cloud Run.
   External: QuickBooks Online API, Crumbl GraphQL API, Gmail, SendGrid, When I Work.
-  AI: Gemini for vendor invoice extraction + email classification; Claude Code as
-  primary development partner.
+  AI: Gemini for customer-service and reporting text (NOT for document parsing);
+  Claude Code as primary development partner, including headless `claude -p` in
+  scheduled jobs.
 
 current_ai_usage: |
+  Verified call sites — do not generalise beyond these:
   - Claude Code for all development (CLAUDE.md, knowledge/ system, skills/)
+  - Headless `claude -p` in scheduled jobs: month-end CFO/controller narrative,
+    weekly memory consolidation, monthly knowledge curation
   - MCP server for read-only QBO queries
-  - Gemini for vendor invoice PDF extraction (Sysco, US Foods, franchising)
-  - Gemini for email classification and routing
-  - Gemini for draft response generation (customer service, vendor inquiries)
-  - LightGBM for demand forecasting
+  - Gemini in src/cs/: customer-service email classification, donation screening,
+    draft response generation
+  - Gemini in src/ops/: morning digest synthesis, shift reports, Slack shift
+    summary, weekly BI report, SKU shadow matching
   - Dual-model adversarial weekly reviews (Gemini red-team + Claude reviewer)
+
+  Explicitly NOT AI — recommendations assuming otherwise are wrong:
+  - Vendor invoice parsing (Sysco, US Foods, Alsco, Crumbl franchising) is
+    DETERMINISTIC per-vendor parsers in src/invoices/vendors.py. Zero LLM calls.
+    This is the single most repeated false premise; see #968 and #1252.
+  - Demand forecasting is the hand-built v3 model in src/ops/forecast*.py. The
+    LightGBM/ML models were deleted in 2026-05 (only a stale requirements pin
+    remains); "LightGBM baseline" is no longer an accurate description.
+
+  Already-built, so "add this" ideas land as duplicates:
+  - LLM eval harness: golden sets in tests/fixtures/llm_eval/ plus an `llm_eval`
+    pytest marker, gated by tests/test_model_strings_pinned.py, which forces an
+    eval run before any model string can be bumped
+  - Prompt-injection hardening: one canonical home in src/ops/secret_redaction.py
+    (escape_for_prompt / redact_secrets), enforced by AST tripwire tests
+  - Verifiable task completion: the /verify skill + scripts/verify_dq_coverage.py
+  - Financial analysis skills: /financials, /month-end, /payroll-import,
+    scripts/consolidated_balance_sheet.py, src/ops/month_end_review.py
+
+  Cost model: Claude runs on a Max subscription with NO API key. Recommendations
+  about API-key spend caps, token budget caps on `claude -p`, or per-call billing
+  controls do not apply and have been explicitly rejected before.
 
 key_areas: |
   Engineering:
@@ -33,9 +78,11 @@ key_areas: |
   - FastAPI + React frontend, Cloud Run deployment
 
   Finance / CFO:
-  - Payroll engine (biweekly, Kentucky OT law, tip distribution)
+  - Payroll engine (biweekly, Kentucky OT law, tip distribution; PEO is BBSI
+    since 2026-06-21, previously Gusto)
   - Month-end accruals, reconciliation, variance analysis
-  - Multi-entity financial reporting and consolidation (DCP, BCP, 3 stores)
+  - Multi-entity financial reporting and intercompany-eliminated consolidation
+    (Bluegrass Cookie Partners holding + 6 store entities, each its own QBO company)
   - Labor cost tracking and scheduling optimization
   - Marketplace platform reconciliation (DoorDash, UberEats, Grubhub)
 
