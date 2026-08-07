@@ -34,8 +34,9 @@ Three places a fact can live, by scope:
 
 **The tier test** — before storing a fact, ask: *would this be true in another repo?* → Tier 3. *Only here?* → Tier 2. *Only this session?* → don't store it.
 
-- **A local/on-device tier is now viable** as small models get good enough to run offline — worth treating as a distinct tier where privacy, data residency or offline operation matter.
-- **Maintain memory locally, not globally.** Optimize the segments actual usage touches rather than periodically reorganizing the whole store; no single memory architecture dominates, and global reshuffles cost more than they return.
+-   **A local/on-device tier is now viable** as small models get good enough to run offline — worth treating as a distinct tier where privacy, data residency or offline operation matter.
+-   **Maintain memory locally, not globally.** Optimize the segments actual usage touches rather than periodically reorganizing the whole store; no single memory architecture dominates, and global reshuffles cost more than they return.
+-   **Architect agents for durable session context by using event logs for resumability, enabling persistent background processes, and leveraging secure cloud environments for detached, long-running tasks.** For agents performing complex, long-horizon tasks, ensure their operational state and context are robustly maintained, logging intermediate steps for resumability, designing for persistent background execution, and deploying to cloud environments that support detached operations.
 
 ## Retrieval Contracts (Sources of Truth)
 
@@ -126,6 +127,7 @@ Version-controlled skills are how recurring workflows become durable, discoverab
 
 - **Make skills granular and composable.** Small, semantically precise commands an agent applies iteratively beat one-shot instructions — more control, more predictable results.
 - **Agents can extract skills from their own successful trajectories**, turning past runs into reusable procedure — the self-improvement end of governed write-back.
+- **Implement systematic feedback loops to capture human corrections of agent mistakes, using this structured data to refine agent models and their understanding of context.** Establish a process where human interventions, especially corrections to agent-generated outputs (e.g., code), are meticulously recorded alongside the original task and the agent's incorrect attempt, using this structured correction data to improve future context interpretation.
 
 ## Decision Journal
 
@@ -266,6 +268,8 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 -   **How the founder of Morning Brew built a Claude content machine that never runs out of ideas and never sounds like slop | Alex Lieberman** (Lenny's Newsletter) — codify agent voice and style guidelines in context files. Digest: 2026-07-20.
 -   **I Built The Token Saver Skill To Cut My Token Use By 90%. Here Is What It Can And Cannot Do For You.** (Nate Jones) — actively prune context to reduce token usage. Digest: 2026-07-29.
 -   **Modus’s operandi: To give AI agents just the right amount of context** (The New Stack) — implement a dynamic 'context warehouse' architecture with continuous learning and real-time assembly. Digest: 2026-07-29.
+-   **Introducing Muse Code and Muse Spark 1.2** (Simon Willison) — Architect agents for durable session context using event logs and persistent cloud environments. Digest: 2026-08-06.
+-   **The 800 mistakes that could reshape Meta’s AI coding strategy** (The New Stack) — Implement systematic feedback loops for human correction of agent mistakes. Digest: 2026-08-05.
 
 ## Where Used
 

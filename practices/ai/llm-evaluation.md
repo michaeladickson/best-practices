@@ -162,7 +162,7 @@ Be aware that common agent memory systems based on embedding proximity (e.g., RA
 Go beyond basic sandbox isolation by implementing and rigorously testing security measures for all components an AI agent interacts with during its operation. This includes verifying the integrity and security of the agent's runtime, its integrated tools, and any external libraries or browser environments to mitigate vulnerabilities that isolation alone cannot address.
 
 ### 39. Design evaluations to distinguish between an AI agent's ability to retrieve information and its capacity for semantic understanding and correct application of that information, specifically testing for errors where facts are recalled accurately but their meaning or context is misinterpreted.
-Agents can confidently present accurate retrieved facts while fundamentally misunderstanding their implications, leading to incorrect conclusions. Evaluation methodologies should go beyond verifying factual recall to assess deeper semantic comprehension and contextual application, ensuring the agent doesn't just 'remember' but 'understands' the information.
+Agents can confidently present accurate retrieved facts while fundamentally misunderstanding their implications, leading to incorrect conclusions. Evaluation methodologies should go beyond verifying factual recall to assess deeper semantic comprehension and contextual application, ensuring the agent doesn't just 'remember' but 'und***erstands' the information.
 
 ### 40. Decouple and evaluate AI agent credentials from the model's direct memory space and execution environment, requiring just-in-time, out-of-band authorization for resource access.
 Implement and rigorously test authentication mechanisms that prevent long-lived API keys or permissive service accounts from residing within an AI agent's accessible memory or environment. Instead, design a system where agents must request credentials dynamically and receive them via an out-of-band, just-in-time authorization process, rendering them powerless even if they escape their sandbox.
@@ -206,6 +206,21 @@ visible (ties into AI spend governance).
 
 ### 51. Implement granular token usage tracking that differentiates between tokens spent on internal 'reasoning' (e.g., scratchpad, intermediate thoughts) and tokens used for the final 'output', to precisely identify cost drivers and optimize agentic workflows for efficiency.
 For complex agentic systems, a significant portion of token spend can occur during internal reasoning and planning steps that are not part of the final user-facing output. By separately tracking these 'reasoning tokens,' teams can gain insights into the efficiency of agent logic, identify areas for prompt optimization, and make informed decisions to reduce operational costs without sacrificing quality.
+
+### 52. Implement specialized automated evaluations for multimodal (e.g., visual) AI outputs to detect subtle, visually apparent flaws that the AI model or agent itself fails to identify even when reviewing its own output.
+For agents generating visual content, traditional evaluation metrics may miss nuanced rendering bugs or inconsistencies. Develop automated visual inspection tools, possibly leveraging alternative AI models or computer vision techniques, to objectively identify flaws that the generating agent's internal self-correction mechanism might overlook despite being presented with visual feedback.
+
+### 53. Design human intervention mechanisms for agentic systems to incorporate an AI-powered classifier that identifies truly dangerous actions, reducing human approval fatigue and improving the overall effectiveness of safety gates.
+Do not prompt humans for every agent action. Instead, use a secondary, specialized AI classifier to filter routine or safe commands, only escalating genuinely high-risk or ambiguous actions for human review. This selective intervention strategy combats 'approval fatigue,' allowing human operators to focus their limited attention on critical decisions where their expertise is most needed, thereby significantly increasing the detection rate of dangerous commands.
+
+### 54. Quantify and track the level of non-determinism in AI model outputs, especially when external tools or capabilities are enabled, and design evaluation strategies that account for or mitigate its impact on regression testing.
+AI models, particularly when integrated with dynamic external resources like web search, can exhibit significant output variation for identical prompts, making consistent evaluation challenging. Establish metrics for non-determinism and incorporate multiple runs per test case in evaluation sets to capture statistical reliability. Develop strategies to either reduce non-determinism (e.g., temperature settings, seeding) or design evaluations that are robust to it (e.g., looser matching, aggregate scoring across multiple samples).
+
+### 55. Implement and evaluate policy engines that govern AI agent behavior based on the *sequence of tool calls and past events*, rather than just individual, point-in-time actions, to prevent emergent risks from complex workflows.
+Traditional access controls evaluate individual tool calls in isolation, which is insufficient for agentic systems capable of multi-step reasoning and complex workflows. Design and rigorously test policy languages and engines that can enforce constraints across a series of agent actions, considering prerequisites, rate limits, and historical context, to prevent valid-but-wrong action sequences that could lead to unintended outcomes or security vulnerabilities.
+
+### 56. Establish a centralized platform engineering function to develop and maintain shared evaluation infrastructure, tools, and standardized workflows for AI agents and LLMs across the organization, preventing fragmentation and ensuring consistent quality management.
+Avoid individual teams independently building disparate evaluation setups, guardrails, and dashboards, which leads to fragmentation and duplicated effort. Instead, invest in a dedicated platform engineering team to provide a common set of tools, services, and best practices for LLM evaluation. This ensures consistency, reusability, and higher fidelity in quality assessment across all AI features, facilitating more robust regression testing and overall quality management.
 
 ## Anti-Patterns
 
@@ -275,6 +290,11 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **Shipping code without human verification** (The New Stack [devops]) — automated verification for AI-generated code against organizational standards and non-functional requirements. Digest: 2026-07-29.
 - **OpenAI and Elastic are tackling the AI problem enterprises can’t ignore** (The New Stack [devops]) — evaluating context retrieval for RBAC and multi-tenant data isolation. Digest: 2026-07-30.
 - **Investigating three real-world incidents in our cybersecurity evaluations** (Simon Willison [ai_engineering]) — verifying enforcement of simulated boundaries to match agent instructions. Digest: 2026-07-31.
+- **Every software company will become a dev tools company** (The New Stack) — centralized platform engineering for shared evaluation infrastructure. Digest: 2026-08-05.
+- **LLM Watch Weekly: The Measurement Problem** (Pascal Biese (LLM Watch)) — quantify and track non-determinism in AI model outputs. Digest: 2026-08-07.
+- **Your AI agent’s next tool call may be valid but wrong. AWS’s Dogwood promises to fix that.** (The New Stack) — implement and evaluate policy engines that govern AI agent behavior based on the sequence of tool calls and past events. Digest: 2026-08-07.
+- **Auto Mode will soon be the default in Claude Code — because humans can’t be trusted** (The New Stack) — design human intervention mechanisms for agentic systems to incorporate an AI-powered classifier. Digest: 2026-08-08.
+- **Moonlight & Mayhem (Raccoon Heist by Codex + GPT-5.6 Sol Ultra)** (Simon Willison) — implement specialized automated evaluations for multimodal (e.g., visual) AI outputs. Digest: 2026-08-08.
 
 ## Where Used
 
