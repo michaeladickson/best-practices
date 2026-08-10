@@ -131,8 +131,10 @@ Key rules:
 
 - **Corrections route to their home, not a catch-all log.** Behavioral feedback →
   cross-session memory; architectural choices → the `decisions/` journal; a failed
-  domain hypothesis → demote it in the relevant `hypotheses.md`. A dedicated `ERRORS.md`
-  just fragments these.
+  domain hypothesis → demote it in the relevant `hypotheses.md`. A catch-all
+  *corrections* log fragments these. This does not condemn a scoped error log:
+  crumbl-ops `knowledge/ERRORS.md` holds only deterministic infra/code failures and
+  carries a graduation rule in its header, which is a different artifact and fine.
 - **Don't date-stamp everything.** Let genuinely time-sensitive entries carry an inline
   date; rely on git history for change time. Status *snapshots* can be staleness-checked
   by mtime, but stable reference facts can't — age ≠ wrong.
