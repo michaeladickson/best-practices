@@ -34,6 +34,7 @@ Patterns and conventions extracted from production repos. Reference these when s
 
 - [Cloud Run](devops/cloud-run.md) — Two-image pattern, env vars, multi-stage Docker, autoscaling
 - [CI/CD](devops/ci-cd.md) — GitHub Actions, Cloud Build, automated reviews
+- [Windows / WSL Boundary](devops/windows-wsl-boundary.md) — `.gitattributes` line-ending pins, why `git status` can't see CRLF corruption, cross-boundary verification gotchas
 
 ## Finance & Investing
 
