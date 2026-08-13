@@ -125,6 +125,12 @@ locally while the app is open — deferred to next launch otherwise) executes
 Run `/skills-sync` in a session for an on-demand pass, or ask for a
 "full reconcile" to compare current skills across all four repos ignoring state.
 
+Dead-man's tell (the WM-digest lesson — scheduled jobs die silently): if
+`~/.claude/skills-sync/state.json` has `last_run` older than ~8 days, the task
+has stopped firing. The task itself lives in app storage, not git — to rebuild
+it on a new machine, recreate a Monday-8am scheduled task pointing at the
+SKILL.md above.
+
 ## Configuration
 
 - `digest/config/feeds.yaml` — All RSS feed sources
