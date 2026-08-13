@@ -106,6 +106,25 @@ for manual dispatch fallback (e.g., re-running a failed digest from any
 machine). It sends email + commits knowledge files and practice-doc updates,
 but does NOT create issues — that part requires the local `gh` auth.
 
+## Weekly Skills Sync
+
+Skills evolve inside individual repos and the improvements never used to travel.
+The `weekly-skills-sync` Claude Code scheduled task (Mondays 8am ET, runs
+locally while the app is open — deferred to next launch otherwise) executes
+[`.claude/skills/skills-sync/SKILL.md`](.claude/skills/skills-sync/SKILL.md):
+
+- Scans `.claude/skills/**` commits on `origin/main` of best-practices,
+  crumbl-ops, command-center, wealth-mgmt since the last run
+  (state: `~/.claude/skills-sync/state.json`, local only — not in this repo).
+- Judges portable mechanism vs repo-specific content, then opens at most one
+  adapted `[skills-sync]` PR per target repo (never pushes to main; never
+  touches local working trees — all edits happen in throwaway worktrees).
+- `[skills-sync]` commits are excluded from future scans (ping-pong guard),
+  and private-repo detail is never generalized into this public repo's skills.
+
+Run `/skills-sync` in a session for an on-demand pass, or ask for a
+"full reconcile" to compare current skills across all four repos ignoring state.
+
 ## Configuration
 
 - `digest/config/feeds.yaml` — All RSS feed sources
