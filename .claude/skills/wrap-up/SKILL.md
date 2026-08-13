@@ -21,13 +21,15 @@ git status --short
 git rev-parse --short HEAD
 git rev-parse --short origin/main
 git -C C:/Users/micha/best-practices rev-parse --short HEAD
+git -C C:/Users/micha/best-practices status --short
 ```
 
 Handle any drift:
 - **Uncommitted changes in the worktree** → commit + push using the one-shot identity override + `Co-Authored-By` footer pattern this repo uses. Never leave the session with a dirty tree.
 - **Worktree ahead of origin/main** → `git push origin HEAD:main`.
 - **Main checkout behind origin/main** → `git -C C:/Users/micha/best-practices merge --ff-only origin/main`.
-- **Worktree diverged from origin/main** → do NOT force-push. Fetch, rebase onto origin/main, resolve any conflicts (usually trivial — this session's edits vs. the weekly `[automated]` commits from the scheduled Friday runs), push. Match the pattern the session already used.
+- **Worktree diverged from origin/main** → do NOT force-push. Fetch, rebase onto origin/main, resolve any conflicts (usually trivial — this session's edits vs. the weekly `[automated]` commits from the scheduled Friday runs), push. Match the pattern the session already used. And judge "diverged" by **content, not count**: after a squash-merged PR, `rev-list --count` reports commits that already landed (squash breaks ancestry) — `git diff origin/main` decides whether anything is actually unlanded (both crumbl-ops and command-center carry this scar).
+- **Main checkout dirty** → don't wrap past it: a session step that resolved an absolute path wrote there while this worktree stayed clean (command-center scar, 2026-08-01), or a scheduled Friday run died mid-commit. Commit it via the normal pattern or clean it — the weekly automation assumes a clean main checkout.
 - **Stray temp files** — check for `_tmp_*`, `*.bak`, or scratchpad artifacts that shouldn't be tracked and remove them.
 
 Do not proceed past this step until all three refs match and the working tree is clean.
