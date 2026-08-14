@@ -20,6 +20,7 @@ best-practices/
     security/          # Secrets management, auth, rate limiting
     devops/            # Cloud Run, CI/CD
     claude-code/       # CLAUDE.md templates, CLI patterns
+    writing/           # voice-memory capture mechanism, email drafting
   reviews/             # Claude-only, diff-scoped review system — see reviews/README.md
     workflow-template.yml  # 5 scheduled types: changes (Mon), data-qa (Thu),
                        #   cto (22nd), context-memory (1st), model-hierarchy (15th).
@@ -143,6 +144,11 @@ SKILL.md above.
 ## Key Conventions
 
 - Always use GEMINI_API_KEY, not Vertex AI (avoids gcloud reauth issues)
+- Anything drafted to be sent or published as Michael follows the PRIVATE master voice
+  memory at command-center `knowledge/voice/master.md`. This repo holds only the
+  mechanism (`practices/writing/voice-memory.md`): `/wrap-up` captures draft-edit deltas
+  as `feedback_voice_*` memories; command-center `/voice-sync` reconciles them monthly.
+  Voice content itself never lands in this public repo.
 - Practices docs should be actionable with code examples, not vague descriptions
 - Each practice includes "Where Used" section linking to source repos
 - Keep practices up to date as repos evolve

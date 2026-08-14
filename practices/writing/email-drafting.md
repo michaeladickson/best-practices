@@ -4,7 +4,10 @@ How to draft email that reads like Michael wrote it, for both **interactive draf
 (Claude drafting for him in a session) and **agent prompts** (CS auto-replies, prep emails,
 digests). One source so the two don't drift.
 
-Adjacent: [Prompt Engineering](../ai/prompt-engineering.md) · [LLM Evaluation](../ai/llm-evaluation.md)
+Adjacent: [Personal Voice Memory](voice-memory.md) (the capture/reconciliation mechanism;
+the master voice profile itself is private, at command-center `knowledge/voice/master.md`) ·
+[Prompt Engineering](../ai/prompt-engineering.md) ·
+[LLM Evaluation](../ai/llm-evaluation.md)
 (prompt changes need a regression check) · [Prompt Injection Mitigation](../ai-safety/prompt-injection-mitigation.md)
 (untrusted email fields belong in `contents`, never `system_instruction`).
 

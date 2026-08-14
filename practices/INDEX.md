@@ -44,7 +44,8 @@ Patterns and conventions extracted from production repos. Reference these when s
 
 ## Writing
 
-- [Email Drafting](writing/email-drafting.md) — Voice, brevity, process exposure; range-as-floor, non-binding caps, no-summary-in-prompt, live A/B as the acceptance test
+- [Personal Voice Memory](writing/voice-memory.md) — Capture + reconciliation mechanism: `feedback_voice_*` captures at `/wrap-up`, monthly `/voice-sync` into the private master (command-center `knowledge/voice/master.md`), public-repo boundary
+- [Email Drafting](writing/email-drafting.md) — The process half: brevity mechanics, range-as-floor, non-binding caps, no-summary-in-prompt, live A/B as the acceptance test
 
 ## Development
 
