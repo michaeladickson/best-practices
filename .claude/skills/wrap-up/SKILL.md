@@ -1,6 +1,6 @@
 ---
 name: wrap-up
-description: End-of-session in best-practices — verify all three git refs (worktree, origin/main, main checkout) match; trace cross-repo tangents (issues filed in crumbl-ops / command-center / wealth-mgmt, prompts handed off); flag digest-pipeline watch-items for Friday's run; save any genuinely-surprising insight to cross-session memory; present a terse summary. No parking, no PROJECT_STATUS — this repo is a catalog, not a delivery tracker.
+description: End-of-session in best-practices — verify all three git refs (worktree, origin/main, main checkout) match; trace cross-repo tangents (issues filed in crumbl-ops / command-center / wealth-mgmt, prompts handed off); flag digest-pipeline watch-items for Friday's run; capture any draft-edit voice deltas as feedback_voice_* memories for the monthly command-center /voice-sync; save any genuinely-surprising insight to cross-session memory; present a terse summary. No parking, no PROJECT_STATUS — this repo is a catalog, not a delivery tracker.
 user_invocable: true
 ---
 
@@ -63,13 +63,41 @@ Two invariants from the 2026-07-26 audit — confirm both for anything scheduled
 - **Recovery parity** — the register script (`scripts/register_*.ps1`) must produce the same trigger as the live Task Scheduler entry. Drift here means a machine rebuild silently restores the wrong schedule (the Sunday-vs-Friday class).
 - **Evidence of work** — a run that exits 0 without producing its artifact must be *detectable* (freshness workflow, output-delta guard, health-check artifact map). "Scheduler says success" is not evidence; the usage scanner logged "Done" for four weeks while processing zero files.
 
-### 4. Cross-session memory (only if something surprising surfaced)
+### 4. Voice harvest (only if the session drafted prose to be sent as Michael)
+
+If this session drafted anything meant to go out as Michael (email, letter, briefing,
+update, text, post) and he edited, corrected, or rewrote it (in chat, by pasting back his
+version, or by editing the draft file), capture the style deltas for the master voice
+memory:
+
+1. Diff Claude's last version against his final one. Ignore factual/content edits; keep
+   style deltas: cuts, word choice, greeting/sign-off, structure, punctuation, register.
+2. Write one capture per distinct delta to THIS project's memory directory
+   (`C:\Users\micha\.claude\projects\C--Users-micha-best-practices\memory\`):
+   `feedback_voice_<slug>.md`, standard memory frontmatter (`metadata.type: feedback`).
+   Body: the rule, his words (one line), one before/after pair. Add the MEMORY.md index
+   line.
+3. Do NOT edit the master voice memory directly (command-center
+   `knowledge/voice/master.md`). Capture locally, reconcile centrally: the monthly
+   `/voice-sync` task in command-center sweeps `feedback_voice_*` captures from every
+   project's memory into the master with dedup and contradiction checks. Pattern spec:
+   `practices/writing/voice-memory.md`.
+4. Note it in the summary ("voice: N deltas captured" or "voice: nothing to harvest").
+
+An unedited draft he explicitly approved can be captured as a confirming example; mere
+non-edits are not signal.
+
+**Portability (skills-sync):** this step is a portable mechanism; every repo's wrap-up
+should carry it, each writing to its own project memory directory. Only the memory-dir
+path changes per repo.
+
+### 5. Cross-session memory (only if something surprising surfaced)
 
 If — and only if — the session surfaced a genuinely non-obvious insight about *how this repo works* (a subtle constraint, a recurring gotcha, a user preference the session confirmed for the first time), save it as its own memory file at `C:\Users\micha\.claude\projects\C--Users-micha-best-practices\memory\` following the standard frontmatter format (`name`, `description`, `metadata.type`), and add a one-line entry to `MEMORY.md` in that directory.
 
 Skip by default. Save memory only for insights that would surprise a fresh reader of the repo — never for anything derivable from the code, git log, or existing docs. Match the anti-fragmentation stance in `practices/claude-code/context-memory-management.md`.
 
-### 5. Present the summary
+### 6. Present the summary
 
 Terse bullets, in this shape:
 
@@ -90,6 +118,9 @@ Watch next Friday's digest for:
 - <doc/feature> — <why>
 - (or "no digest-pipeline watch-items")
 
+Voice:
+- captured <n> deltas as feedback_voice_* memories: <one-line each>  (or "nothing to harvest")
+
 Memory saved:
 - <slug>: <one-line>  (or "none — nothing surprising")
 
@@ -99,6 +130,7 @@ Git: worktree = origin/main = main checkout at <sha>. Working tree clean.
 ## Rules
 - Step 1 is required, not optional — a session that leaves any of the three refs out of sync is unfinished.
 - Steps 2–3 are enumeration, not judgment: name what happened; don't editorialize.
-- Skip step 4 by default. The bar for a memory save is "would surprise a fresh reader"; anything less belongs in a doc or a commit message.
+- Step 4 fires only on actual draft edits. No outbound prose, one line ("voice: nothing to harvest"), move on. Captures are private project memory; the public repo never carries voice content, only this mechanism.
+- Skip step 5 by default. The bar for a memory save is "would surprise a fresh reader"; anything less belongs in a doc or a commit message.
 - Bullet points over paragraphs — terse wins.
 - No emojis unless the user has explicitly asked for them.
