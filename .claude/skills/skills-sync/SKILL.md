@@ -52,6 +52,8 @@ git -C <checkout> log --oneline <state-sha>..origin/main -- .claude/skills/
 
 If no repo has candidate commits: write state (fresh SHAs + `last_run`), report "No skill changes this week", stop.
 
+**But zero candidates is a claim, not a default.** A missing checkout, a failed fetch, or a path typo produces exactly the same empty `git log` as a genuinely quiet week — and writing state on it advances the SHA past commits nobody read, permanently. The state file makes that silent: next week's scan starts after the work it skipped. Before reporting "no changes", confirm every repo in the sync set returned a real `origin/main` SHA in the step above. A repo you could not scan gets named in the summary and **keeps its old SHA**; never fold it into "none".
+
 ### 2. Understand each change
 
 For each candidate commit, read the actual diff and the final file state:

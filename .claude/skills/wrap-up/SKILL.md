@@ -53,6 +53,9 @@ The weekly digest + `practice_updater` runs Friday 6pm ET via the `CC-WeeklyDige
 - **`.github/workflows/weekly-digests.yml` changed** → *"manual-dispatch fallback affected — the local runner is untouched."*
 - **Any workflow or `reviews/*.yml` template changed** → dispatch it once before wrapping (`gh workflow run …`) or name why not. GitHub treats unparseable workflow YAML as *trigger-less with no error* — the tell is the API showing the file path as the workflow name. The push-time validator gates parse errors; only a dispatch proves end-to-end (2026-07-26: the freshness dead-man's-switch shipped dead and only a manual dispatch caught it).
 - **A practice doc within ~10% of the 70KB cap** → *"consolidation pass due before the updater starts skipping it (`at_capacity:consolidate`)."*
+- **A doc's keyword prefilter, scope, or required anchors narrowed** in `digest/config/practice-docs.yaml` → *"a prefilter that now matches nothing produces a clean run and no commit — byte-identical to the quiet week this pipeline has most weeks."* Prove it still reaches the doc with `python -m digest.practice_updater --dry-run` before wrapping; don't wait on a Friday silence you can't read.
+
+The shape behind that last one is worth carrying into every item above: **a zero-result run and a genuinely quiet week produce the same output.** The failure guards don't help, because they cover the *unreachable* case — a successful call that returns nothing is not distinguishable from a real empty set. Any change that narrows what a step reads (a filter, a label, a roster, a glob, an anchor) buys a stretch of silence that proves nothing, so verify it once by hand while you still know what you changed.
 
 Do NOT invent watch-items. If the session didn't change any of these areas, say *"no digest-pipeline watch-items."*
 
