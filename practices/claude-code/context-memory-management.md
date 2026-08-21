@@ -71,14 +71,16 @@ Format: pre-assembled markdown brief, newest-first, each fact tagged with its so
 - **Codify voice/style as a reusable context file.** A dedicated tone/persona file injected into the prompt keeps register consistent instead of re-described each time.
 - **Live data needs a streaming foundation.** Fragmented sources plus legacy access control is the usual blocker for agents reasoning over current business state.
 - **Cache hot context on fast storage** when retrieval latency starts to matter.
-- **Declarative orchestration over ad-hoc chaining.** Blueprint languages and named patterns (supervisor, delegation, fan-out) make multi-agent context flow reviewable.
+-   **Declarative orchestration over ad-hoc chaining.** Blueprint languages and named patterns (supervisor, delegation, fan-out) make multi-agent context flow reviewable.
+-   **Integrate agent environments with live application states to enable direct, editable interaction.** Implement a local MCP server within desktop applications, allowing coding agents to directly access and modify live project scenes. This ensures agents operate with real-time, editable context, with changes seamlessly integrated into the application's undo history, creating a truly interactive feedback loop.
 
 ### Context Lake Architecture
 
 - **A Context Lake** centralizes agent-retrievable knowledge (codebase, APIs, services, team) into one governed store, with access control at the data layer rather than per tool, pre-chunked to support progressive disclosure.
 - **A context *warehouse* adds active components:** a miner that continuously crawls heterogeneous sources for deltas, and a composer that assembles a purpose-built brief for the task at hand instead of serving static retrieval.
 - **Compile knowledge, don't just store it.** An LLM pass that turns raw sources into wikis, summaries and linked concept articles gives agents something queryable, with outputs feeding back in.
-- **Scale to zero.** Agent retrieval load is bursty; serverless components avoid paying for idle.
+-   **Scale to zero.** Agent retrieval load is bursty; serverless components avoid paying for idle.
+-   **Incorporate a 'Semantic Cache' to store and retrieve previously processed context or generated responses, preventing redundant model invocations and token bleed.** Deploy a Semantic Cache before expensive model invocations to store results of common queries or processed contexts. This allows agents to quickly retrieve relevant information without re-running retrievals or model inferences for identical or semantically similar inputs, significantly reducing token usage and latency in multi-agent systems.
 
 ## Context Budget
 
@@ -139,6 +141,7 @@ Choices that outlive today's task go in `decisions/YYYY-MM-DD-{topic}.md` (see [
 When surfaced context is **AI-generated** (a model-written summary, a classification), mark it where it's shown, so a reader can tell synthesis from ground truth and knows to verify before acting. Raw data and AI synthesis should stay visually distinguishable. The same applies to *assembled* context: tag each fact with its source (especially for financial or compliance work), so a reviewer can trust or challenge a specific claim instead of the whole answer.
 
 - **Tag context by trust boundary — operator vs. external.** An agent cannot otherwise tell your instructions from instructions embedded in a web page or a GitHub issue it read. This is the context-layer half of prompt-injection defense; the action-layer half is in `../ai-safety/agent-action-safety.md`.
+-   **Implement robust security measures to prevent 'Cryptographic Context Injection,' where agents might decrypt and execute malicious instructions hidden within encrypted context.** Recognize that agents' code execution environments can be exploited to decrypt and act upon malicious instructions, even if security filters inspect incoming/outgoing plaintext. Design context handling to prevent agents from executing code within encrypted payloads, or ensure decryption processes are strictly sandboxed and verified before any output is passed to the agent's main execution flow.
 - **Require an evidence packet with consequential decisions:** the queries run, completeness of the data, approximations made, and alternatives tested — not just the records retrieved.
 
 ## Enforcement (the frontier)
@@ -271,6 +274,9 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 -   **Modus’s operandi: To give AI agents just the right amount of context** (The New Stack) — implement a dynamic 'context warehouse' architecture with continuous learning and real-time assembly. Digest: 2026-07-29.
 -   **Introducing Muse Code and Muse Spark 1.2** (Simon Willison) — Architect agents for durable session context using event logs and persistent cloud environments. Digest: 2026-08-06.
 -   **The 800 mistakes that could reshape Meta’s AI coding strategy** (The New Stack) — Implement systematic feedback loops for human correction of agent mistakes. Digest: 2026-08-05.
+-   **Spline rebuilt its entire 3D editor. Then it handed the keys to Claude Code.** (The New Stack) — integrate agent environments with live application states for direct, editable interaction. Digest: 2026-08-22.
+-   **Researchers hid an attack inside AES encryption. The AI model cracked it open willingly.** (The New Stack) — implement robust security measures to prevent cryptographic context injection. Digest: 2026-08-20.
+-   **Stop the token bleed: building token-efficient multi-agent systems** (The New Stack) — incorporate a semantic cache to prevent redundant model invocations and token bleed. Digest: 2026-08-20.
 
 ## Where Used
 

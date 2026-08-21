@@ -76,9 +76,13 @@ session. Most "the agent didn't know X" failures are context failures, not reaso
 - **Retrieval quality is the bottleneck, not reasoning.** Rank trade-off discussions and design rationale above implementation detail; agents fabricate confidently when fed partial or poorly ranked context.
 - **Fix the data at the source.** Redundant, obsolete and trivial (ROT) enterprise data poisons everything downstream — garbage in, confident garbage out.
 
-### Theme B — Reasoning and honesty: attacking confident fabrication
+### 4. Create and continuously optimize dedicated, agent-facing documentation files (e.g., AGENTS.md) that explicitly define tech stacks, build/test commands, off-limits directories, and team conventions.
+Unlike human-centric documentation, agent-facing configuration files serve as a direct, structured context foundation for AI agents, detailing operational parameters, architectural constraints, and forbidden actions. Regularly refine and optimize these documents to improve agent task success, ensure adherence to engineering standards, and reduce inference costs, rather than relying on implicit understanding or human interpretation.
 
-### 4. Make the agent defend its reasoning
+### 5. Integrate AI agents as 'teaching agents' earlier in the development workflow to preserve knowledge sharing and address cognitive debt before formal code review.
+With the overwhelming volume of AI-generated code, traditional code review is no longer effective for knowledge transfer. Shift left by employing AI agents to act as interactive teaching tools during code creation, explaining anti-patterns, architectural decisions, and team conventions. This proactively shares knowledge and helps developers understand the 'why' behind design choices, mitigating the accumulation of cognitive debt.
+
+### 6. Make the agent defend its reasoning
 In review, prompt the agent to explain *why* it chose this design, what it ruled out,
 and what it's unsure about. This directly attacks "wrote code but didn't think"
 (digest 2026-05-18) and forces the latent reasoning into the open where a human can
@@ -88,7 +92,7 @@ challenge it. If it can't defend a choice, that's a finding.
 - **Prefer models that flag their own uncertainty.** It lets reviewers spend attention where the model is least reliable.
 - **The human still has to understand the code.** Reviewers own the architecture and its integration, not just the prompt that produced it.
 
-### 5. Require facts, not inferences, in agent-written reports
+### 7. Require facts, not inferences, in agent-written reports
 When an agent writes an issue, a bug report, or a problem description, restrict it to
 observables: command run, expected outcome, actual outcome, exact error and logs.
 Inferred root causes and suggested fixes read as authoritative and send humans chasing
@@ -101,7 +105,7 @@ fabrications.
 
 ### Theme C — Validation in a real environment
 
-### 6. Validate in a real environment — "looks done" is not done
+### 8. Validate in a real environment — "looks done" is not done
 The validation loop is central to agentic dev: code should be run, tested, and where
 relevant deployed to an ephemeral environment before it's trusted (digest 2026-04-26;
 "81% PR acceptance" came from environment-based validation, not better prompts).
@@ -112,7 +116,7 @@ the actual diff read). Agents will confidently assert success they didn't achiev
 - **Give agents stateful execution.** A live kernel (cell-by-cell execution) lets an agent observe intermediate effects and adapt, instead of guessing across static tool calls.
 - **Test adversarially.** Hostile simulations and deliberately non-ideal conditions surface the edge cases ordinary validation misses.
 
-### 7. Re-validate when anything underneath changes
+### 9. Re-validate when anything underneath changes
 A model upgrade is a behavior change even when benchmarks improve. Re-run the critical
 paths; the "AI Upgrade Trap" is regression introduced by a version bump nobody treated
 as a deploy.
@@ -121,9 +125,12 @@ as a deploy.
 - **Keep a language-independent conformance suite.** It's what makes large AI-driven migrations or refactors verifiable when the implementation language itself changes.
 - **Benchmark against your own work.** Public benchmarks miss enterprise-shaped, large-context tasks; build task-representative evals with transparent data and traces.
 
+### 10. When using AI for code translation or large-scale refactoring, implement rigorous verification processes to prove behavioral equivalence with the original code, beyond just successful compilation and basic testing.
+AI-generated code, especially in translation or refactoring tasks, can compile and pass initial tests while still behaving differently from the original. Employ advanced techniques like fuzzing, formal program analysis, and symbolic repair to systematically identify and rectify subtle behavioral mismatches, ensuring the translated code faithfully replicates the intended functionality.
+
 ### Theme D — Automated review as a gate
 
-### 8. Automated review as a gate, not a replacement
+### 11. Automated review as a gate, not a replacement
 Layered/multi-agent review (e.g. Claude Code Review) examines diffs within the full
 codebase, ranks findings by severity, and catches subtle bugs at a low false-positive
 rate (digest 2026-03-27). Use it as a *first-pass gate* — it raises signal — but keep
@@ -132,7 +139,7 @@ a human accountable for merge. Two cheap, high-leverage gates:
   author the change (e.g. a scheduled diff-scoped review workflow).
 - The author-agent must address each finding or explain why it's a false positive.
 
-### 9. Build the review pipeline out of independent verifiers
+### 12. Build the review pipeline out of independent verifiers
 The recurring pattern across every source: the thing that generates must not be the
 thing that accepts.
 
@@ -143,7 +150,10 @@ thing that accepts.
 - **LLM-specific release gates.** Baseline evals, drift detection, shadow validation, cost and latency guardrails — traditional CI/CD doesn't catch probabilistic degradation.
 - **Keep a slop registry.** Classify and track recurring anti-patterns (over-engineering, misaligned architecture, non-existent API calls) so detection compounds instead of restarting each review.
 
-### 10. Extend existing governance to agent-run pipeline steps
+### 13. When implementing AI-driven self-correction or feedback loops, rigorously evaluate and ensure the reliability of the AI component acting as the 'verifier' or critic.
+Many AI self-improving loops fail because the AI providing feedback for critique, scoring, or iterative refinement is not reliable enough to guide the process effectively. Treat the AI verifier as a critical system component and subject it to stringent validation, ensuring its feedback mechanisms are consistently accurate and lead to genuine improvements, rather than just perpetuating a self-correction spiral.
+
+### 14. Extend existing governance to agent-run pipeline steps
 Agents can execute whole CI/CD stages, not just author code. When they do, the
 pipeline's audit trail and human oversight have to cover agent actions too, or the
 governance you already built silently stops applying. Frameworks like AC/DC
@@ -152,13 +162,16 @@ late checkpoint.
 
 ### Theme E — Keeping changes reviewable
 
-### 11. Keep diffs small and scoped
+### 15. Keep diffs small and scoped
 Big-bang AI diffs are unreviewable, so they get rubber-stamped — that's how slop
 merges. Constrain each change to one concern, fitting existing conventions. Small
 diffs make the review checklist and the reasoning defense (*Make the agent defend its
 reasoning*, above) actually tractable.
 
-### 12. Stop the self-correction spiral
+### 16. Leverage integrated, multiplayer supervision environments that provide real-time visibility into an AI agent's plans, diffs, and execution for effective human oversight and intervention.
+Beyond passive audit logs, utilize tools that offer a dedicated, collaborative space where human supervisors can actively monitor an agent's real-time progress, review generated code and outputs (including diffs and live previews), and intervene to request changes or halt execution. This facilitates continuous human-in-the-loop oversight and enhances knowledge sharing.
+
+### 17. Stop the self-correction spiral
 When a model starts re-fixing its own output in a loop (digest 2026-04-26), it rarely
 recovers in-context and it burns tokens while drifting. Cut it: `Esc Esc` / `/rewind`
 to before the spiral, re-spec, and retry — don't keep arguing with it. (See
@@ -166,15 +179,18 @@ to before the spiral, re-spec, and retry — don't keep arguing with it. (See
 
 - **Put stop conditions in the loop design.** Explicit acceptance criteria, success metrics and a human sign-off point. Defining "done" for an agent loop matters as much as for a human task, and it's what prevents open-ended burn.
 
-### 13. Consider regenerating rather than maintaining
+### 18. Consider regenerating rather than maintaining
 Where the spec is the real artifact, update the spec and re-generate instead of
 hand-patching generated code. It moves the review burden to the specification and
 stops manual edits accreting into debt. Applies to genuinely spec-driven components,
 not to everything.
 
+### 19. Prioritize maintaining conceptual integrity and manage the cognitive load on human engineers when rapidly generating code with AI.
+Rapid code generation by AI agents can lead to software that lacks conceptual integrity, accumulating 'weird bumps in funny different directions.' Teams must actively work to maintain a coherent system design, recognizing that while agents increase code output velocity, human cognitive capacity remains the bottleneck for understanding and integrating this volume of code.
+
 ### Theme F — Agent architecture and harness
 
-### 14. Treat the harness as the engineering problem
+### 20. Treat the harness as the engineering problem
 Output quality is a property of the harness as much as the model: integrated
 evaluation loops feeding runtime results back to the agent are what drive
 improvement.
@@ -184,14 +200,17 @@ improvement.
 - **Add a meta-harness when vendors multiply.** An orchestration layer standardizing session history, security controls and spend across heterogeneous agent platforms.
 - **Route by cost-capability.** Default to the cheapest capable model; reserve frontier models for work where the reasoning demonstrably prevents expensive slop.
 
-### 15. Prune the toolkit
+### 21. Prune the toolkit
 Less is more. Audit an agent's tools regularly and delete the redundant ones — Vercel
 deleted 80% of its agent's tools and the agent got better. Every extra tool is
 cognitive load and a failure mode.
 
 - **Design tool schemas defensively.** Models carry vendor-specific tool-use biases and will emit malformed calls and invented arguments; validate and recover rather than assuming well-formed input.
 
-### 16. Make skills portable and inspectable
+### 22. Configure agent 'reasoning effort' or similar internal deliberation parameters to optimize for task requirements, preventing unnecessary overthinking and associated token waste.
+AI models often default to high 'reasoning effort,' which can lead to excessive processing, increased latency, and higher costs for routine tasks. Explicitly adjust these parameters within the agent's configuration to match the complexity of the task, ensuring the agent dedicates appropriate computational resources without overthinking or generating unnecessary intermediate steps or verbose output.
+
+### 23. Make skills portable and inspectable
 Encode agent procedures as open, movable artifacts (`SKILL.md` files, runbooks,
 config) rather than leaving them embedded in a vendor tool or an ephemeral chat
 history. They're career and organizational capital; they should be testable and
@@ -201,7 +220,7 @@ migratable.
 
 ### Theme G — Blast radius, permissions, and supply chain
 
-### 17. Human-in-the-loop for irreversible / high-blast-radius actions
+### 24. Human-in-the-loop for irreversible / high-blast-radius actions
 The data-loss catastrophe happened because an agent took a destructive action without
 a gate (digest 2026-03-27). Never let an agent run migrations, deletes, prod writes,
 or money movement unsupervised. Externalize operational knowledge (what's destructive,
@@ -210,7 +229,7 @@ otherwise lacks — and still gate the action.
 
 - **Design against approval fatigue.** If humans are prompted for everything, they rubber-stamp everything and the gate is decorative. Route only high-impact and genuinely ambiguous decisions to a human.
 
-### 18. Treat every external input as hostile
+### 25. Treat every external input as hostile
 An agent cannot distinguish its operator's instructions from instructions embedded in
 a GitHub issue, a web page, or a document it reads. Indirect prompt injection is the
 default threat model, not an edge case.
@@ -218,7 +237,7 @@ default threat model, not an edge case.
 - **Scrutinize output channels for exfiltration.** Pre-authenticated links, rendered content and message sends are all data-egress paths (Microsoft Copilot Cowork exfiltrated files this way).
 - **Broker credentials; never let them sit in context.** Isolate auth flows from the agent's context window and harness behind a dedicated gateway issuing temporary least-privilege access.
 
-### 19. Give agents their own identity and least-privilege permissions
+### 26. Give agents their own identity and least-privilege permissions
 Agents inheriting a human's or a service account's broad permissions create an
 "identity vacuum" — a large attack surface with no attribution.
 
@@ -227,10 +246,10 @@ Agents inheriting a human's or a service account's broad permissions create an
 - **Least-privilege secrets in CI/CD**, scoped to the specific job that needs them, to bound the blast radius of a compromised agent.
 - **Encode permissions in the harness itself**, so authorized actions and reachable resources are explicit and auditable.
 - **Sandbox the runtime.** Managed, isolated execution environments contain tool calls and code execution.
-    - **Mandate strict network sandboxing and isolation for all AI agent testing and evaluation environments, especially for cybersecurity capabilities, to prevent accidental real-world attacks.** Ensure that any environment where AI agents are tested, particularly for capabilities like cyber attack or vulnerability exploitation, is completely isolated from production and real-world networks. Repeated misconfigurations have led to agents accidentally hacking real targets during evaluations.
+    - **Mandate strict network sandboxing and isolation for all AI agent testing and evaluation environments, especially for cybersecurity capabilities, to prevent accidental real-world attacks.** Ensure that any environment where AI agents is tested, particularly for capabilities like cyber attack or vulnerability exploitation, is completely isolated from production and real-world networks. Repeated misconfigurations have led to agents accidentally hacking real targets during evaluations.
 - **Govern self-modifying agents.** Agents that create tools or touch the filesystem at runtime outrun static policy; log and review emergent capability.
 
-### 20. Secure the toolchain and everything the agent installs
+### 27. Secure the toolchain and everything the agent installs
 The attack surface moved upstream: IDE extensions, agent platforms and developer
 workstations are now weaponized supply-chain targets.
 
@@ -241,9 +260,15 @@ workstations are now weaponized supply-chain targets.
 - **Evaluate multi-turn.** Single-turn safety results are a poor predictor; real adversaries decompose and reframe across turns.
 - **Redact at machine speed.** Sensitive data reaches sandboxes, pipelines, training sets and agent memory without anyone instructing it to; use synthetic data in non-production.
 
+### 28. Ensure all code and data processed within an AI agent's execution environment, including decrypted content, is subject to rigorous security filtering and inspection.
+Adversaries can bypass input/output filters by providing encrypted malicious payloads that the AI agent decrypts and executes within its internal code environment. Implement robust security measures to inspect all intermediate states, including any plaintext generated from encrypted inputs, to prevent the agent from willingly acting on self-generated malicious instructions.
+
+### 29. Cryptographically sign all AI-generated artifacts, including container images, model weights, and inference runtimes, to establish proactive provenance and verify integrity throughout the software supply chain.
+The proliferation of AI artifacts (model weights, training datasets, inference runtimes) in container images creates new supply chain vulnerabilities. Implement cryptographic signing to ensure that the origin and integrity of these artifacts can be verified. This proactive measure provides verifiable provenance, addressing the question of 'who built this, and has it been modified?' which static vulnerability scanning alone cannot answer.
+
 ### Theme H — Ownership, governance, accountability
 
-### 21. Name an owner for every deployed agent
+### 30. Name an owner for every deployed agent
 Unowned agents become haunted houses — stale policies, rotted instructions, nobody
 accountable for the output. An "Agent Owner's Card" (purpose, context, health,
 owner) makes ownership visible.
@@ -254,10 +279,13 @@ owner) makes ownership visible.
 - **Set a policy on accepting AI-generated contributions**, internal and external: full code, or only reproducible bug reports and test cases?
 - **Regulatory accountability is arriving.** The EU Cyber Resilience Act and similar impose documentation duties regardless of who — or what — wrote the code; open standards work (e.g. Appia Foundation) is where verifiability is being built.
 
-### 22. Implement policy enforcement for AI agents that governs sequences of tool calls and actions, rather than just evaluating each action in isolation.
+### 31. Define explicit job titles and responsibilities for AI agents to clarify their scope and accountability.
+Treat AI agents as virtual team members with persistent identities, complete with defined roles, responsibilities, and associated permissions. This helps delineate their operational scope, aligns expectations for their contributions, and clarifies accountability when issues arise, much like assigning a job title to a human team member.
+
+### 32. Implement policy enforcement for AI agents that governs sequences of tool calls and actions, rather than just evaluating each action in isolation.
 Use policy languages that can evaluate the context of previous actions when deciding whether to permit a subsequent agent action. This ensures multi-step agent behaviors adhere to organizational rules, preventing valid but contextually wrong actions within complex workflows.
 
-### 23. Measure the cleanup tax, not just velocity
+### 33. Measure the cleanup tax, not just velocity
 "2x velocity" is meaningless if rework doubles too. Intercom paired Claude Code with
 deep telemetry — invocations, sessions, dashboards (digest 2026-04-26). Track rework:
 how often AI-authored code is reverted, hot-fixed, or refactored shortly after merge.
@@ -267,7 +295,7 @@ not a side effect — prefer the simplest solution a human can maintain.
 - **Connect changes to production outcomes.** "Percentage of code written by AI" measures nothing; link specific contributions to bugs, performance and maintenance cost to learn where agents are actually additive.
 - **Tie activity to business outcomes.** AI business observability counters "tokenmaxxing" — spend that looks like progress.
 
-### 24. Instrument the agent, not just the output
+### 34. Instrument the agent, not just the output
 Agent failures are usually silent: drift, looping, inefficient consumption, no crash
 and no alert. Traditional log-based debugging doesn't reach them.
 
@@ -384,6 +412,16 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **Building an iPhone app with zero technical skills | Bryce Rattner Keithley** (Lenny's Newsletter) — hyper-literal and unambiguous prompts. Digest: 2026-06-01.
 - **☕🤖Tutorial: Build Your Founder Skill Pack (5 Claude Skills You Install Once and Use Every Week)** (The AI Break) — Implement a dedicated 'De-Slop pass' for post-generation refinement. Digest: 2026-07-17.
 - **Your Agent Doesn’t Have a Memory Problem** (Pascal Biese (LLM Watch)) — Structured mechanisms to verify an AI agent's comprehension of information. Digest: 2026-07-20.
+- **Grok, Claude, and Hermes agents get job titles — and persistent permissions** (The New Stack) — defining explicit job titles and responsibilities for AI agents. Digest: 2026-08-21.
+- **Conceptual integrity and counting lines of code** (Simon Willison) — prioritizing conceptual integrity and managing human cognitive load with AI-generated code. Digest: 2026-08-20.
+- **Researchers hid an attack inside AES encryption. The AI model cracked it open willingly.** (The New Stack) — rigorous security filtering and inspection of decrypted content in AI agent execution environments. Digest: 2026-08-20.
+- **Slack has a new channel type — but only agents can create one** (The New Stack) — leveraging integrated, multiplayer supervision environments for human oversight of AI agents. Digest: 2026-08-20.
+- **Why Most Self-Improving AI Loops Fail and How to Build One That Works** (Ruben Dominguez (The AI Corner)) — rigorously evaluating the reliability of AI components acting as verifiers in self-correction loops. Digest: 2026-08-19.
+- **Your coding agent got the onboarding your developers never did** (The New Stack) — creating and continuously optimizing dedicated, agent-facing documentation files (e.g., AGENTS.md). Digest: 2026-08-19.
+- **AI broke code review. What about knowledge sharing?** (The New Stack) — integrating AI agents as 'teaching agents' earlier in the development workflow. Digest: 2026-08-19.
+- **AI-generated Rust compiles perfectly. That’s the scary part.** (The New Stack) — implementing rigorous verification processes for behavioral equivalence in AI code translation/refactoring. Digest: 2026-08-20.
+- **Qwen 3.8 27B is excellent, but it defaults to wildly overthinking things** (Simon Willison) — configuring agent 'reasoning effort' to optimize for task requirements. Digest: 2026-08-17.
+- **Your container images are unsigned. In the AI era, that’s a ticking time bomb.** (The New Stack) — cryptographically signing all AI-generated artifacts for provenance and integrity. Digest: 2026-08-14.
 - Referenced-only (title in recommendations, no full summary saved): **We Taught AI to Write Code But We Forgot to Teach It to Think**, **You Need AI That Reduces Maintenance Costs**, **Beyond prompting: How KubeStellar reached 81% PR acceptance with AI agents**, **Are AI agents actually slowing us down?**, **Your Agent Can Code. It Just Can't See.**
 
 ## Where Used

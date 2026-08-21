@@ -148,52 +148,67 @@ When deploying updates to agent components, run the new version alongside the cu
 ### 30. Implement continuous drift detection for agent behavior and underlying models.
 Continuously monitor agent performance metrics, model outputs, and embedding spaces to detect gradual degradation (eval drift) or changes in data distribution (distribution shift) that may lead to suboptimal or incorrect agent actions without triggering hard failure thresholds.
 
-### 31. Provenance and an audit trail for every action
+### 31. Establish an advanced, multi-signal correlation system for AI agent operational monitoring to detect nuanced failure modes that combine telemetry from logs, metrics, traces, and specific agent tool calls.
+Move beyond basic drift detection by implementing a sophisticated monitoring system that correlates data from various observability sources, including agent logs, system metrics, distributed traces of tool calls, and external system responses. This enables the detection of complex and subtle failure modes that single-signal monitoring might miss, leading to more proactive operational safety.
+
+### 32. Provenance and an audit trail for every action
 Log each agent action with its inputs, the judge's decision + reason, who/what approved,
 and the result. This is what makes an agent action auditable (essential for financial /
 regulated workflows) and debuggable after the fact. Keep AI-proposed vs. human-approved
 distinguishable.
 
-### 32. Ensure that any agent-driven automatic approval processes, particularly for code changes, generate comprehensive, auditable, and queryable records that adhere to compliance standards (e.g., SOC 2) and are integrated into the organization's risk policy.
+### 33. Ensure that any agent-driven automatic approval processes, particularly for code changes, generate comprehensive, auditable, and queryable records that adhere to compliance standards (e.g., SOC 2) and are integrated into the organization's risk policy.
 Auto-approval by agents, even for low-risk actions, requires robust auditability for compliance and accountability. The records must be detailed enough to reconstruct decisions, queryable for analysis, and explicitly align with established risk policies to maintain regulatory and internal governance standards.
 
-### 33. Architect agent executions as durable workflows that checkpoint each step to ensure resilience, recoverability, and atomic operations.
+### 34. Architect agent executions as durable workflows that checkpoint each step to ensure resilience, recoverability, and atomic operations.
 Design agent tasks to create checkpoints after each significant step, allowing an agent session to pause, gracefully survive crashes, and resume from the last validated state. This prevents partial, unrecoverable actions and ensures the overall integrity and audibility of complex, multi-step agent processes.
 
-### 34. Develop and maintain a comprehensive, up-to-date dependency map for all AI agent systems and their supporting infrastructure to enable effective emergency shutdown or intervention.
+### 35. Develop and maintain a comprehensive, up-to-date dependency map for all AI agent systems and their supporting infrastructure to enable effective emergency shutdown or intervention.
 In complex production environments, AI agent services often rely on numerous interconnected systems, including APIs, cloud resources, identity services, and downstream applications. A detailed dependency map is essential for understanding the full blast radius of an agent and for orchestrating a controlled, complete shutdown or targeted intervention during an incident.
 
-### 35. Design agent systems using an 'interconnected loops' architecture to manage complex, recurring tasks and their dependencies autonomously.
+### 36. Design agent systems using an 'interconnected loops' architecture to manage complex, recurring tasks and their dependencies autonomously.
 For systems with multiple ongoing obligations, structure agents as a network of narrow, recurring 'loops,' each with its own memory, information sources, and safe actions. These loops are specifically designed to observe and react to changes or outputs from other interconnected loops, enabling the system to autonomously manage complex interdependencies and adapt to evolving conditions, moving beyond isolated, durable workflows.
 
-### 36. Isolate agent-generated code execution within hardened sandboxes.
+### 37. Isolate agent-generated code execution within hardened sandboxes.
 When an AI agent generates and executes code, this execution must occur within strictly isolated environments such as process sandboxes, virtual machines, or WebAssembly runtimes. Implement tight filesystem boundaries and egress controls to prevent unauthorized access to the host system, exfiltration of sensitive data, or unintended network activity, even if the agent's code is buggy or malicious.
 
-### 37. Rigorously verify the isolation and network egress configurations of all agent evaluation environments.
+### 38. Implement granular resource limits (CPU, RAM, execution time) for agent-generated code execution within sandboxes to prevent denial-of-service or runaway processes.
+Beyond general isolation, explicitly define and enforce limits on CPU usage, memory consumption, and maximum execution duration for any code executed by an agent in a sandboxed environment. This prevents resource exhaustion attacks, infinite loops, or runaway processes from impacting system stability or availability.
+
+### 39. Enforce explicit allowlists for filesystem access within agent execution environments, permitting access only to designated files or directories.
+Configure agent sandboxes with a strict allowlist approach to filesystem access, ensuring that agents can only read from or write to predefined, essential files or directories. This prevents unauthorized data exfiltration, modification, or the introduction of malicious code into unintended locations.
+
+### 40. Rigorously verify the isolation and network egress configurations of all agent evaluation environments.
 Ensure that environments designated as simulations are truly isolated from the public internet and production systems. Network egress paths must be explicitly controlled and verified, even when agents are instructed they are in a simulation, as misconfigured evaluation environments pose a significant real-world risk.
 
-### 38. Prohibit AI agents from utilizing public, unauthenticated external code execution or evaluation services.
+### 41. Prohibit AI agents from utilizing public, unauthenticated external code execution or evaluation services.
 Strictly prevent AI agents from accessing or leveraging external, publicly accessible, and unauthenticated code execution environments or third-party sandboxes as part of their operational workflow or as a means to circumvent internal controls. Such services can be easily abused as staging grounds for further attacks, as demonstrated by real-world incidents.
 
-### 39. Harden the entire AI agent runtime environment, extending protection beyond isolation to included tools, browsers, and libraries.
+### 42. Harden the entire AI agent runtime environment, extending protection beyond isolation to included tools, browsers, and libraries.
 Beyond merely isolating the agent in a sandbox, actively harden the comprehensive runtime environment that the agent operates within. This includes securing and applying strict controls to all embedded tools, browsers, and libraries utilized by the agent, closing attack surfaces that basic sandbox isolation alone may not address.
 
-### 40. Assign a distinct, verifiable identity to every AI agent, and explicitly manage its dynamically acquired permissions throughout its lifecycle.
+### 43. Implement stringent isolation and security controls for AI model development and internal testing environments to prevent agents from breaching these sandboxes and accessing or impacting external or internal systems.
+Extend sandboxing and hardening principles to environments where AI models and agents are developed, fine-tuned, and internally tested. These environments must be securely isolated with tight network and tool access limits to prevent agents from escaping, attacking internal systems, or accessing sensitive data during their development lifecycle.
+
+### 44. Assign a distinct, verifiable identity to every AI agent, and explicitly manage its dynamically acquired permissions throughout its lifecycle.
 Every AI agent, regardless of its function, must operate under a unique, authenticated identity. This foundation enables granular least-privilege enforcement, clear accountability, and a comprehensive audit trail for all actions. Crucially, the system must also manage and log how agents dynamically request and acquire new tool access or roles during their operation, ensuring these transitions are authorized and traceable.
 
-### 41. Implement secure, zero-exposure credential management mechanisms for agents.
+### 45. Implement secure, zero-exposure credential management mechanisms for agents.
 Agents should access credentials through dedicated, task-scoped authentication frameworks that decrypt and inject credentials directly into target systems on-device, without exposing plaintext passwords or one-time codes to the underlying LLM. This ensures agents perform authenticated actions while minimizing the risk of credential leakage or misuse by the model itself.
 
-### 42. Implement just-in-time credential injection and out-of-band authentication for AI agents.
+### 46. Implement just-in-time credential injection and out-of-band authentication for AI agents.
 Replace long-lived API keys or permissive service accounts injected into agent environments with mechanisms for just-in-time credential injection and authentication that occur entirely outside the agent's direct memory space. This decouples credentials from the agent's environment, rendering agents powerless even if they escape their sandbox without active, out-of-band authorization.
 
-### 43. Deploy models and agents to operate on sensitive data locally or within controlled, isolated environments.
+### 47. Deploy models and agents to operate on sensitive data locally or within controlled, isolated environments.
 To protect proprietary or sensitive information, bring the AI model and agent execution to the data source rather than transmitting sensitive data to external model providers. Leverage local execution environments or fine-tuned models on private infrastructure to process confidential inputs, ensuring data remains within trusted boundaries and mitigating data exfiltration risks.
 
-### 44. Implement explicit user consent and granular access controls for agent interactions with local files and desktop applications.
+### 48. Implement explicit user consent and granular access controls for agent interactions with local files and desktop applications.
 When an agent operates in a desktop environment, require explicit, runtime user permission before allowing access to local files, other desktop applications, or system resources. This ensures users retain ultimate control over local data and system integrity.
 
-### 45. Establish a distinct, authenticated identity layer for AI agents performing financial transactions.
+### 49. Establish clear policies and technical controls for the lifecycle, retention, and security of user interaction data continuously captured by agents for context and memory, including explicit user consent for specific data types and timeframes.
+For agents that capture continuous streams of user interaction events (e.g., clicks, typing, app switches) to build an operational memory or timeline, define strict policies for data retention, anonymization, and secure storage. Crucially, obtain granular user consent specifying which interaction types can be captured, for how long, and for what explicit purposes, moving beyond static file access permissions.
+
+### 50. Establish a distinct, authenticated identity layer for AI agents performing financial transactions.
 For agents authorized to manage money, spend, or interact with financial systems, implement a robust identity layer that includes unique authentication, tokenization capabilities, and secure wallet management. This ensures that each agent's financial actions are traceable, adhere to defined limits, and are independently verifiable as originating from a securely identified entity.
 
 ## Anti-Patterns
@@ -217,6 +232,11 @@ shared review workflow.
 
 Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 
+-   **How to build smarter OpenSearch alerts: Join our live conversation** (The New Stack) — establish an advanced, multi-signal correlation system for AI agent operational monitoring. Digest: 2026-08-20.
+-   **“The opening stages of OpenAI’s unraveling”: OpenAI slows model training — not everyone is buying the explanation** (The New Stack) — implement stringent isolation and security controls for AI model development and internal testing environments. Digest: 2026-08-20.
+-   **smolmachines / smolvm as a sandbox for untrusted Python & JavaScript** (Simon Willison) — enforce explicit allowlists for filesystem access within agent execution environments. Digest: 2026-08-20.
+-   **smolmachines / smolvm as a sandbox for untrusted Python & JavaScript** (Simon Willison) — implement granular resource limits (CPU, RAM, execution time) for agent-generated code execution within sandboxes. Digest: 2026-08-20.
+-   **ChatGPT can now remember what you did on your Mac — without screenshots** (The New Stack) — establish clear policies and technical controls for the lifecycle, retention, and security of user interaction data. Digest: 2026-08-14.
 -   **Auto Mode will soon be the default in Claude Code — because humans can’t be trusted** (The New Stack) — implement an AI-driven pre-screening layer to filter routine agent actions. Digest: 2026-08-08.
 -   **The npm attack that turned provenance attestations into camouflage** (The New Stack) — scrutinize and restrict the use of pre-execution hooks in software packages. Digest: 2026-08-07.
 -   **The “AI kill switch” assumes you know what you are trying to shut down** (The New Stack) — develop a comprehensive, up-to-date dependency map for emergency shutdown. Digest: 2026-08-07.
