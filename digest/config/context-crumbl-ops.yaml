@@ -106,6 +106,23 @@ interests: |
   - Franchise / multi-entity accounting patterns
   - AI for accounts payable and accounts receivable
 
+# Added 2026-08-23: evaluations kept concluding "already built" (#1887 and the
+# weeks before it) because project-level ideas don't survive contact with a
+# mature repo. Demand technique-level deltas instead; empty is a valid output.
+recommendation_guidance: |
+  This project is MATURE. Field-level ideas ("adopt context engineering",
+  "add an audit agent", "build an eval harness") are already built and will be
+  closed as duplicates — do not propose them.
+  - Propose at most 2 recommendations, and only NARROW implementation deltas:
+    a specific technique, applied to a named module or workflow from the
+    context above, that the article describes in enough technical detail to
+    implement. If the article only names a concept without the how, it cannot
+    support a recommendation.
+  - Each recommendation must state what the repo does today in that spot and
+    what would concretely change — a falsifiable delta, not a theme.
+  - "No qualifying ideas this week" (empty project_recommendations) is a GOOD
+    output and expected most weeks. Never pad toward a count.
+
 email:
   from: "michael@bluegrasscookies.com"
   to: "michael.a.dickson@gmail.com"

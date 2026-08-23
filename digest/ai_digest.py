@@ -57,6 +57,23 @@ Key areas:
 
 The owner is interested in:
 {ctx.get('interests', '')}
+{_recommendation_guidance_block(ctx)}"""
+
+
+def _recommendation_guidance_block(ctx: dict) -> str:
+    """Optional per-context override of how recommendations should be framed.
+
+    Lets a mature target (crumbl-ops) demand narrow implementation deltas while
+    a younger one keeps the default project-level framing. Appended to the
+    context section so it sits with the rest of the project-specific text.
+    """
+    guidance = ctx.get("recommendation_guidance", "").strip()
+    if not guidance:
+        return ""
+    return f"""
+Recommendation guidance for this project (OVERRIDES the generic rules below
+where they conflict):
+{guidance}
 """
 
 
