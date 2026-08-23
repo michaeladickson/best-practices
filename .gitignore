@@ -5,4 +5,5 @@ venv/
 .DS_Store
 .claude/settings.local.json
 data/feed_archive/
+data/digest_inbox/
 logs/

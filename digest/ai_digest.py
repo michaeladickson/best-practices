@@ -276,6 +276,53 @@ def fetch_all_archived_posts() -> list[dict]:
     return posts
 
 
+INBOX_DIR = Path(__file__).parent.parent / "data" / "digest_inbox"
+
+
+def _load_inbox_posts(archive: dict) -> list[dict]:
+    """One-off inputs (video transcripts, pasted articles, PDFs-as-text) dropped
+    into data/digest_inbox/*.md flow through the same scoring/knowledge/practice
+    path as feed posts. Frontmatter: title, source_url; optional date, category,
+    source. Non-destructive — the wrapper moves files to processed/ only after
+    ALL contexts have run, so every digest sees them; the archive (keyed by
+    source_url) dedups re-reads. See CLAUDE.md "Running the Digest".
+    """
+    if not INBOX_DIR.exists():
+        return []
+    posts = []
+    for path in sorted(INBOX_DIR.glob("*.md")):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as e:
+            log.warning("inbox_read_failed", file=path.name, error=str(e))
+            continue
+        meta, body = {}, text
+        if text.startswith("---"):
+            parts = text.split("---", 2)
+            if len(parts) == 3:
+                try:
+                    meta = yaml.safe_load(parts[1]) or {}
+                    body = parts[2]
+                except yaml.YAMLError:
+                    pass
+        link = meta.get("source_url", f"inbox://{path.name}")
+        post = {
+            "source": meta.get("source", "Manual inbox"),
+            "category": meta.get("category", "inbox"),
+            "title": meta.get("title", path.stem.replace("-", " ")),
+            "link": link,
+            "published": str(meta.get("date", datetime.now(timezone.utc).strftime("%Y-%m-%d")))[:10],
+            "content_preview": body.strip()[:3000],
+        }
+        posts.append(post)
+        if link not in archive:
+            archive[link] = post
+    if posts:
+        _save_archive(archive)
+        log.info("inbox_posts_loaded", count=len(posts))
+    return posts
+
+
 def _analyze_posts(posts: list[dict], context_prompt: str,
                    project_name: str) -> Optional[dict]:
     if not posts:
@@ -726,6 +773,12 @@ def main(days: int, dry_run: bool, context_path: Optional[str],
                               for s in sorted(stale, key=lambda s: -s["days"])[:5])
             print(f"{len(stale)} feed(s) stale >{FEED_STALE_DAYS}d — may be dead "
                   f"rather than quiet: {worst}", file=sys.stderr)
+
+    # Inbox items ride along with whatever the feeds produced (and can rescue
+    # an otherwise-quiet week from the early exit below).
+    inbox_posts = _load_inbox_posts(_load_archive())
+    seen_links = {p["link"] for p in posts}
+    posts.extend(p for p in inbox_posts if p["link"] not in seen_links)
 
     if not posts:
         # Feeds fetched fine, nothing new in the window — a genuinely quiet week.

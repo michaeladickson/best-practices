@@ -85,6 +85,15 @@ anchors). Guardrails, since this also edits the anti-slop doc itself:
   rejected and the doc is left untouched (retries next week). Git history is the backstop.
 - Most weeks change nothing. Review the `[automated]` practice commits like any other diff.
 
+### One-off inputs (digest inbox)
+
+Drop a video transcript, pasted article, or PDF-as-text into `data/digest_inbox/`
+(gitignored — content may be copyrighted or private) as a `.md` with frontmatter
+`title:` and `source_url:` (optional `date:`, `source:`, `category:`). The next
+digest run scores it alongside feed posts for every context; the wrapper moves it
+to `processed/` after all three succeed. The archive dedups by `source_url`.
+Citation-discovery issues that end "no feed — check manually" route here too.
+
 ### Manual / dev runs
 
 ```bash

@@ -238,6 +238,15 @@ else
   echo "Committed and pushed practice-doc updates"
 fi
 
+# Retire consumed inbox items only after ALL contexts have run (the loader in
+# ai_digest.py is non-destructive so every digest sees them). Only on full
+# success — a failed context re-reads them next attempt; the archive dedups.
+if [ "$DIGESTS_FAILED" -eq 0 ] && ls data/digest_inbox/*.md >/dev/null 2>&1; then
+  mkdir -p data/digest_inbox/processed
+  mv data/digest_inbox/*.md data/digest_inbox/processed/
+  echo "Inbox items moved to processed/"
+fi
+
 echo ""
 echo "=== Feed instrumentation (yield report, citation discovery, heartbeats) ==="
 # All three are best-effort: a failure warns but never fails the run — the

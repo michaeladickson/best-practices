@@ -99,7 +99,39 @@ def build_report(days: int = 90) -> str:
     zero = [n for n, s in stats.items() if s["window"] == 0 and _age(s) >= days]
     if zero:
         lines += ["", f"**No posts in {days}d (dead or dormant):** " + ", ".join(zero)]
+    lines += _acceptance_section()
     return "\n".join(lines) + "\n"
+
+
+def _acceptance_section() -> list[str]:
+    """Digest-idea acceptance rate per target repo, from the verdict ledgers.
+
+    This is the kill-criteria number: if a repo's acceptance stays ~0 for a
+    quarter after the 2026-08-23 changes (practitioner feeds, narrow-delta
+    guidance, verdict feedback) settle in, downgrade that digest's cadence or
+    drop its issue leg rather than keep paying for it.
+    """
+    feedback_dir = ROOT / "data" / "digest_feedback"
+    if not feedback_dir.exists():
+        return []
+    lines = ["", "## Digest idea acceptance (from evaluation verdicts)", ""]
+    found = False
+    for path in sorted(feedback_dir.glob("*.json")):
+        with open(path, encoding="utf-8") as f:
+            ledger = json.load(f)
+        verdicts = [v for iss in ledger.get("issues", {}).values()
+                    for v in iss.get("verdicts", [])]
+        if not verdicts:
+            continue
+        found = True
+        accepted = sum(1 for v in verdicts if v["verdict"] == "accepted")
+        by_kind = {}
+        for v in verdicts:
+            by_kind[v["verdict"]] = by_kind.get(v["verdict"], 0) + 1
+        breakdown = ", ".join(f"{k}: {n}" for k, n in sorted(by_kind.items(), key=lambda kv: -kv[1]))
+        lines.append(f"- **{path.stem}** — {accepted}/{len(verdicts)} accepted "
+                     f"({breakdown}) across {len(ledger['issues'])} evaluated issues")
+    return lines if found else []
 
 
 @click.command()
