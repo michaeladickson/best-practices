@@ -175,7 +175,7 @@ for CTX in crumbl-ops command-center wealth-mgmt; do
   # at the end. This run is a long serial chain (3 digests + a 5-doc practice
   # update); when it was killed mid-run on 2026-07-17 the completed crumbl-ops
   # knowledge file was left uncommitted because the batch commit never ran.
-  git add data/digest_knowledge/
+  git add data/digest_knowledge/ data/digest_feedback/
   if ! git diff --cached --quiet; then
     git commit -q -m "Weekly digest: ${CTX} knowledge file [automated]"
     echo "Committed $CTX knowledge file"

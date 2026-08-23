@@ -732,8 +732,17 @@ def main(days: int, dry_run: bool, context_path: Optional[str],
         print("No new posts found.")
         return
 
+    # Verdict feedback loop: pull evaluation verdicts from newly closed digest
+    # issues into the per-project ledger, then inject the ledger into the
+    # prompt so rejected ideas are not re-proposed. Collection needs local gh
+    # auth (skipped in the Actions fallback); injection only needs the
+    # committed ledger, so it works everywhere. Never blocks the run.
+    from digest.verdict_feedback import collect_verdicts, render_verdict_block
+    if not dry_run:
+        collect_verdicts(ctx)
+
     log.info("analyzing_posts", count=len(posts))
-    context_prompt = _build_context_prompt(ctx)
+    context_prompt = _build_context_prompt(ctx) + render_verdict_block(project_name)
     analysis = _analyze_posts(posts, context_prompt, project_name)
     if not analysis:
         # Must be non-zero: run_weekly_digest.sh counts a failed context via the

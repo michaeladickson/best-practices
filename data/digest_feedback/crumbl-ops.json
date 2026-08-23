@@ -1,0 +1,150 @@
+{
+  "issues": {
+    "1887": {
+      "title": "Weekly digest 2026-08-21: ideas to evaluate",
+      "closed_at": "2026-08-22",
+      "verdicts": [
+        {
+          "idea": "Implement Advanced Context Engineering for Claude Code",
+          "verdict": "already-built",
+          "reason": "The proposal's substance (structured agent context) is CLAUDE.md + `knowledge/` + path-scoped `.claude/rules/` + 30+ skills + the persistent memory system + `/work-on` preloading — maintained daily by the wrap-up rituals."
+        },
+        {
+          "idea": "Develop an AI-Driven Financial Audit Agent (Shadow Ledger)",
+          "verdict": "already-built",
+          "reason": "The repo's audit layer (DQ checks, reconciliations, pre-flight, QA) and AI-narrative half (weekly BI report, digest synthesis) already exist, with a grounding gate for AI narratives."
+        },
+        {
+          "idea": "Async agent-human workflows",
+          "verdict": "tracked",
+          "reason": "The concrete, local version of this idea (staged-script handoff, classifier-allowlist decision) is already tracked by #1902, making a generic 'async orchestration' project redundant."
+        },
+        {
+          "idea": "Cryptographic-context injection hardening",
+          "verdict": "false-premise",
+          "reason": "This repo's only cryptography is own-secret handling, and no LLM call site or tool exposes decryption capabilities to agents, making the attack shape absent."
+        }
+      ]
+    },
+    "1431": {
+      "title": "Weekly digest 2026-08-07: ideas to evaluate",
+      "closed_at": "2026-08-09",
+      "verdicts": [
+        {
+          "idea": "Skills evaluation / smevals",
+          "verdict": "accepted",
+          "reason": "This is the only genuinely open idea, with no deadline, and is naturally #1418-adjacent."
+        },
+        {
+          "idea": "AI code review + issue triage",
+          "verdict": "already-built",
+          "reason": "The PR Review Gate already runs an Opus pass and Copilot shadow lane for code review and issue triage."
+        }
+      ]
+    },
+    "1092": {
+      "title": "Weekly digest 2026-07-24: ideas to evaluate",
+      "closed_at": "2026-08-02",
+      "verdicts": [
+        {
+          "idea": "Upgrade to Opus 5 & develop Claude Skills",
+          "verdict": "already-built",
+          "reason": "Opus 5 is already the top model in CLAUDE.md, and there are already 25 skills in `.claude/skills/` with a rule to promote recurring operations to skills."
+        },
+        {
+          "idea": "Harden AI agent security with Cloud Run sandboxes",
+          "verdict": "rejected",
+          "reason": "Cloud Run sandboxes are for untrusted code, but crumbl-ops runs its own deterministic jobs and already has other security measures like deny-all egress and scoped service accounts."
+        },
+        {
+          "idea": "Optimize Gemini / hybrid LLM for finance",
+          "verdict": "false-premise",
+          "reason": "Invoice parsing has never involved an LLM; it is deterministic per-vendor code, and a hybrid local-LLM strategy is enterprise ML-ops for a small operation."
+        },
+        {
+          "idea": "AI testing, observability, LightGBM drift",
+          "verdict": "already-built",
+          "reason": "All named components like AI test generation, property-based testing, mutation testing, forecast backtesting, model drift detection, and anomaly detection already exist, and LightGBM models were deleted in 2026-05."
+        }
+      ]
+    },
+    "1020": {
+      "title": "Weekly digest 2026-07-17: ideas to evaluate",
+      "closed_at": "2026-07-21",
+      "verdicts": [
+        {
+          "idea": "Fortify AI Agent Security and Access",
+          "verdict": "already-built",
+          "reason": "Harden-runner egress-policy, `src/ops/secret_redaction.py`, and repo-wide `system_instruction` rules ensure robust security."
+        },
+        {
+          "idea": "Boost Claude Code Efficiency",
+          "verdict": "already-built",
+          "reason": "24 skills in `.claude/skills/`, the manifest-driven weekly-review harness, and `CLAUDE.md` are already implemented."
+        },
+        {
+          "idea": "AI Investment Scorecard",
+          "verdict": "already-built",
+          "reason": "Data and alarms exist in `src/ops/llm_metrics.py`, with only a consolidated dollar cost-per-purpose rollup missing, which is a reporting convenience."
+        },
+        {
+          "idea": "AI-Driven Validation for Deployments",
+          "verdict": "already-built",
+          "reason": "This is `project_qa_framework`, including property tests, mutation testing, and adversarial multi-agent review."
+        }
+      ]
+    },
+    "968": {
+      "title": "Weekly digest 2026-07-10: ideas to evaluate",
+      "closed_at": "2026-07-16",
+      "verdicts": [
+        {
+          "idea": "AI Output Validation for Finance",
+          "verdict": "false-premise",
+          "reason": "The premise is false as no LLM extraction exists to validate; existing deterministic parsers are already covered by corpus-validation-before-goldens with live dollar-level backstops such as dup-bill DQ (#991), vendor-draft bank-rec (#987), check_required_qbo_vendors (#848), and suspense-JE for unbalanced posts."
+        },
+        {
+          "idea": "Model routing for cost",
+          "verdict": "already-built",
+          "reason": "CLAUDE.md §Model Selection, refreshed in #882, already covers model selection and subagent tiering, making an internal LLM gateway over-engineering at the current 2-owner scale."
+        },
+        {
+          "idea": "Agent harnesses",
+          "verdict": "rejected",
+          "reason": "Current practice, including 20+ skills, hooks, headless cron sessions (`claude -p`), and dual-model weekly review, already surpasses the proposed script harness for generating unit tests."
+        },
+        {
+          "idea": "Proactive AI observability",
+          "verdict": "already-built",
+          "reason": "`src/ops/llm_metrics.py`, CS classifier observability (migration 152), LLM-related DQ checks (`data_quality/system.py`), Gemini output-cap tripwires, and the weekly-review metrics ledger already provide appropriate scale observability."
+        }
+      ]
+    },
+    "882": {
+      "title": "Weekly digest 2026-07-03: ideas to evaluate",
+      "closed_at": "2026-07-04",
+      "verdicts": [
+        {
+          "idea": "Multi-Model AI Routing Strategy",
+          "verdict": "accepted",
+          "reason": "CLAUDE.md was refreshed with Fable guidance, escalation categories, and subagent tiering, though the full 'model-picker system' was deemed over-engineering."
+        },
+        {
+          "idea": "Autoresearch Loops for AI Model Validation",
+          "verdict": "already-built",
+          "reason": "The repo already contains the proposed machinery for LLM release gates, but the digest's premises about LightGBM and Gemini invoice extraction were incorrect."
+        },
+        {
+          "idea": "Financial-agent guardrails",
+          "verdict": "already-built",
+          "reason": "The repo already incorporates action-tier gates, persist-gates, dedup tags, suspense-JE holds, deploy point-of-action approval, and PreToolUse hooks."
+        },
+        {
+          "idea": "AI software factory",
+          "verdict": "already-built",
+          "reason": "The proposed elements of skills/, subagents, workflows, knowledge/, and memory already form the project's operating model."
+        }
+      ]
+    }
+  }
+}
