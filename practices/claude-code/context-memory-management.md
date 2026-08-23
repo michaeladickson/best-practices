@@ -111,6 +111,42 @@ The asymmetry drives the rule: a paragraph in root `CLAUDE.md` is paid in every 
 -   **Enterprise tasks want holistic context.** Real workflows need broader assembly than benchmarks imply — interconnected decisions, not isolated snippets.
 -   **Don't tokenmaxx.** Token volume is not productivity. Tie consumption to delivered outcomes, or the budget grows without the value.
 
+## Training the Always-Loaded File (the Backward Pass)
+
+The always-loaded `CLAUDE.md` behaves like model weights: every session is a forward pass
+that reads it unchanged, and the gap between what the agent did and what you wanted is the
+loss. Most maintenance stops at the forward pass — rules get pasted in reactively after one
+bad session and nothing ever audits whether a line still earns its keep. Treat updates as a
+disciplined backward pass instead:
+
+-   **Evidence comes from transcripts, not anecdotes.** The session logs already record
+    which rule was followed, which was violated, and what the agent re-derived that no rule
+    covers. Update from those, not from the memory of being annoyed. Treat each list item
+    or paragraph as an addressable unit and ask: in which sessions did it matter, was it
+    followed, was it wrong?
+-   **Batch before you update — two-session minimum.** A rule earns its place only when the
+    pattern it fixes appeared in **two or more independent sessions**. One bad session is
+    noise; this single gate removes most bloat, because most pasted-in rules were reactions
+    to an incident that never recurred.
+-   **Small steps.** At most ~5 edits per pass — add, remove, rewrite, or extract to a
+    skill. Never a full rewrite: a large step on a memory file is indistinguishable from
+    starting over, and you lose everything that was working.
+-   **Fix a token budget; at the budget, edits are zero-sum.** Pick a size for the
+    always-loaded file (e.g. ~5K tokens). Near it, every addition names the removal or
+    extraction that pays for it.
+-   **Broad/narrow triage** (skills are the release valve):
+    - *Broad* — relevant in ≥~20% of sessions, or safety-critical → stays in `CLAUDE.md`.
+    - *Narrow with a detectable trigger* → extract to a skill (loads only when invoked).
+    - *Narrow with no detectable trigger* → deletion candidate.
+-   **This applies to the project-level file only.** The user-level `~/.claude/CLAUDE.md`
+    is hand-written preference, changes rarely, and no tool or agent should "optimize" it.
+
+In this repo the loop runs as the `/backward-pass` skill
+([`.claude/skills/backward-pass/SKILL.md`](../../.claude/skills/backward-pass/SKILL.md)):
+Claude reviews recent session transcripts for the target repo, scores each CLAUDE.md unit,
+and proposes ≤5 gated edits for human review. No third-party tool touches the transcript
+stores (they contain private-repo material).
+
 ## Cross-Boundary Duplication Is Allowed
 
 The anti-duplication rule applies *within* a load context, not across. Cross-session memory may legitimately restate a repo fact, because memory loads when a *different* repo is active and this repo's docs are not in context. The test isn't "does this string appear twice?" — it's "can these two copies be in context at the same time and disagree?" If they can never co-occur, the duplication is safe and often necessary.
@@ -277,6 +313,7 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 -   **Spline rebuilt its entire 3D editor. Then it handed the keys to Claude Code.** (The New Stack) — integrate agent environments with live application states for direct, editable interaction. Digest: 2026-08-22.
 -   **Researchers hid an attack inside AES encryption. The AI model cracked it open willingly.** (The New Stack) — implement robust security measures to prevent cryptographic context injection. Digest: 2026-08-20.
 -   **Stop the token bleed: building token-efficient multi-agent systems** (The New Stack) — incorporate a semantic cache to prevent redundant model invocations and token bleed. Digest: 2026-08-20.
+-   **Your AGENTS.md is a Neural Net** (Kun Chen, Kun's Field Notes, 2026-08-22) — treat the project memory file as trained weights: transcript-evidenced, batched (2-session minimum), budgeted, small-step edits; skills as the release valve. Read directly (email), not via digest.
 
 ## Where Used
 
