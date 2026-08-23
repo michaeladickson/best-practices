@@ -238,6 +238,22 @@ else
   echo "Committed and pushed practice-doc updates"
 fi
 
+echo ""
+echo "=== Feed instrumentation (yield report, citation discovery, heartbeats) ==="
+# All three are best-effort: a failure warns but never fails the run — the
+# digests and practice updates above are the deliverables, this is telemetry.
+# citation_discovery files feed-candidate issues via local gh auth;
+# check_heartbeats files an issue only when a scheduled job's state is stale.
+python3 -m digest.feed_report || echo "WARNING: feed report failed" >&2
+python3 -m digest.citation_discovery || echo "WARNING: citation discovery failed" >&2
+python3 scripts/check_heartbeats.py || echo "WARNING: stale heartbeat(s) detected — issue filed" >&2
+
+git add data/feed_report.md data/feed_candidates.json 2>/dev/null
+if ! git diff --cached --quiet; then
+  git commit -q -m "Weekly telemetry: feed report + citation ledger [automated]"
+  git push -q origin main || echo "WARNING: push of telemetry failed" >&2
+fi
+
 if [ "$FAILED" -gt 0 ]; then
   echo ""
   echo "WARNING: $FAILED step(s) failed."

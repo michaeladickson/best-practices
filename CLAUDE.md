@@ -66,6 +66,7 @@ The wrapper at `scripts/run_weekly_digest.sh`:
 3. Creates GitHub issues in target repos using local `gh` auth
 4. Auto-updates the living practice docs from the same week's articles (`python -m digest.practice_updater`) — see below
 5. Commits and pushes the new knowledge files + any practice-doc updates back to `origin/main` (two separate `[automated]` commits)
+6. Telemetry (best-effort, never fails the run): regenerates `data/feed_report.md` (per-feed yield + freshness), runs `digest/citation_discovery.py` (proposes feed candidates as GitHub issues when a domain is cited in ≥3 articles by ≥2 feeds — human approves by editing feeds.yaml), and `scripts/check_heartbeats.py` (unified dead-man's tell for all scheduled jobs; files an issue on staleness). Also pulls evaluation verdicts from closed digest issues into `data/digest_feedback/` so rejected ideas aren't re-proposed (runs pre-analysis, per context).
 
 ### Auto-updating the living practice docs
 
