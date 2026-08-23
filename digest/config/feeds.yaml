@@ -56,6 +56,34 @@ feeds:
     url: "https://www.aihero.dev/rss.xml"
     category: ai_engineering
 
+  # Practitioner blogs (added 2026-08-23 — deliberately reweighting the pool toward
+  # implementable technique over commentary; all three feeds verified live that day)
+  - name: "Eugene Yan"
+    # /feed/ serves HTML; /rss/ is the real feed. Newest entry 2026-06-21 at add time —
+    # low volume, high signal (evals, LLM system patterns; now at Anthropic).
+    url: "https://eugeneyan.com/rss/"
+    category: ai_engineering
+  - name: "Hamel Husain"
+    # Quarto site; feed is index.xml, not /feed. Evals and error analysis with code.
+    url: "https://hamel.dev/index.xml"
+    category: ai_engineering
+  - name: "Sebastian Raschka (Ahead of AI)"
+    url: "https://magazine.sebastianraschka.com/feed"
+    category: ai_engineering
+    description: "Research-adjacent depth: LLM architectures, post-training. Weekly-ish."
+  - name: "Hacker News: claude code (50+ points)"
+    # hnrss.org keyword feed — practitioner discussion the newsletters miss. The points
+    # floor keeps volume sane. Add parallel queries (context engineering, AGENTS.md)
+    # only if this one proves out in the incorporated.json ledger.
+    url: "https://hnrss.org/newest?q=claude+code&points=50"
+    category: ai_engineering
+  # NOT added 2026-08-23 — Chip Huyen (huyenchip.com/feed.xml): feed is live and valid
+  # XML but frozen since Jan 2025 (the Diff lesson: healthy-looking, contributing
+  # nothing). Book-cycle hiatus, most likely. Re-check occasionally; add if it wakes.
+  # - name: "Chip Huyen"
+  #   url: "https://huyenchip.com/feed.xml"
+  #   category: ai_engineering
+
   # AI + Investing (cross-routed from wealth-mgmt for AI best practices)
   - name: "Compound With AI"
     url: "https://news.aiinvestinghq.com/feed"
