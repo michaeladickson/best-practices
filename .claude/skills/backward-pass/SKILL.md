@@ -50,6 +50,18 @@ each unit tally across sessions: **helped** (visibly steered behavior), **violat
 (never mattered). Then the inverse: cluster the gaps — things agents got wrong or
 re-derived that **no unit covers**.
 
+### 3b. Skill-usage tally (rides along, costs nothing extra)
+
+While reading the transcripts, count Skill invocations (`"skill":"<name>"` in the
+jsonl) against the repo's `.claude/skills/` inventory. Report per skill: invocations
+this window, and consecutive windows at zero (tracked in the state file). A skill at
+zero for 3+ windows is a deletion/merge candidate *unless* its cadence is longer than
+the window (monthly close, quarterly rituals) or it's invoked by scheduled/headless
+jobs — check both before proposing. Skill deletions count toward the ≤5 edit budget
+like any other edit. (Baseline audit 2026-08-23: /start-family skills at zero across
+~170 sessions in three repos; crumbl-ops finance skills at zero across in-window
+close and payroll cycles.)
+
 ### 4. Propose edits — the gates are hard
 
 - **At most 5 edits** per pass: add / remove / rewrite / extract-to-skill.
