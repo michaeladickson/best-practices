@@ -52,15 +52,18 @@ re-derived that **no unit covers**.
 
 ### 3b. Skill-usage tally (rides along, costs nothing extra)
 
-While reading the transcripts, count Skill invocations (`"skill":"<name>"` in the
-jsonl) against the repo's `.claude/skills/` inventory. Report per skill: invocations
-this window, and consecutive windows at zero (tracked in the state file). A skill at
-zero for 3+ windows is a deletion/merge candidate *unless* its cadence is longer than
-the window (monthly close, quarterly rituals) or it's invoked by scheduled/headless
-jobs — check both before proposing. Skill deletions count toward the ≤5 edit budget
-like any other edit. (Baseline audit 2026-08-23: /start-family skills at zero across
-~170 sessions in three repos; crumbl-ops finance skills at zero across in-window
-close and payroll cycles.)
+While reading the transcripts, count Skill invocations against the repo's
+`.claude/skills/` inventory. **Count BOTH logging forms** — user-typed slash commands
+log as `<command-name>/<name></command-name>`, model-initiated calls as
+`"skill":"<name>"`; counting only the second concluded /start was never used when it
+had 61 invocations (2026-08-23 audit bug). Report per skill: invocations this window,
+and consecutive windows at zero (tracked in the state file). A skill at zero for 3+
+windows is a deletion/merge candidate *unless* its cadence is longer than the window
+(monthly close, quarterly rituals) or it's invoked by scheduled/headless jobs — check
+both before proposing. Skill deletions count toward the ≤5 edit budget like any other
+edit. (Corrected 2026-08-23 baseline: the only genuinely dormant skills are
+wealth-mgmt's analysis set (analyze-earnings, thesis-check), command-center voice-sync,
+and crumbl-ops financials/payroll-import — the latter possibly headless now.)
 
 ### 4. Propose edits — the gates are hard
 
