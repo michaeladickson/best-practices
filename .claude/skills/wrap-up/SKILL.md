@@ -100,6 +100,33 @@ If — and only if — the session surfaced a genuinely non-obvious insight abou
 
 Skip by default. Save memory only for insights that would surprise a fresh reader of the repo — never for anything derivable from the code, git log, or existing docs. Match the anti-fragmentation stance in `practices/claude-code/context-memory-management.md`.
 
+### 5b. Push the memory repo (REQUIRED — a different repo from this one)
+
+Steps 4 and 5 write into `C:\Users\micha\.claude\projects\`, which is its own private git
+repo, version-controlled in place so recall paths are unchanged. Step 1 verifies *this* repo's
+three refs and never looks at it. Skip this and the session's memory exists only on this
+machine, while the backup ages silently and still reads as healthy.
+
+```bash
+git -C /c/Users/micha/.claude/projects status --porcelain
+```
+
+If dirty: `add -A`, commit naming what changed (`memory: <what>`), push.
+
+- **`add -A` is correct there specifically.** That repo's `.gitignore` ignores everything and
+  re-admits `*/memory/**` plus its own root files, so `-A` cannot reach the session
+  transcripts sharing the directory. If it ever stages a path outside `memory/`, stop and fix
+  the allowlist rather than committing.
+- **It spans every project on this machine, not just this one.** Commit all of it from here —
+  a session in another repo writes memory too, and one commit beats a file left behind. Do
+  not narrow it to the best-practices slug.
+- **It is private and stays private.** It carries memory from repos that are not public.
+  Never mirror any of it into this repo, and never make that repo public.
+- Single-branch backup repo: commit straight to its `main`. No PR, no landing rules.
+
+**Portability (skills-sync):** portable mechanism; every repo's wrap-up should carry it. Only
+the project's own memory-directory path and the step numbering change.
+
 ### 6. Present the summary
 
 Terse bullets, in this shape:
@@ -127,6 +154,9 @@ Voice:
 Memory saved:
 - <slug>: <one-line>  (or "none — nothing surprising")
 
+Memory repo:
+- pushed <sha> — <one-line>  (or "clean — nothing to push")
+
 Git: worktree = origin/main = main checkout at <sha>. Working tree clean.
 ```
 
@@ -134,6 +164,7 @@ Git: worktree = origin/main = main checkout at <sha>. Working tree clean.
 - Step 1 is required, not optional — a session that leaves any of the three refs out of sync is unfinished.
 - Steps 2–3 are enumeration, not judgment: name what happened; don't editorialize.
 - Step 4 fires only on actual draft edits. No outbound prose, one line ("voice: nothing to harvest"), move on. Captures are private project memory; the public repo never carries voice content, only this mechanism.
+- Step 5b is required whenever step 4 or 5 wrote a file, and costs one `status` call when they didn't.
 - Skip step 5 by default. The bar for a memory save is "would surprise a fresh reader"; anything less belongs in a doc or a commit message.
 - Bullet points over paragraphs — terse wins.
 - No emojis unless the user has explicitly asked for them.
