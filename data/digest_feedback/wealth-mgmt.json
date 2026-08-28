@@ -1,0 +1,67 @@
+{
+  "issues": {
+    "78": {
+      "title": "Weekly digest 2026-06-26: ideas to evaluate",
+      "closed_at": "2026-08-28",
+      "verdicts": [
+        {
+          "idea": "Develop AI Agent Governance & Liability Framework",
+          "verdict": "rejected",
+          "reason": "The issue containing this idea was closed as an unactioned weekly-digest issue older than 60 days as part of the 2026-08-28 backlog triage."
+        },
+        {
+          "idea": "Enhance AI Investment Research with Proactive Red-Teaming",
+          "verdict": "rejected",
+          "reason": "The issue containing this idea was closed as an unactioned weekly-digest issue older than 60 days as part of the 2026-08-28 backlog triage."
+        }
+      ]
+    },
+    "77": {
+      "title": "Weekly digest 2026-06-19: ideas to evaluate",
+      "closed_at": "2026-08-28",
+      "verdicts": []
+    },
+    "74": {
+      "title": "Weekly digest 2026-06-05: ideas to evaluate",
+      "closed_at": "2026-08-28",
+      "verdicts": []
+    },
+    "67": {
+      "title": "Weekly digest 2026-05-31: ideas to evaluate",
+      "closed_at": "2026-08-28",
+      "verdicts": []
+    },
+    "59": {
+      "title": "Weekly digest 2026-05-24: ideas to evaluate",
+      "closed_at": "2026-08-28",
+      "verdicts": [
+        {
+          "idea": "Implement Robust AI Agent Governance & Security",
+          "verdict": "rejected",
+          "reason": "Closing as part of the 2026-08-28 backlog triage: unactioned weekly-digest issues older than 60 days."
+        },
+        {
+          "idea": "Proactively Optimize AI Costs and Capacity",
+          "verdict": "rejected",
+          "reason": "Closing as part of the 2026-08-28 backlog triage: unactioned weekly-digest issues older than 60 days."
+        }
+      ]
+    },
+    "55": {
+      "title": "Weekly digest 2026-05-22: ideas to evaluate",
+      "closed_at": "2026-08-28",
+      "verdicts": [
+        {
+          "idea": "Establish Robust AI Agent Governance for Trust & Compliance",
+          "verdict": "rejected",
+          "reason": "The idea was unactioned and closed as part of the 2026-08-28 backlog triage of unactioned weekly-digest issues older than 60 days."
+        },
+        {
+          "idea": "Enhance Investment Research with AI-driven Financial Document Analysis",
+          "verdict": "rejected",
+          "reason": "The idea was unactioned and closed as part of the 2026-08-28 backlog triage of unactioned weekly-digest issues older than 60 days."
+        }
+      ]
+    }
+  }
+}
