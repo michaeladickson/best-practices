@@ -191,10 +191,13 @@ echo "=== Updating living practice docs from this week's articles ==="
 # Auto-edits every doc listed in digest/config/practice-docs.yaml from the same
 # archived articles. Dedup ledger + structural validation guard the writes.
 # Exits non-zero when a doc is BLOCKED (validation-rejected, at the size cap, or
-# errored) — that week's candidates are discarded and it will block again next week
-# for the same reason. It still exits 0 for a normal no-new-articles week. Any
-# partial edits it DID write are committed below regardless, so failing here never
-# strands work.
+# errored). A blocked doc's candidates are NOT retried next week: the ledger only
+# records successes, and the --days 7 window slides past this week's articles by
+# the next Friday run — so they are silently lost unless the updater is re-run
+# before then (2026-08-28: the llm-evaluation block was recovered only by a
+# same-week manual re-run). It still exits 0 for a normal no-new-articles week.
+# Any partial edits it DID write are committed below regardless, so failing here
+# never strands work.
 if ! python3 -m digest.practice_updater --days 7; then
   echo "WARNING: practice-doc update reported blocked doc(s) — see the BLOCKED list above" >&2
   FAILED=$((FAILED + 1))
@@ -271,9 +274,10 @@ if [ "$FAILED" -gt 0 ]; then
     echo "    python3 -m digest --context digest/config/context-<name>.yaml --days 7"
   fi
   if [ "$PRACTICE_FAILED" -gt 0 ]; then
-    echo "  Practice-doc update had blocked doc(s) — their candidates were discarded"
-    echo "  and will be discarded again next week until a human resolves them."
-    echo "  Re-run after fixing:"
+    echo "  Practice-doc update had blocked doc(s). Their candidates are LOST once"
+    echo "  the --days 7 window slides past them (next Friday) — NOT retried. Fix"
+    echo "  the blocked doc (e.g. consolidate it) and re-run BEFORE then, in the"
+    echo "  main checkout with GEMINI_API_KEY from Secret Manager (SA cc-digest@):"
     echo "    python3 -m digest.practice_updater --days 7"
   fi
   exit 1
