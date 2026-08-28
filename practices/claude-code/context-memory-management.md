@@ -36,7 +36,7 @@ Three places a fact can live, by scope:
 
 -   **A local/on-device tier is now viable** as small models get good enough to run offline — worth treating as a distinct tier where privacy, data residency or offline operation matter.
 -   **Maintain memory locally, not globally.** Optimize the segments actual usage touches rather than periodically reorganizing the whole store; no single memory architecture dominates, and global reshuffles cost more than they return.
--   **Architect agents for durable session context by using event logs for resumability, enabling persistent background processes, and leveraging secure cloud environments for detached, long-running tasks.** For agents performing complex, long-horizon tasks, ensure their operational state and context are robustly maintained, logging intermediate steps for resumability, designing for persistent background execution, and deploying to cloud environments that support detached operations.
+-   **Architect agents for durable session context by using event logs for resumability, enabling persistent background processes, and leveraging secure cloud environments for detached, long-running tasks.** For agents performing complex, long-horizon tasks, ensure their operational state and context is robustly maintained, logging intermediate steps for resumability, designing for persistent background execution, and deploying to cloud environments that support detached operations.
 
 ## Retrieval Contracts (Sources of Truth)
 
@@ -73,6 +73,7 @@ Format: pre-assembled markdown brief, newest-first, each fact tagged with its so
 - **Cache hot context on fast storage** when retrieval latency starts to matter.
 -   **Declarative orchestration over ad-hoc chaining.** Blueprint languages and named patterns (supervisor, delegation, fan-out) make multi-agent context flow reviewable.
 -   **Integrate agent environments with live application states to enable direct, editable interaction.** Implement a local MCP server within desktop applications, allowing coding agents to directly access and modify live project scenes. This ensures agents operate with real-time, editable context, with changes seamlessly integrated into the application's undo history, creating a truly interactive feedback loop.
+-   **Implement GraphRAG by combining knowledge graphs with vector search to enable multi-hop reasoning and global summarization for complex context retrieval.** Standard RAG, relying solely on chunked text, often fails at multi-hop questions requiring connections across multiple text segments. GraphRAG introduces structured knowledge from knowledge graphs alongside semantic search, allowing agents to perform more sophisticated reasoning and comprehensive summarization by explicitly mapping relationships between concepts.
 
 ### Context Lake Architecture
 
@@ -313,7 +314,8 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 -   **Spline rebuilt its entire 3D editor. Then it handed the keys to Claude Code.** (The New Stack) — integrate agent environments with live application states for direct, editable interaction. Digest: 2026-08-22.
 -   **Researchers hid an attack inside AES encryption. The AI model cracked it open willingly.** (The New Stack) — implement robust security measures to prevent cryptographic context injection. Digest: 2026-08-20.
 -   **Stop the token bleed: building token-efficient multi-agent systems** (The New Stack) — incorporate a semantic cache to prevent redundant model invocations and token bleed. Digest: 2026-08-20.
--   **Your AGENTS.md is a Neural Net** (Kun Chen, Kun's Field Notes, 2026-08-22) — treat the project memory file as trained weights: transcript-evidenced, batched (2-session minimum), budgeted, small-step edits; skills as the release valve. Read directly (email), not via digest.
+-   **Your AGENTS.md is a Neural Net** (Kun Chen (Kun's Field Notes)) — data-driven methodology for maintaining project-level context files via session transcripts and budgeting. Digest: 2026-08-23.
+-   **Why basic RAG fails at multi-hop reasoning (and how GraphRAG fixes it)** (The New Stack) — combining knowledge graphs with vector search for multi-hop reasoning. Digest: 2026-08-27.
 
 ## Where Used
 
