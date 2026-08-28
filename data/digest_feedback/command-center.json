@@ -1,0 +1,114 @@
+{
+  "issues": {
+    "339": {
+      "title": "Weekly digest 2026-08-07: ideas to evaluate",
+      "closed_at": "2026-08-14",
+      "verdicts": [
+        {
+          "idea": "Implement Agent Output Verification & Human-in-the-Loop",
+          "verdict": "already-built",
+          "reason": "The fixture regression eval (`scripts/eval_triage_fixtures.py`) was built for `classify_email`, applying output verification in the repo's existing shape."
+        },
+        {
+          "idea": "Architect Agent Tools with Stateless MCP 2.0",
+          "verdict": "rejected",
+          "reason": "The stateless-MCP refactor was dropped due to no second consumer on a single-user fleet and existing injection registries already governing risk."
+        }
+      ]
+    },
+    "293": {
+      "title": "Weekly digest 2026-08-01: ideas to evaluate",
+      "closed_at": "2026-08-14",
+      "verdicts": [
+        {
+          "idea": "Structured agent evaluation",
+          "verdict": "accepted",
+          "reason": "Implemented as a house-style fixture evaluation using `scripts/eval_triage_fixtures.py` and `tests/fixtures/triage_eval_cases.json`, which surfaced a real prompt gap."
+        },
+        {
+          "idea": "Enforce agent security and permission boundaries",
+          "verdict": "false-premise",
+          "reason": "Dropped as a project because live risk is already governed by injection registries (`verify_injection_registry.py`, `verify_write_registry.py`) and existing discipline."
+        },
+        {
+          "idea": "Token/context optimization",
+          "verdict": "accepted",
+          "reason": "The observable half was built, with every Gemini call now logging a `gemini_tokens` event, revealing that thinking tokens dominate."
+        },
+        {
+          "idea": "Computer-use agents for portals",
+          "verdict": "rejected",
+          "reason": "Dropped because Cowork now ships computer-use and browser control in-session, duplicating functionality without its permission model."
+        }
+      ]
+    },
+    "368": {
+      "title": "Weekly digest 2026-08-01: ideas to evaluate",
+      "closed_at": "2026-08-01",
+      "verdicts": [
+        {
+          "idea": "Implement Claude Code Goal Engineering",
+          "verdict": "already-built",
+          "reason": "The substance of verifiable completion conditions is already provided by `/verify`, backed by `scripts/verify_dq_coverage.py` and the AST tripwires (`tests/test_*_canonical.py`)."
+        },
+        {
+          "idea": "Harden AI Agent Security and Permissions",
+          "verdict": "false-premise",
+          "reason": "This idea repeats the false premise that Gemini performs vendor invoice extraction and proposes hardening that largely exists, in addition to being rejected on scale for a two-owner, six-store operation."
+        },
+        {
+          "idea": "Develop Claude Financial Analysis Skills",
+          "verdict": "already-built",
+          "reason": "The proposed financial analysis tools including `/financials`, `/month-end`, `/payroll-import`, `scripts/consolidated_balance_sheet.py`, and `src/ops/month_end_review.py` already shipped months ago."
+        },
+        {
+          "idea": "Systematize LLM Cost-Performance Evaluation",
+          "verdict": "already-built",
+          "reason": "The evaluation harness with golden sets (`tests/fixtures/llm_eval/`), the `llm_eval` pytest marker, `tests/test_model_strings_pinned.py`, and `src/ops/llm_metrics.py` already exists, and its advice contradicts standing decisions on API key caps and token cost controls."
+        }
+      ]
+    },
+    "256": {
+      "title": "Weekly digest 2026-07-24: ideas to evaluate",
+      "closed_at": "2026-07-29",
+      "verdicts": [
+        {
+          "idea": "Integrate Desktop Automation for API-less Portals",
+          "verdict": "rejected",
+          "reason": "The proposed Playwright module is not needed, as computer-use tooling is available for native apps and Chrome MCP handles web portals DOM-aware."
+        },
+        {
+          "idea": "Standardize Claude Skills and Enhance Agent Memory for Cohesion",
+          "verdict": "already-built",
+          "reason": "The `.claude/skills/INDEX.md` and a file-per-fact memory store already exist, with prompt hygiene being a pass over skill bodies rather than an architecture project."
+        },
+        {
+          "idea": "Agent Security/Observability",
+          "verdict": "already-built",
+          "reason": "Read-side and write-side injection registries (`scripts/verify_injection_registry.py`, `scripts/verify_write_registry.py`) and `quote_untrusted()` are already implemented."
+        },
+        {
+          "idea": "Model Routing / Cost",
+          "verdict": "already-built",
+          "reason": "CLAUDE.md already encodes Opus/Sonnet/Haiku routing and Opus 5 is in use, with triage cost not being a problem."
+        }
+      ]
+    },
+    "239": {
+      "title": "Weekly digest 2026-07-10: ideas to evaluate",
+      "closed_at": "2026-07-27",
+      "verdicts": [
+        {
+          "idea": "Implement Multi-Model Routing for Cost Efficiency",
+          "verdict": "tracked",
+          "reason": "Superseded by #256 (2026-07-24 digest)."
+        },
+        {
+          "idea": "Develop Agent Harnesses and 'Loops' for Structured Workflows",
+          "verdict": "tracked",
+          "reason": "Superseded by #256 (2026-07-24 digest)."
+        }
+      ]
+    }
+  }
+}
