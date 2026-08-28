@@ -112,6 +112,9 @@ and whole-codebase comprehension, so use ones built for it. And when your eval c
 need to be trusted by others, publish the datasets, harness, judging criteria, results,
 and raw traces so outside reviewers can replicate and attack the methodology.
 
+### Implement double-blind evaluation setups using confidential computing to prevent benchmark leakage and ensure unbiased assessment of proprietary models.
+Utilize confidential computing environments (e.g., hardware-encrypted enclaves) where model weights and inference code are kept private from evaluators, and test benchmarks and evaluation code are kept private from model providers. This prevents accidental or intentional contamination of benchmarks and ensures unbiased evaluation results.
+
 ### Evaluate operational characteristics, not just benchmark scores
 Production reliability lives in behaviors benchmarks don't score: source discipline,
 operational judgment, provenance tracking, self-correction. Sweep configurable
@@ -159,6 +162,9 @@ environment rather than asserted to the agent — especially in security-critica
 Serving these environments at agent speed is a platform capability in its own right:
 measure provisioning latency, concurrent capacity, and dependency fidelity.
 
+### Develop and validate sophisticated simulations of human behavior and user interactions (digital twins) for pre-deployment testing of AI systems.
+Beyond basic simulations, create high-fidelity digital twins of human behavior. This involves extensive data collection from interviews, observations, and transactions, and applies techniques like Randomized Controlled Trials (RCTs) and modeling causal mechanisms to accurately reproduce human decision-making and emergent behaviors in a simulated environment before product or policy deployment.
+
 ### Account for non-determinism in evaluation
 Outputs vary run to run, and more so with external tools enabled. Quantify the
 variation, run each eval case multiple times and score aggregates, reduce
@@ -201,6 +207,9 @@ proceed with caution / safe). Verify adherence to architectural patterns and
 non-functional conventions (scalability, error handling) as a step distinct from
 functional testing — that separation is what lets AI-written code ship without
 line-by-line human review.
+
+### Use Abstract Syntax Trees (ASTs) to evaluate the safety and potential side effects of AI-generated code commands before execution.
+Analyze AI-generated shell commands by parsing them into ASTs to understand their structural capabilities, track variable resolutions across commands, and identify potential read/write side effects. This method helps catch dangerous command transformations that string-based checks miss.
 
 ### Instrument agentic systems with correlated observability
 Traditional log-metric-trace models fall short when a workflow spans multiple tools,
@@ -307,6 +316,9 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **GLM-5.3 didn’t change the base model — where did its coding gains come from?** (The New Stack) — design evaluations that specifically assess the impact of scaled post-training and reinforcement learning on long-horizon tasks for fixed base models. Digest: 2026-08-14.
 - **Don't classify. Hallucinate!** (Simon Willison) — for classification or tagging tasks with extensive vocabularies, allow LLMs to 'hallucinate' novel labels, then map these to existing categories using vector embeddings. Digest: 2026-08-15.
 - **Most coding agent benchmarks skip large-scale refactoring. Not this one.** (The New Stack) — develop or utilize benchmarks specifically designed to evaluate AI coding agents' capability for large-scale code refactoring and understanding of entire codebases. Digest: 2026-08-21.
+- **Google found a way to test Gemini without seeing the questions** (The New Stack) — double-blind evaluation using confidential computing. Digest: 2026-08-28.
+- **LM Studio built a judge for AI commands. Then the judge started agreeing with the defendant.** (The New Stack) — AST parsing for safety and side effects in AI-generated commands. Digest: 2026-08-28.
+- **Simulation: the new Scaling Law — Joon Sung Park, Simile AI** (Latent Space) — advanced simulations of human behavior (digital twins) for pre-deployment testing. Digest: 2026-08-22.
 
 ## Where Used
 
