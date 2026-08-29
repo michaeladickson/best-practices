@@ -37,6 +37,7 @@ Three places a fact can live, by scope:
 -   **A local/on-device tier is now viable** as small models get good enough to run offline — worth treating as a distinct tier where privacy, data residency or offline operation matter.
 -   **Maintain memory locally, not globally.** Optimize the segments actual usage touches rather than periodically reorganizing the whole store; no single memory architecture dominates, and global reshuffles cost more than they return.
 -   **Architect agents for durable session context by using event logs for resumability, enabling persistent background processes, and leveraging secure cloud environments for detached, long-running tasks.** For agents performing complex, long-horizon tasks, ensure their operational state and context is robustly maintained, logging intermediate steps for resumability, designing for persistent background execution, and deploying to cloud environments that support detached operations.
+-   **Per-agent memory is its own scope.** Claude Code subagents accept `memory: project` (or `user`, `local`) in their frontmatter, which gives the agent a persistent directory under `.claude/agent-memory/` that it reads on start and writes as it works — so a code-reviewer stops re-deriving the same codebase patterns every session. The tier test extends: *true for this agent's role, regardless of session?* → agent memory, not the repo `CLAUDE.md` (every session pays for that) and not session context (evaporates). Two rules: tell the agent what to accumulate ("update your agent memory with patterns and recurring issues you discover") — a memory directory with no write instruction accumulates nothing; and treat it as agent-*written* memory for validation purposes (see Retrieval Contracts) — it drifts like any other doc, just without a human editor.
 
 ## Retrieval Contracts (Sources of Truth)
 
@@ -244,6 +245,7 @@ Use [`reviews/context-memory-review.md`](../../reviews/context-memory-review.md)
 
 Synthesized from saved digest articles (`data/digest_knowledge/`) plus production use:
 
+-   **This week in Claude Code, 2026-08-28** (Claude Code team newsletter, via digest inbox) — per-agent persistent memory: `memory:` frontmatter → `.claude/agent-memory/`. Added 2026-08-28.
 -   **Your AI agent is rediscovering 85% of its context every run** (Nate Jones) — assembly vs. rediscovery, the knowledge layer. Digests: 2026-05-16, 2026-05-18.
 -   **Why agent harnesses fail inside cloud-native systems** (The New Stack) — harness footprint, feedback loops. Digest: 2026-05-18.
 -   **How to build a skills library** (The New Stack) / **Red Hat's skill packs give AI agents institutional memory** — skills as durable memory. Digests: 2026-05-16/18.
