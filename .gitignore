@@ -6,4 +6,7 @@ venv/
 .claude/settings.local.json
 data/feed_archive/
 data/digest_inbox/
+# Spend data stays out of this public repo (report is local-only; alerts go to
+# command-center). The script itself is the shareable mechanism.
+data/gh_usage_report.md
 logs/

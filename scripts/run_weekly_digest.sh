@@ -259,6 +259,9 @@ echo "=== Feed instrumentation (yield report, citation discovery, heartbeats) ==
 python3 -m digest.feed_report || echo "WARNING: feed report failed" >&2
 python3 -m digest.citation_discovery || echo "WARNING: citation discovery failed" >&2
 python3 scripts/check_heartbeats.py || echo "WARNING: stale heartbeat(s) detected — issue filed" >&2
+# Spend tripwires (report is gitignored — spend data stays out of this public
+# repo; alerts file into command-center). Needs WSL gh with the "user" scope.
+python3 scripts/check_gh_usage.py || echo "WARNING: GH usage tripwire fired or check failed — see above" >&2
 
 git add data/feed_report.md data/feed_candidates.json 2>/dev/null
 if ! git diff --cached --quiet; then
