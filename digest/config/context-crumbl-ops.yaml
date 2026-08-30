@@ -130,5 +130,8 @@ email:
 
 github_issue:
   repo: "michaeladickson/crumbl-ops"
-  labels: ["sprint-next", "weekly-digest"]
+  # crumbl-ops labels follow its six-axis grid (knowledge/issue-labels.md):
+  # area/* is REQUIRED (no area renders as "Unlabelled — needs an area" on
+  # the Thursday agenda) and `sprint-next` was retired 2026-08-13.
+  labels: ["area/app", "weekly-digest"]
   title_prefix: "Weekly digest"
