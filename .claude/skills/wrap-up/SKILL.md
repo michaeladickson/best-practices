@@ -61,10 +61,11 @@ Do NOT invent watch-items. If the session didn't change any of these areas, say 
 
 ### 3b. Automation-parity check (only if the session touched scheduled automation)
 
-Two invariants from the 2026-07-26 audit — confirm both for anything scheduled this session touched:
+Three invariants — the first two from the 2026-07-26 audit — confirm each for anything scheduled this session touched:
 
 - **Recovery parity** — the register script (`scripts/register_*.ps1`) must produce the same trigger as the live Task Scheduler entry. Drift here means a machine rebuild silently restores the wrong schedule (the Sunday-vs-Friday class).
 - **Evidence of work** — a run that exits 0 without producing its artifact must be *detectable* (freshness workflow, output-delta guard, health-check artifact map). "Scheduler says success" is not evidence; the usage scanner logged "Done" for four weeks while processing zero files.
+- **Line endings on any `scripts/*.sh` the session edited** — an in-place write from a Python step on Windows rewrites the file CRLF. `.gitattributes` pins `eol=lf` on *checkout* only and does not cover a local write, so the file still reads clean in `git status` while the shebang fails at run time. `file scripts/<name>.sh` is the whole check. This is how a sibling repo's weekly digest died: exit 127 on every run for weeks, with Task Scheduler reporting a completed task (wealth-mgmt `/verify`, 2026-08-26). `scripts/run_weekly_digest.sh` is the exposure here — the whole Friday pipeline is downstream of it, and it is exactly the class of failure the evidence-of-work invariant above exists to catch.
 
 ### 4. Voice harvest (only if the session drafted prose to be sent as Michael)
 
