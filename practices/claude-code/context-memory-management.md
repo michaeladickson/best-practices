@@ -140,6 +140,22 @@ disciplined backward pass instead:
     - *Broad* — relevant in ≥~20% of sessions, or safety-critical → stays in `CLAUDE.md`.
     - *Narrow with a detectable trigger* → extract to a skill (loads only when invoked).
     - *Narrow with no detectable trigger* → deletion candidate.
+-   **Audit the skill inventory in the same pass — on reachability, not just invocation
+    count.** The transcripts record which skills ran, so tally them while you are already
+    reading (counting *both* logging forms — user-typed slash commands and model-initiated
+    calls log differently, and counting one alone badly undercounts). A skill at zero across
+    several windows looks like a deletion candidate. Usually it is not. Before proposing
+    removal, count what *routes* to it: mentions in other skills, in `CLAUDE.md`, in scripts,
+    workflows, and scheduled tasks. **Exclude catalog listings** — an index or file-map that
+    enumerates every skill makes all of them look reachable while sending nobody anywhere.
+    Then read the result: zero invocations **and** zero routes means *unreachable, not
+    unwanted*, and the fix is to route it from whichever skill's own output raises the
+    question it answers. Zero invocations *with* routes is either a real value question or a
+    description that fails to name the trigger people actually use. And read the skill before
+    proposing its deletion — one audit across four repos found four of five dormant skills
+    were reachability failures, including one whose practice was mandated by `CLAUDE.md` and
+    instantiated in 38 tests. Deleting on the count alone would have removed all four.
+
 -   **This applies to the project-level file only.** The user-level `~/.claude/CLAUDE.md`
     is hand-written preference, changes rarely, and no tool or agent should "optimize" it.
 
