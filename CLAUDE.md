@@ -120,27 +120,19 @@ but does NOT create issues — that part requires the local `gh` auth.
 ## Weekly Skills Sync
 
 Skills evolve inside individual repos and the improvements never used to travel.
-The `weekly-skills-sync` Claude Code scheduled task (Mondays 8am ET, runs
-locally while the app is open — deferred to next launch otherwise) executes
-[`.claude/skills/skills-sync/SKILL.md`](.claude/skills/skills-sync/SKILL.md):
+[`.claude/skills/skills-sync/SKILL.md`](.claude/skills/skills-sync/SKILL.md) is the weekly
+propagation pass: it scans `.claude/skills/**` on `origin/main` across the four repos, judges
+portable mechanism vs repo-specific content, and opens at most one adapted `[skills-sync]` PR
+per target repo — never pushing to main, never touching a local working tree, never
+generalizing private-repo detail into this public one. `[skills-sync]` commits are excluded
+from future scans (ping-pong guard). Run `/skills-sync` for an on-demand pass, or ask for a
+"full reconcile" to compare all four repos ignoring state.
 
-- Scans `.claude/skills/**` commits on `origin/main` of best-practices,
-  crumbl-ops, command-center, wealth-mgmt since the last run
-  (state: `~/.claude/skills-sync/state.json`, local only — not in this repo).
-- Judges portable mechanism vs repo-specific content, then opens at most one
-  adapted `[skills-sync]` PR per target repo (never pushes to main; never
-  touches local working trees — all edits happen in throwaway worktrees).
-- `[skills-sync]` commits are excluded from future scans (ping-pong guard),
-  and private-repo detail is never generalized into this public repo's skills.
-
-Run `/skills-sync` in a session for an on-demand pass, or ask for a
-"full reconcile" to compare current skills across all four repos ignoring state.
-
-Dead-man's tell (the WM-digest lesson — scheduled jobs die silently): if
-`~/.claude/skills-sync/state.json` has `last_run` older than ~8 days, the task
-has stopped firing. The task itself lives in app storage, not git — to rebuild
-it on a new machine, recreate a Monday-8am scheduled task pointing at the
-SKILL.md above.
+Cadence, freshness signal, kill criteria, and rebuild-on-a-new-machine steps for this and for
+every other standing job live in [`AUTOMATION.md`](AUTOMATION.md) — one row per job, checked
+weekly by `scripts/check_heartbeats.py`. Read it before adding, changing, or diagnosing any
+scheduled work, and add a row when you add a job: a job that exists but is not registered
+there dies silently (the WM-WeeklyDigest lesson).
 
 ## Configuration
 
