@@ -18,7 +18,7 @@ moment feedback happens, reconcile on a schedule.
 
 | Piece | Home | Cadence |
 |---|---|---|
-| **Master voice memory** | one PRIVATE repo file (Michael: command-center `knowledge/voice/master.md`) | edited only by reconciliation |
+| **Master voice memory** | PRIVATE repo files (Michael: command-center `knowledge/voice/master.md` for the rules, `registers.md` for per-audience detail once it outgrows one file) | edited only by reconciliation |
 | **Capture** | `feedback_voice_*.md` files in each project's session-memory directory, written by every repo's `/wrap-up` | at session end, or immediately when the edit happens |
 | **Reconciliation** | `/voice-sync` skill in the master's repo, run by a monthly scheduled task | monthly |
 | **Loading** | pointer + core excerpt in `~/.claude/CLAUDE.md`, read before any drafting | every session |
@@ -54,7 +54,12 @@ The monthly pass (Michael: command-center `/voice-sync`) folds captures into the
   both.
 - **Absorbed captures get stamped** (`Absorbed: YYYY-MM-DD`) and left in place as the
   provenance trail; the stamp is what makes re-runs idempotent.
-- **Size cap.** The master loads at drafting time; hold it under ~250 lines by merging.
+- **Size cap.** The memory loads at drafting time; hold each file under ~300 lines by
+  merging. When the cap starts costing live rules rather than duplicates, **split by
+  artifact class rather than raising it again**: the rules that apply everywhere in one
+  file, the per-audience detail in another, with a one-line index in the first so a
+  drafter can pick an audience without opening the second. Michael's hit that point at
+  38 absorbed captures.
 - **Spoken is not written.** Call transcripts inform what the user thinks, never how
   they write; transcript cadence must not drive written-voice rules.
 - **PR per run, never a push to main.** The master is the user's voice; every change to
