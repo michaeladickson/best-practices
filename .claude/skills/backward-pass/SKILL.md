@@ -59,11 +59,50 @@ log as `<command-name>/<name></command-name>`, model-initiated calls as
 had 61 invocations (2026-08-23 audit bug). Report per skill: invocations this window,
 and consecutive windows at zero (tracked in the state file). A skill at zero for 3+
 windows is a deletion/merge candidate *unless* its cadence is longer than the window
-(monthly close, quarterly rituals) or it's invoked by scheduled/headless jobs — check
-both before proposing. Skill deletions count toward the ≤5 edit budget like any other
-edit. (Corrected 2026-08-23 baseline: the only genuinely dormant skills are
-wealth-mgmt's analysis set (analyze-earnings, thesis-check), command-center voice-sync,
-and crumbl-ops financials/payroll-import — the latter possibly headless now.)
+(monthly close, quarterly rituals), it's invoked by scheduled/headless jobs, **or it is
+unreachable (step 3c)** — check all three before proposing. Skill deletions count toward
+the ≤5 edit budget like any other edit. (The 2026-08-23 dormant-skill baseline is
+superseded — see step 3c and the `skill_notes` in each repo's state file.)
+
+### 3c. Reachability gate — never propose a skill deletion without it
+
+A zero in the tally means "nobody invoked it," not "nobody wants it." On 2026-09-01 that
+distinction went **four times out of five**: of five skills sitting at zero, four were
+*unreachable* rather than unwanted, and the rule as written would have deleted all four.
+
+Before proposing any deletion, count that skill's **inbound references** — a `/<name>` or
+`skills/<name>/` mention in:
+
+- other skills' `SKILL.md`, **excluding its own** (a skill citing itself proves nothing)
+- root and per-module `CLAUDE.md`
+- `scripts/*`, `.github/workflows/*`, and `~/.claude/scheduled-tasks/*/SKILL.md`
+
+**Catalog listings are not routing.** `.claude/skills/INDEX.md` and CLAUDE.md's File Map line
+enumerate every skill in the repo, so counting them makes everything look reachable. Neither
+sends anyone anywhere, and nor does a ticked backlog checkbox. Exclude them.
+
+Then read the 2×2:
+
+| | routed | not routed |
+|---|---|---|
+| **invoked** | healthy | user types it directly — fine, most workhorses live here (`work-on`, `dq-check`, `search-email`) |
+| **not invoked** | a real value question — propose deletion only if it also fails on merit | **unreachable, not unwanted — propose *routing*, never deletion** |
+
+For an unreachable skill, name the caller whose own output raises the question it answers and
+propose a one-paragraph handoff there. Three landed 2026-09-01: command-center's `/wrap-up` →
+`/verify`, wealth-mgmt's `/portfolio-review` → `/analyze-earnings`, crumbl-ops' `/verify`
+Step 2e → `/ast-tripwire` (that pair already linked one way — the skill cited the step, and
+the step said nothing back).
+
+**Routed but still unused can be a *description* failure.** crumbl-ops' `/servers` had five
+inbound routes and 2 invocations against 18 sessions of ad-hoc server work, because its
+description named neither dominant trigger. Read a routed-but-unused skill's `description:`
+against the phrasings the transcripts actually show before concluding anything about value.
+
+**And read the skill itself before proposing its deletion.** `ast-tripwire` read as a pure
+orphan on every metric; the practice it documents is mandated by crumbl-ops' CLAUDE.md and
+instantiated in 38 `test_*_canonical.py` files. The metric measured routing — the skill was
+carrying the authoring half of a live discipline.
 
 ### 4. Propose edits — the gates are hard
 
