@@ -109,6 +109,53 @@
           "reason": "Superseded by #256 (2026-07-24 digest)."
         }
       ]
+    },
+    "481": {
+      "title": "Weekly digest 2026-08-28: ideas to evaluate",
+      "closed_at": "2026-08-30",
+      "verdicts": [
+        {
+          "idea": "Agent Runtime Sandboxing for Claude Code",
+          "verdict": "rejected",
+          "reason": "The actual attack surface is narrower than assumed, with real injection defenses already existing, and full OS-level sandboxing is a multi-day infra project disproportionate to a single-operator system."
+        },
+        {
+          "idea": "Optimize Agent Harness for Token Efficiency",
+          "verdict": "false-premise",
+          "reason": "Agents can only call Gemini at runtime (no `anthropic` SDK, no key provisioned), and existing routing for interactive Claude Code sessions is already documented in CLAUDE.md."
+        },
+        {
+          "idea": "Data-driven skills/memory management",
+          "verdict": "already-built",
+          "reason": "`.claude/skills/` exists with an index, and `MEMORY.md` already does structured cross-session capture with a defined lifecycle."
+        }
+      ]
+    },
+    "442": {
+      "title": "Weekly digest 2026-08-21: ideas to evaluate",
+      "closed_at": "2026-08-30",
+      "verdicts": [
+        {
+          "idea": "Dynamic Model Routing for Efficiency",
+          "verdict": "false-premise",
+          "reason": "agents can only call Gemini at runtime, no `anthropic` SDK or key provisioned (confirmed in `reference_agent_llm_runtime`)."
+        },
+        {
+          "idea": "Sandboxed Execution for Prompt Injection Defenses",
+          "verdict": "rejected",
+          "reason": "Real defenses already exist (`verify_injection_registry.py`, `sanitize_untrusted()`, read/write registries checked by `/verify`), and full sandboxing is disproportionate multi-day infra work for a single-operator system."
+        },
+        {
+          "idea": "Structured web interaction for portal automation",
+          "verdict": "rejected",
+          "reason": "The idea is speculative until there's an actual portal named to automate, so there is nothing to build against yet."
+        },
+        {
+          "idea": "Formalize brain files / skills library",
+          "verdict": "already-built",
+          "reason": "Largely already built (`.claude/skills/` with an index, `MEMORY.md` with a defined capture/reconcile lifecycle), and a closely-related 'knowledge-curation' auto-tuned-memory idea was already specced and retired unbuilt 6/29/2026 for lack of a live input."
+        }
+      ]
     }
   }
 }

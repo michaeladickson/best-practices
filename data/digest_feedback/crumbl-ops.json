@@ -145,6 +145,22 @@
           "reason": "The proposed elements of skills/, subagents, workflows, knowledge/, and memory already form the project's operating model."
         }
       ]
+    },
+    "2107": {
+      "title": "Weekly digest 2026-08-28: ideas to evaluate",
+      "closed_at": "2026-08-30",
+      "verdicts": [
+        {
+          "idea": "Optimize Claude Code Context Hierarchy",
+          "verdict": "already-built",
+          "reason": "Claude Code already loads context hierarchically, uses a context budget in practice, and its weekly `cron_memory_consolidation.sh` and monthly `cron_knowledge_curation.sh` jobs already prune stale rules using telemetry from `.claude/hooks/log_instructions_loaded.py`."
+        },
+        {
+          "idea": "Implement Deterministic Agent Action Guar",
+          "verdict": "already-built",
+          "reason": "`.claude/hooks/check_dangerous_bash.py` (PreToolUse on Bash, #488) already interposes deterministically on agent-proposed commands, implementing the reasoning-vs-authority split at the tool-call chokepoint rather than a bespoke AST layer."
+        }
+      ]
     }
   }
 }
