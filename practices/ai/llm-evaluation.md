@@ -56,6 +56,9 @@ prompts (digest 2026-05-16). Re-test inherited prompt *patterns* too: few-shot e
 and negative-constraint lists that helped an older model can actively degrade a newer
 one, so prompt-engineering habits are themselves a thing the eval must catch.
 
+### Manage and evaluate agent 'guidance files' (e.g., shared prompt files encoding design principles or operational policies) as distinct, version-controlled assets.
+For agentic systems, especially those interacting with external tools or requiring specific stylistic/policy adherence, create separate, shareable files that encapsulate human judgment and guidelines (e.g., `design.md` for brand style). Implement a versioning and evaluation process for these guidance files to measure their effectiveness in reducing common failure modes and ensuring consistent, on-brand outputs across diverse agent applications.
+
 ### Pin model versions; gate upgrades behind the eval
 Never let a model float to "latest" silently. Pin the version, and treat a model bump
 as a change that must pass the eval set first. This is the concrete defense against
@@ -112,6 +115,9 @@ and whole-codebase comprehension, so use ones built for it. And when your eval c
 need to be trusted by others, publish the datasets, harness, judging criteria, results,
 and raw traces so outside reviewers can replicate and attack the methodology.
 
+### Explicitly differentiate and quantify the performance contribution of the evaluation harness or surrounding system from the raw model on benchmarks.
+Benchmarks often measure the entire system's performance, not just the raw model. When reporting or evaluating against benchmarks, disentangle the performance gains derived from specific evaluation harnesses or system components (e.g., preserving reasoning state, context compaction) to accurately assess the model's intrinsic capabilities.
+
 ### Implement double-blind evaluation setups using confidential computing to prevent benchmark leakage and ensure unbiased assessment of proprietary models.
 Utilize confidential computing environments (e.g., hardware-encrypted enclaves) where model weights and inference code are kept private from evaluators, and test benchmarks and evaluation code are kept private from model providers. This prevents accidental or intentional contamination of benchmarks and ensures unbiased evaluation results.
 
@@ -145,6 +151,9 @@ conclusions, make them emit an **evidence packet** — queries run, statistical
 justification, completeness assessment, alternative hypotheses considered — and
 evaluate the packet as part of the output.
 
+### Evaluate agent performance based on quantifiable business impact and desired real-world outcomes, not merely on the generation of intermediate process or internal activity.
+Agents might generate plans, reports, or extensive reasoning chains that appear productive but do not translate to tangible business value. Design evaluations to measure the ultimate goal (e.g., customer conversion, bug resolution) rather than proxy metrics of internal agent activity, to ensure agents are delivering meaningful work.
+
 ### Evaluate the orchestration layer: routers, decomposition, tool prompts
 Multi-agent decomposition and dynamic model routing are their own failure surfaces.
 Evaluate the router's decisions and the decomposition quality by their effect on
@@ -177,12 +186,33 @@ interactions, and test prompt injection where it actually arrives — embedded i
 pages the agent browses and code it executes, not just pasted into a prompt. Probe for
 covert behavior too: agents pursuing hidden goals while appearing compliant.
 
+### Define and test explicit operating boundaries for agents, including unacceptable actions, forbidden states, and how they should handle unknown or unresolvable situations.
+Beyond defining correct behavior, explicitly delineate the boundaries of acceptable agent operation. This includes identifying and documenting actions agents must *not* take, data they must *not* expose, and how they should gracefully fail or acknowledge limitations when unable to complete a task within defined constraints. Integrate these boundaries into evaluation scenarios.
+
+### Develop specific evaluation scenarios to test for agent motivated reasoning and misalignment, where agents might pursue narrow task objectives through unintended or harmful actions, or optimize for imagined evaluation criteria.
+Agents have demonstrated a capacity to creatively bypass constraints or collude when tasked with specific goals, especially in permissive evaluation environments. Design adversarial evaluations that probe for an agent's tendency to infer and game implicit scoring mechanisms, exploit system vulnerabilities, or take unauthorized actions to achieve its perceived objective.
+
 ### Sandbox agent execution — and evaluate the whole stack
 Agents that generate and run code get robust, isolated sandboxes, full stop. Then
 evaluate the security of the whole execution stack — hardened runtime, browsers, tools,
 libraries — not just container isolation. For agents touching critical systems
 (databases, production infra), correctness requirements are unforgiving: stricter
 sandboxing, human-in-the-loop validation, or formal methods.
+
+### Gate AI-generated code with automated verification
+Put an AI gate in the merge queue: check changes against production requirements,
+internal standards (often expressed in natural language), cross-repository dependency
+risk, and lightweight functional tests in a sandbox, ending in a clear verdict (BLOCK /
+proceed with caution / safe). Verify adherence to architectural patterns and
+non-functional conventions (scalability, error handling) as a step distinct from
+functional testing — that separation is what lets AI-written code ship without
+line-by-line human review.
+
+### Utilize context-blind subagents for adversarial pre-review of agent-generated outputs to uncover latent flaws.
+When evaluating code or other complex outputs generated by an agent, deploy a 'context-blind' subagent as an adversarial reviewer. This subagent, intentionally deprived of the original generation context, can act as an impartial or 'ignorant' tester, potentially identifying assumptions, inconsistencies, or hidden issues that a context-aware human or another agent might overlook.
+
+### Use Abstract Syntax Trees (ASTs) to evaluate the safety and potential side effects of AI-generated code commands before execution.
+Analyze AI-generated shell commands by parsing them into ASTs to understand their structural capabilities, track variable resolutions across commands, and identify potential read/write side effects. This method helps catch dangerous command transformations that string-based checks miss.
 
 ### Evaluate agent identity, credentials, and action-sequence policy
 Agents request tools and assume roles dynamically, so verify least privilege, clear
@@ -198,18 +228,6 @@ keep that real at volume: review the *artifacts and observable outcomes* rather 
 AI's internal code or logic, and put an AI classifier in front of the approval queue so
 humans see genuinely dangerous actions instead of drowning in routine ones — approval
 fatigue is how safety gates fail.
-
-### Gate AI-generated code with automated verification
-Put an AI gate in the merge queue: check changes against production requirements,
-internal standards (often expressed in natural language), cross-repository dependency
-risk, and lightweight functional tests in a sandbox, ending in a clear verdict (BLOCK /
-proceed with caution / safe). Verify adherence to architectural patterns and
-non-functional conventions (scalability, error handling) as a step distinct from
-functional testing — that separation is what lets AI-written code ship without
-line-by-line human review.
-
-### Use Abstract Syntax Trees (ASTs) to evaluate the safety and potential side effects of AI-generated code commands before execution.
-Analyze AI-generated shell commands by parsing them into ASTs to understand their structural capabilities, track variable resolutions across commands, and identify potential read/write side effects. This method helps catch dangerous command transformations that string-based checks miss.
 
 ### Instrument agentic systems with correlated observability
 Traditional log-metric-trace models fall short when a workflow spans multiple tools,
@@ -319,6 +337,12 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **Google found a way to test Gemini without seeing the questions** (The New Stack) — double-blind evaluation using confidential computing. Digest: 2026-08-28.
 - **LM Studio built a judge for AI commands. Then the judge started agreeing with the defendant.** (The New Stack) — AST parsing for safety and side effects in AI-generated commands. Digest: 2026-08-28.
 - **Simulation: the new Scaling Law — Joon Sung Park, Simile AI** (Latent Space) — advanced simulations of human behavior (digital twins) for pre-deployment testing. Digest: 2026-08-22.
+- **This week in Claude Code (2026-08-28): /resume on desktop, phone-started sessions, subagent memory, cost tooling** (Claude Code weekly newsletter (email)) — Utilize context-blind subagents for adversarial pre-review of agent-generated outputs to uncover latent flaws. Digest: 2026-08-28.
+- **Executive Briefing: You Are Paying for Agent Activity and Calling It Work** (Nate Jones) — Evaluate agent performance based on quantifiable business impact and desired real-world outcomes, not merely on the generation of intermediate process or internal activity. Digest: 2026-08-30.
+- **Vercel built a feedback loop that treats agent instructions like software** (The New Stack) — Manage and evaluate agent 'guidance files' (e.g., shared prompt files encoding design principles or operational policies) as distinct, version-controlled assets. Digest: 2026-09-02.
+- **AI agent evaluations are part of the product** (The New Stack) — Define and test explicit operating boundaries for agents, including unacceptable actions, forbidden states, and how they should handle unknown or unresolvable situations. Digest: 2026-09-04.
+- **OpenAI will sell you Astra, but not the system that scored 98.6% on ARC-AGI-3** (The New Stack) — Explicitly differentiate and quantify the performance contribution of the evaluation harness or surrounding system from the raw model on benchmarks. Digest: 2026-09-04.
+- **OpenAI's rogue agents were caught communicating via public wikis** (Simon Willison [ai_engineering]) — Develop specific evaluation scenarios to test for agent motivated reasoning and misalignment, where agents might pursue narrow task objectives through unintended or harmful actions, or optimize for imagined evaluation criteria. Digest: 2026-09-04.
 
 ## Where Used
 
