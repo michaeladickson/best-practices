@@ -381,29 +381,50 @@ Rules:
 - For where_it_fits, first_step, risks: be concrete but acknowledge uncertainty
 - Be honest — if nothing is relevant this week, return empty arrays"""
 
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
-    except Exception as e:
-        # Timeout (GEMINI_TIMEOUT_MS) or transport error. Return None so main()
-        # exits non-zero and the wrapper counts this context as failed, rather
-        # than raising a traceback through click.
-        log.error("analysis_request_failed", error=str(e), error_type=type(e).__name__)
-        return None
+    # Force JSON at the API level rather than trusting the prompt's "respond with
+    # JSON" instruction. On 2026-09-04 the crumbl-ops context came back malformed at
+    # char 7885 and failed the whole weekly digest; the same fix is already house
+    # practice in command-center's agents/shared/gemini_client.py for the same reason.
+    config = {"response_mime_type": "application/json"}
 
-    text = response.text
-    if "```json" in text:
-        text = text.split("```json")[1].split("```")[0]
-    elif "```" in text:
-        text = text.split("```")[1].split("```")[0]
+    # One retry. A malformed response is a sampling accident, not a deterministic
+    # failure, and the cost of the retry is one Flash call against a weekly job whose
+    # only other outcome is a red task for seven days.
+    for attempt in (1, 2):
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=config,
+            )
+        except Exception as e:
+            # Timeout (GEMINI_TIMEOUT_MS) or transport error. Return None so main()
+            # exits non-zero and the wrapper counts this context as failed, rather
+            # than raising a traceback through click.
+            log.error("analysis_request_failed", error=str(e),
+                      error_type=type(e).__name__, attempt=attempt)
+            if attempt == 2:
+                return None
+            continue
 
-    try:
-        return json.loads(text.strip())
-    except json.JSONDecodeError as e:
-        log.error("json_parse_failed", error=str(e), response=text[:200])
-        return None
+        text = response.text or ""
+        if "```json" in text:
+            text = text.split("```json")[1].split("```")[0]
+        elif "```" in text:
+            text = text.split("```")[1].split("```")[0]
+
+        try:
+            return json.loads(text.strip())
+        except json.JSONDecodeError as e:
+            # Log the TAIL as well as the head. The 9/04 failure was at char 7885 and
+            # the log captured only the first 200 characters, which showed a
+            # well-formed opening and said nothing about what actually broke.
+            log.error("json_parse_failed", error=str(e), attempt=attempt,
+                      length=len(text), head=text[:200], tail=text[-300:])
+            if attempt == 2:
+                return None
+
+    return None
 
 
 def _build_email(analysis: dict, week_label: str,
@@ -693,19 +714,28 @@ def _create_github_issue(analysis: dict, ctx: dict, project_name: str,
     for label in labels:
         cmd.extend(["--label", label])
 
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        if result.returncode == 0:
-            url = result.stdout.strip()
-            log.info("issue_created", repo=repo, url=url, title=title)
-            return True
-        else:
-            log.error("issue_create_failed", repo=repo,
-                      stderr=result.stderr[:500])
-            return False
-    except Exception as e:
-        log.error("issue_create_exception", repo=repo, error=str(e))
-        return False
+    # Retry once on a transient GitHub error. On 2026-09-04 this returned
+    # "HTTP 504: Gateway Timeout" from the GraphQL API and the digest issue was
+    # simply never filed — the caller discards this bool, so nothing counted the
+    # loss and the run still reported that context as healthy.
+    for attempt in (1, 2):
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            if result.returncode == 0:
+                url = result.stdout.strip()
+                log.info("issue_created", repo=repo, url=url, title=title)
+                return True
+            stderr = result.stderr[:500]
+            transient = any(code in stderr for code in ("HTTP 50", "timeout", "Timeout"))
+            log.error("issue_create_failed", repo=repo, stderr=stderr,
+                      attempt=attempt, will_retry=(transient and attempt == 1))
+            if not (transient and attempt == 1):
+                return False
+        except Exception as e:
+            log.error("issue_create_exception", repo=repo, error=str(e), attempt=attempt)
+            if attempt == 2:
+                return False
+    return False
 
 
 @click.command()

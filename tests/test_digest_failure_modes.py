@@ -217,6 +217,64 @@ def test_analysis_transport_error_returns_none(monkeypatch):
     assert ai_digest._analyze_posts(posts, "ctx", "proj") is None
 
 
+# --- malformed JSON: retry, and ask the API for JSON in the first place -----
+# 2026-09-04: the crumbl-ops context came back malformed at char 7885, _analyze_posts
+# returned None on the single attempt, and CC-WeeklyDigest exited 1 for the week.
+
+
+class _Recorder:
+    """A Gemini stand-in that replays a fixed script of responses."""
+
+    def __init__(self, *texts):
+        self.texts = list(texts)
+        self.calls = []
+        outer = self
+
+        class _Models:
+            @staticmethod
+            def generate_content(**kw):
+                outer.calls.append(kw)
+                return type("R", (), {"text": outer.texts.pop(0)})()
+
+        self.models = _Models()
+
+
+GOOD = '{"top_posts": [], "project_recommendations": []}'
+POSTS = [{"source": "s", "category": "c", "title": "t", "link": "u",
+          "published": "2026-07-19", "content_preview": "x"}]
+
+
+def test_malformed_json_is_retried_once_and_succeeds(monkeypatch):
+    rec = _Recorder('{"top_posts": [{"title": "a",,}]}', GOOD)
+    monkeypatch.setattr(ai_digest, "_get_gemini_client", lambda: rec)
+    assert ai_digest._analyze_posts(POSTS, "ctx", "proj") == {
+        "top_posts": [], "project_recommendations": []}
+    assert len(rec.calls) == 2, "a malformed response must be retried"
+
+
+def test_malformed_json_twice_still_returns_none(monkeypatch):
+    """The retry must not turn a real break into a silent empty digest."""
+    rec = _Recorder("not json at all", "still not json")
+    monkeypatch.setattr(ai_digest, "_get_gemini_client", lambda: rec)
+    assert ai_digest._analyze_posts(POSTS, "ctx", "proj") is None
+    assert len(rec.calls) == 2, "exactly two attempts, not an unbounded loop"
+
+
+def test_valid_json_is_not_retried(monkeypatch):
+    rec = _Recorder(GOOD)
+    monkeypatch.setattr(ai_digest, "_get_gemini_client", lambda: rec)
+    assert ai_digest._analyze_posts(POSTS, "ctx", "proj") is not None
+    assert len(rec.calls) == 1, "a good response must cost one call, not two"
+
+
+def test_the_api_is_asked_for_json_not_just_the_prompt(monkeypatch):
+    """The prompt's 'respond with JSON' instruction is what failed on 9/04."""
+    rec = _Recorder(GOOD)
+    monkeypatch.setattr(ai_digest, "_get_gemini_client", lambda: rec)
+    ai_digest._analyze_posts(POSTS, "ctx", "proj")
+    assert rec.calls[0]["config"]["response_mime_type"] == "application/json"
+
+
 # --- the hang guard -----------------------------------------------------
 
 def test_gemini_client_has_bounded_timeout(monkeypatch):
