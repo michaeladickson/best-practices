@@ -164,6 +164,17 @@ Then flag only the collision rules that intersect what Michael picks up:
 
 - `MEMORY.md` auto-loads into the system prompt every session. **Do not re-read it.** Fetch
   individual memory files lazily, only when their topic comes up.
+- **Read the shared judgment index once per session:**
+  ```bash
+  cat C:/Users/micha/.claude/projects/_shared/memory/MEMORY.md
+  ```
+  86 portable rules — harness and shell facts, git/GitHub discipline, verification method,
+  working style — promoted out of the individual repos in 2026-09. They are one canonical
+  copy, and this repo's own `MEMORY.md` carries only a pointer to them, so nothing loads
+  them automatically. Reading the index here is what puts them in reach; a rule you learn
+  about only after making the mistake it prevents has not helped. Individual files stay
+  lazy — read one when its topic comes up. Corrections go to the shared copy, never back
+  into a repo.
 - Open issues in this repo — mostly auto-filed feed candidates awaiting a human decision:
   ```bash
   gh issue list -R michaeladickson/best-practices --state open --limit 15 --json number,title --jq '.[] | "\(.number) \(.title)"'
