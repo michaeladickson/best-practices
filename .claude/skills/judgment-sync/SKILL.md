@@ -107,6 +107,15 @@ carry; partially updating a stale mirror is worse than leaving it wholly stale.
 
 `git mv` into `_shared/memory/`. Then:
 
+**Every index, not just `MEMORY.md`.** A store may carry secondary topical indexes
+(`MEMORY-ops.md`, `MEMORY-patterns.md`). Glob `MEMORY*.md`. The first four passes globbed
+`MEMORY.md` alone and left 47 links pointing at files that had moved — invisible because the
+verification used the same narrow glob as the edit. **A check narrower than the thing it
+verifies always passes.**
+
+A promoted memory is still worth routing to, so repoint rather than drop:
+`[label](../../_shared/memory/<file>.md)`.
+
 **Origin index — link-level surgery, never line-level.** Index lines carry two or three
 links each:
 
@@ -153,7 +162,8 @@ correct and idempotent, since an applied `(store)` is itself a paren.
 
 ### 6. Integrity gate — all must pass
 
-- Every link in every index resolves to an existing file.
+- Every link in **every `MEMORY*.md` in every store** resolves — primary and secondary. Glob
+  the same set the edit touched, or wider; never narrower.
 - No promoted file is still referenced by an origin index.
 - No path double-prefixed (`_shared/_shared/`). **Check path shape, not basename existence** —
   a basename check passes no matter how mangled the path is, which is how a `_shared/_shared/`
