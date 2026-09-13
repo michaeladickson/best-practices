@@ -59,10 +59,43 @@ guarantee about the rest.
 
 ## Three ways this misleads you
 
-**1. Partner surfaces are priced separately and are not in the feed.** Vertex AI
-and Bedrock bill on their own sheets. If a workload runs on Vertex, the
-aggregator cannot tell you what it costs — and code that falls back to Vertex
-when an API key is absent is running on a price the feed never showed you.
+**1. A managed-cloud surface bills by SKU, not by headline rate.** The aggregator
+reports one input and one output number per model. That is the shape of a
+first-party API bill. It is not the shape of a Vertex AI or Bedrock bill, and the
+gap is not a markup — it is that the same model resolves to several SKUs.
+
+Two distinct cases, worth keeping straight:
+
+- **Partner-operated models** (Claude on Vertex/Bedrock) are priced by the
+  partner on its own sheet. The aggregator genuinely does not cover them.
+- **First-party models on the vendor's own cloud** (Gemini on Vertex) are priced
+  by the same vendor, and the headline rates do match. Verified 2026-09-13:
+  Google's AI Studio page and OpenRouter agreed exactly on 2.5 Flash,
+  3.1 Flash Lite, 3.5 Flash Lite, 3.5 Flash and 3.8 Flash. **What differs is that
+  Vertex splits each model into many billable SKUs that the headline collapses.**
+
+From the Cloud Billing catalog (service `C7E2-9256-1C43`), Gemini on Vertex
+varies along at least three axes that AI Studio does not expose:
+
+| Axis | Example |
+|---|---|
+| Thinking on/off is a **separate SKU** | 2.5 Flash text output: $0.60 off, **$3.50 on** |
+| Global vs regional endpoint | 3.1 Flash Lite input: $0.25 global, $0.28 regional |
+| Service tier (Flex / standard / Priority) | 3.1 Flash Lite regional output: $0.83 Flex, $1.65 standard |
+
+A workload with thinking enabled on a regional endpoint is on none of the three
+numbers the headline shows. Worse, the catalog carries more than one SKU family
+per model — 2.5 Flash appears both as a "GA" set matching AI Studio ($0.30/$2.50)
+and a non-GA set at $0.15/$0.60/$3.50 — and which one bills depends on the model
+version string.
+
+**So: the aggregator tells you the order of magnitude and when something moved.
+Your own invoice is the only thing that tells you what you pay.** Do not reason
+from the headline to a Vertex or Bedrock bill in either direction; look it up.
+
+This is the trap worth naming, because it is silent: code that falls back to a
+managed-cloud client when an API key is absent (a very common pattern) is billing
+on SKUs nobody has ever looked at.
 
 **2. Sticker rate is not spend.** Thinking tokens, cache-read rates, and batch
 discounts move the real number more than the headline does. A model at twice the
@@ -109,8 +142,10 @@ kill criteria, like every other standing job.
   `scripts/run_weekly_digest.sh`; report at `data/model_pricing.md`
 - **crumbl-ops** — the Vertex Gemini 2.5 migration
   ([crumbl-ops#2572](https://github.com/michaeladickson/crumbl-ops/issues/2572))
-  is the case this doc was written from; note that its traffic is on Vertex, so
-  the feed screens options but cannot price its current bill
+  is the case this doc was written from. Its traffic runs on Vertex with thinking
+  enabled on a regional endpoint, which is the exact combination the headline
+  rate misses: three axes off the published number, on a model whose catalog
+  carries two SKU families
 
 ## Sources
 
