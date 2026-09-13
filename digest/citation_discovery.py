@@ -43,7 +43,17 @@ MIN_SOURCES = 2       # distinct citing feeds
 MAX_PROPOSALS_PER_RUN = 3
 FIRST_SCAN_DAYS = 14  # bound the very first sweep
 
+# A proposal nobody touched in this many days closes itself. Rationale, measured
+# 2026-09-13: nine candidates had accumulated, the oldest 16 days old, and no
+# issue had ever been closed in this repo -- the queue was write-only, which
+# looks healthy and trains you to skip the issue list where real work also lives
+# (#30). The dedup ledger marks a domain proposed at FILE time, so closing loses
+# nothing and nothing is re-proposed. This makes "no decision" an explicit no
+# with a date on it instead of a pile.
+PROPOSAL_TTL_DAYS = 30
+
 REPO = "michaeladickson/best-practices"
+NEWLINE = chr(10)  # literal newline, kept as chr() so the value survives templating
 
 # Domains that are infrastructure, social, or self-referential — never feed
 # candidates. Substrings matched against the registrable domain.
@@ -163,6 +173,88 @@ def scan(ledger: dict) -> int:
     return scanned
 
 
+def expire_stale_proposals(ledger: dict, dry_run: bool) -> list[str]:
+    """Close untouched feed-candidate issues older than PROPOSAL_TTL_DAYS.
+
+    Only issues with **zero comments** are eligible. A comment means somebody is
+    weighing it -- a recommendation to add, a question, a partial decision -- and
+    auto-closing that would throw away the one thing the queue was missing. This
+    is what keeps the rule from fighting the triage it is meant to encourage.
+
+    Best-effort, like everything else in the weekly telemetry step: a gh failure
+    warns and the run continues. Never fails the digest.
+    """
+    import subprocess
+
+    result = subprocess.run(
+        ["gh", "issue", "list", "--repo", REPO, "--state", "open", "--limit", "100",
+         "--json", "number,title,createdAt,comments"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if result.returncode != 0:
+        log.warning("expire_list_failed", stderr=result.stderr[:200])
+        return []
+
+    try:
+        issues = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        log.warning("expire_parse_failed", stdout=result.stdout[:200])
+        return []
+
+    now = datetime.now(timezone.utc)
+    closed = []
+    for issue in issues:
+        title = issue.get("title", "")
+        if not title.startswith("Feed candidate: "):
+            continue
+        if issue.get("comments"):
+            continue  # under discussion -- leave it alone
+        try:
+            created = datetime.fromisoformat(issue["createdAt"].replace("Z", "+00:00"))
+        except (KeyError, ValueError):
+            continue
+        age = (now - created).days
+        if age < PROPOSAL_TTL_DAYS:
+            continue
+
+        domain = title[len("Feed candidate: "):].split(" (cited")[0]
+        comment = NEWLINE.join([
+            f"Closing automatically: open {age} days with no comment, past the "
+            f"{PROPOSAL_TTL_DAYS}-day triage window.",
+            "",
+            "No decision is treated as a no. The dedup ledger already recorded "
+            "this domain as proposed, so it will not be re-proposed and nothing "
+            "is lost by closing.",
+            "",
+            "If it should be a feed, add it to `digest/config/feeds.yaml` by "
+            "hand -- that is the only approval path, and it works just as well "
+            "after this is closed. Commenting on a candidate keeps it open "
+            "indefinitely.",
+            "",
+            "Rule added in #30, after nine candidates accumulated with none "
+            "actioned.",
+        ])
+        if dry_run:
+            print(f"[dry-run] would expire #{issue['number']} {domain} ({age}d)")
+            closed.append(domain)
+            continue
+
+        r = subprocess.run(
+            ["gh", "issue", "close", str(issue["number"]), "--repo", REPO,
+             "--comment", comment],
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if r.returncode != 0:
+            log.warning("expire_close_failed", number=issue["number"],
+                        stderr=r.stderr[:200])
+            continue
+        log.info("candidate_expired", domain=domain, number=issue["number"], age_days=age)
+        entry = ledger["domains"].get(domain)
+        if entry is not None:
+            entry["expired"] = now.strftime("%Y-%m-%d")
+        closed.append(domain)
+
+    return closed
+
+
 def propose(ledger: dict, dry_run: bool) -> list[str]:
     import subprocess
     proposed = []
@@ -222,10 +314,15 @@ def main(dry_run: bool):
     print(f"Scanned {scanned} new posts; {len(ledger['domains'])} cited domains "
           f"tracked; {len(over)} over threshold.")
     proposed = propose(ledger, dry_run)
+    expired = expire_stale_proposals(ledger, dry_run)
     if not dry_run:
         _save_ledger(ledger)
     if proposed:
         print(f"Proposed: {', '.join(proposed)}")
+    if expired:
+        print(f"Expired (untouched > {PROPOSAL_TTL_DAYS}d): {', '.join(expired)}")
+    if not proposed and not expired:
+        print("No new proposals, nothing expired.")
 
 
 if __name__ == "__main__":
