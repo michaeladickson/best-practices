@@ -15,7 +15,7 @@ on a deprecated model at a price nobody has looked at in a year.
 
 | Route | Covers | Good for | Fails at |
 |---|---|---|---|
-| **Aggregator API** (OpenRouter `/api/v1/models`) | 445 models, 59 vendors, incl. 155 open-weight | Screening, change detection, open-weight coverage | Partner surfaces (Vertex, Bedrock); is a list rate, not your bill |
+| **Aggregator API** (OpenRouter `/api/v1/models`) | 445 models, 59 vendors, incl. 155 open-weight | Screening, change detection, open-weight coverage | Partner-operated models (Claude on Vertex/Bedrock); collapses managed-cloud SKUs into one rate; is a list rate, not your bill |
 | **Vendor pricing pages** | One vendor, authoritative | The number you actually commit to | Manual; no change detection; partner pages are separate from first-party |
 | **Your own billing** | What you actually spent | Cost per *task*, the only number that decides anything | Retrospective; tells you nothing about a model you haven't run |
 
