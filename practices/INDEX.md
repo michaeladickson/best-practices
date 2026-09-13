@@ -17,6 +17,7 @@ Patterns and conventions extracted from production repos. Reference these when s
 ## AI
 
 - [Gemini Integration](ai/gemini-integration.md) — Client setup, model selection, batch processing, Edge Functions
+- [Model Pricing Comparison](ai/model-pricing-comparison.md) — Cross-vendor per-token pricing, the standing weekly check, and the three ways sticker rates mislead
 - [Prompt Engineering](ai/prompt-engineering.md) — Classification, context-aware, structured output, code review
 - [LLM Evaluation & Prompt-Regression](ai/llm-evaluation.md) — Golden/fixture datasets, task-appropriate metrics, CI regression gate, model-upgrade gating, drift monitoring
 
