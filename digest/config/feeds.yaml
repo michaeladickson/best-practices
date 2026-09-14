@@ -28,6 +28,16 @@ feeds:
   - name: "OpenAI Blog"
     url: "https://openai.com/blog/rss.xml"
     category: ai_models
+  # Both added 2026-09-13 from citation-discovery proposals (#13, #25) after a
+  # triage pass; see AUTOMATION.md for the acceptance baseline.
+  - name: "Hugging Face Blog"
+    url: "https://huggingface.co/blog/feed.xml"
+    category: ai_models
+    description: "~3 posts/week; the 861-item archive is history, not volume"
+  - name: "ARC Prize"
+    url: "https://arcprize.org/feed.xml"
+    category: ai_models
+    description: "Episodic - benchmark results, quiet for weeks at a time"
   - name: "AI Engineering"
     url: "https://aiengineer.substack.com/feed"
     category: ai_engineering

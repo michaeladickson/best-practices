@@ -104,6 +104,17 @@ If — and only if — the session surfaced a genuinely non-obvious insight abou
 
 Skip by default. Save memory only for insights that would surprise a fresh reader of the repo — never for anything derivable from the code, git log, or existing docs. Match the anti-fragmentation stance in `practices/claude-code/context-memory-management.md`.
 
+**Choose the store before you write the file.** Ask the one question `/judgment-sync` uses:
+*would this rule fire in a repo containing none of this repo's code?* A clear yes means it
+belongs in `C:\Users\micha\.claude\projects\_shared\memory\` — one canonical copy that every
+repo reads — and its one-line entry goes in that store's `MEMORY.md`, not this repo's.
+Harness and shell facts, git/GitHub behavior, verification method and working-style
+preferences are almost always shared; anything naming this repo's tools, data or docs is not.
+
+Getting this right at capture time is the cheap moment. Deciding later means moving the file
+and then repairing every skill, hook and `[[wikilink]]` that pointed at the old location,
+which is the whole reason `/judgment-sync` exists.
+
 ### 5b. Push the memory repo (REQUIRED — a different repo from this one)
 
 Steps 4 and 5 write into `C:\Users\micha\.claude\projects\`, which is its own private git

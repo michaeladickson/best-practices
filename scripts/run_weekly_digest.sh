@@ -21,6 +21,23 @@ set -e
 set -o pipefail  # so the gcloud failure in `gcloud_w | tr` actually propagates
 cd "$(dirname "$0")/.."
 
+# Fast-forward before doing any work, so this run's commits are built on a
+# current base. Sessions push to origin/main from worktrees, which leaves THIS
+# checkout behind without touching its working tree — nothing here looks wrong,
+# and the tell only appears at the end when `git push origin main` is rejected
+# as non-fast-forward. That push failure is a warning, not a fatal, so the
+# knowledge files and telemetry would just silently not land (observed
+# 2026-09-13: main checkout 3 commits behind after a session pushed).
+#
+# Warn rather than exit: the digests are the deliverable and still email fine
+# from a stale base. --ff-only so a genuinely diverged checkout is reported
+# instead of being merged blind.
+if ! git pull --ff-only origin main; then
+  echo "WARNING: could not fast-forward to origin/main — this checkout may be" >&2
+  echo "         behind or diverged, and the commits below may fail to push." >&2
+  echo "         Current: $(git rev-parse --short HEAD)  origin/main: $(git rev-parse --short origin/main 2>/dev/null || echo unknown)" >&2
+fi
+
 GCP_PROJECT="hybrid-elysium-471814-p2"
 
 # Unattended secret fetch uses a key-based service account, NOT the interactive
@@ -251,8 +268,8 @@ if [ "$DIGESTS_FAILED" -eq 0 ] && ls data/digest_inbox/*.md >/dev/null 2>&1; the
 fi
 
 echo ""
-echo "=== Feed instrumentation (yield report, citation discovery, heartbeats) ==="
-# All three are best-effort: a failure warns but never fails the run — the
+echo "=== Feed instrumentation (yield report, citation discovery, heartbeats, model pricing) ==="
+# All of these are best-effort: a failure warns but never fails the run — the
 # digests and practice updates above are the deliverables, this is telemetry.
 # citation_discovery files feed-candidate issues via local gh auth;
 # check_heartbeats files an issue only when a scheduled job's state is stale.
@@ -262,10 +279,14 @@ python3 scripts/check_heartbeats.py || echo "WARNING: stale heartbeat(s) detecte
 # Spend tripwires (report is gitignored — spend data stays out of this public
 # repo; alerts file into command-center). Needs WSL gh with the "user" scope.
 python3 scripts/check_gh_usage.py || echo "WARNING: GH usage tripwire fired or check failed — see above" >&2
+# Standing price check on the model watchlist. Files an issue only when a
+# tracked model's rate moves >=5% or leaves the feed; otherwise it just
+# refreshes data/model_pricing.md and the weekly commit carries the diff.
+python3 -m digest.model_pricing || echo "WARNING: model pricing check failed" >&2
 
-git add data/feed_report.md data/feed_candidates.json 2>/dev/null
+git add data/feed_report.md data/feed_candidates.json data/model_pricing.md data/model_pricing.json 2>/dev/null
 if ! git diff --cached --quiet; then
-  git commit -q -m "Weekly telemetry: feed report + citation ledger [automated]"
+  git commit -q -m "Weekly telemetry: feed report + citation ledger + model pricing [automated]"
   git push -q origin main || echo "WARNING: push of telemetry failed" >&2
 fi
 
