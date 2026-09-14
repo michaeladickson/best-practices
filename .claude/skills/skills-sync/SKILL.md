@@ -84,6 +84,8 @@ Extra rules:
 
 Dedup first: `gh pr list -R michaeladickson/<repo> --state open --search "[skills-sync]"`. If an open sync PR exists, push this week's commits onto **its existing branch** instead of opening a second PR; also skip any source commit already listed in an open PR's "Source commits covered" section.
 
+**Merge `origin/main` into that branch before you edit it.** A sync branch is cut from `origin/main` on the day it was opened, so the file this week's port belongs in may not exist on it yet — the 2026-09-07 branch had no `start/SKILL.md` at all, because `/start` was created two days after it. Splicing into a file that isn't there fails loudly; the worse case is editing a stale copy and silently reverting whatever main has since landed in it. Merge, confirm the merge was clean, then port. Update the PR body's "Source commits covered" to cover both runs, and say in the body that two runs are stacked and why.
+
 **Report the age of any sync PR you find open.** This skill opens PRs into three repos and has never looked back at whether they landed — an open PR reads as healthy by definition, and green CI never alarms on one that has simply stopped moving (command-center#415: 14 days, ~450 lines unlanded, ten wrap-ups each calling it "in flight"). Ask for the age and merge state at dedup time, and name anything quiet 7+ days or `CONFLICTING` on the summary's `PRs:` line rather than silently stacking another week of commits onto it:
 
 ```bash
