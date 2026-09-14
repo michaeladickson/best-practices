@@ -49,7 +49,23 @@ email:
   to: "michael.a.dickson@gmail.com"
   subject_prefix: "Wealth-mgmt Digest"
 
-github_issue:
-  repo: "michaeladickson/wealth-mgmt"
-  labels: ["weekly-digest"]
-  title_prefix: "Weekly digest"
+# Issue filing DISABLED 2026-09-14 (Michael). The digest email still sends; only
+# the GitHub issue queue is off. Eight of these accumulated in wealth-mgmt between
+# 2026-07-10 and 2026-09-11 with zero comments on any, and on review the ideas
+# collapsed to four themes re-proposed most weeks (AI cost/model routing, agent
+# security, LLM output validation, local inference) that are already covered by
+# practices/ai-safety/, practices/ai/llm-evaluation.md and wealth-mgmt#226.
+#
+# Root cause, if this is ever reconsidered: the recommendations are written for a
+# product that does not exist. They cite "clients", "client advisory tools",
+# "compliance modules" and Supabase; wealth-mgmt is a single-operator tool over
+# one household's money with none of those. Fix the project context before
+# re-enabling, or the queue rebuilds. All eight were closed at wealth-mgmt#223.
+#
+# _create_github_issue() and its caller both guard on `repo`, so removing the key
+# is the supported off switch, not a hack.
+#
+# github_issue:
+#   repo: "michaeladickson/wealth-mgmt"
+#   labels: ["weekly-digest"]
+#   title_prefix: "Weekly digest"
