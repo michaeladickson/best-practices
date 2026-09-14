@@ -160,6 +160,68 @@ Then flag only the collision rules that intersect what Michael picks up:
   landed branch as unmerged. Match with `awk`, not `grep -P` — this locale kills `grep -P`, and
   every branch then silently reads "no PR", which looks identical to "safe to delete".
 
+## Step 3b — Branches whose commits never landed (live, read-only)
+
+`/wrap-up` step 1 checks that this session's work reached `origin/main`, and it is correct.
+**But it only runs when a session actually wraps up.** A session that ends without one leaves
+its branch invisible to every later wrap-up, because that check runs at the end of a session
+rather than the start of the next one.
+
+Most work here lands with `git push origin HEAD:main` and never has a branch at all, which is
+exactly why the exceptions go unwatched. The `[skills-sync]` PR branches are the only routine
+branch traffic in this repo, they are opened by a scheduled job rather than by Michael, and
+nothing looks at one again unless someone asks. **A sync PR nobody merges reads as healthy** —
+it is open, its CI is green — while the ports it carries are in no repo at all.
+
+Report-only, and cheap:
+
+```bash
+git fetch origin --prune -q
+gh pr list -R michaeladickson/best-practices --state all --limit 200 \
+  --json headRefName,number,state -q '.[] | "\(.headRefName)\t\(.number) \(.state)"' > /tmp/_prs 2>/dev/null
+
+{ git for-each-ref --format='%(refname:short)' refs/heads/
+  git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | sed 's|^origin/||'
+} | grep -vxE 'main|HEAD' | sort -u | while read -r B; do
+  git show-ref -q --verify "refs/heads/$B" && REF="$B" || REF="origin/$B"
+  git merge-base --is-ancestor "$REF" origin/main 2>/dev/null && continue
+  N=$(git rev-list --count "origin/main..$REF" 2>/dev/null) || continue
+  [ "${N:-0}" -eq 0 ] && continue
+  PR=$(awk -F'\t' -v b="$B" '$1==b {print $2; exit}' /tmp/_prs)
+  AGE=$(( ( $(date +%s) - $(git log -1 --format=%ct "$REF") ) / 86400 ))
+  case "$PR" in
+    '')       if [ "$AGE" -le 1 ]; then
+                echo "  $B  $N commit(s)  no PR yet, ${AGE}d old — probably live, check step 3"
+              else
+                echo "  $B  $N commit(s)  ${AGE}d old  NO PR — never proposed"
+              fi ;;
+    *MERGED)  ;;                                  # squash-merge leftover, not a finding
+    *OPEN)    echo "  $B  $N commit(s)  open PR #${PR%% *}, quiet ${AGE}d" ;;
+    *)        echo "  $B  $N commit(s)  PR #${PR%% *} CLOSED UNMERGED" ;;
+  esac
+done
+```
+
+**Two findings here, not one.** `NO PR` on a branch older than a day is work never proposed.
+An **open PR whose newest commit is 7+ days old is a stalled one** — the sync-PR class above,
+and the finding this repo actually produces. Both belong in the briefing.
+
+Judge by the **PR record**, matched with `awk`. Not `grep -P`: this locale kills it, and every
+branch then silently reads "no PR", which looks identical to "safe to delete". This is the same
+authority rule step 3 applies to stale worktrees, for the same reason — after a squash merge,
+ancestry, patch-id and content diff all read a landed branch as unmerged. The converse holds
+too: `--delete-branch` removes the remote ref, so a *merged* branch has local commits and no
+remote ref, and any check reading ref existence before the PR record calls it unpushed work and
+prescribes re-pushing it. Require both — no remote ref **and** no PR record — before saying
+stranded.
+
+A branch whose newest commit is hours old is almost always a session that has not wrapped up
+yet. Age is the only thing separating that from work orphaned in April, so cross-check every
+hit against step 3 and never touch a branch belonging to a live session.
+
+**Do not act on it here.** Merging, reviving or closing a branch is Michael's call at session
+start. Report and ask.
+
 ## Step 4 — Memory and open items (batch with step 2)
 
 - `MEMORY.md` auto-loads into the system prompt every session. **Do not re-read it.** Fetch
@@ -194,8 +256,10 @@ Order:
    inbox count; what fires next. If everything is healthy and nothing landed, one line:
    "Automation green, nothing new since <date>."
 4. **Concurrent sessions** — one line each, or "No other live sessions."
-5. **Open items** — issue counts by class.
-6. Then ask: **What do you want to pick up?**
+5. **Unlanded branches** — only if step 3b found a `NO PR` branch or an open PR quiet 7+ days.
+   Branch, commit count, age, and what the commits touch. Omit the section entirely otherwise.
+6. **Open items** — issue counts by class.
+7. Then ask: **What do you want to pick up?**
 
 ## Lazy-load on focus
 
