@@ -182,7 +182,7 @@ gh pr list -R michaeladickson/best-practices --state all --limit 200 \
 
 { git for-each-ref --format='%(refname:short)' refs/heads/
   git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | sed 's|^origin/||'
-} | grep -vxE 'main|HEAD' | sort -u | while read -r B; do
+} | grep -vxE 'main|HEAD|origin' | sort -u | while read -r B; do
   git show-ref -q --verify "refs/heads/$B" && REF="$B" || REF="origin/$B"
   git merge-base --is-ancestor "$REF" origin/main 2>/dev/null && continue
   N=$(git rev-list --count "origin/main..$REF" 2>/dev/null) || continue
