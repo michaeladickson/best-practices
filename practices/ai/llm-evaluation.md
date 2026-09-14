@@ -32,6 +32,46 @@ Practices are deliberately unnumbered — entries get inserted and merged over t
 numbered cross-references rot. This section was consolidated 2026-08-28 (59 → 27
 entries); the per-article trail is unchanged under [Sources](#sources).
 
+### Decide which calls earn a floor — and check you did not only measure the easy ones
+Not every LLM call needs an eval. The line that has held up: **an LLM call whose output
+reaches someone outside the team, or is written to a durable artifact without review,
+needs a floor.** Internal, reviewed, or throwaway output does not.
+
+The failure this prevents is not "no evals". It is evals pointed at the wrong half of the
+system, which looks like coverage and is not. Measured across four repos on 2026-09-13:
+
+| Had a golden set | Baseline | Had none |
+|---|---|---|
+| Email classifier | 22/22 (100%) | Customer-facing draft generation |
+| SKU pick | 12/12 (100%) | Receipt vision parsing into accounting |
+| Donation screener | 16/16 (100%) | The CFO narrative |
+| | | Financial transaction categorization |
+| | | A weekly job that auto-edits living docs |
+
+Every measured task was classification with an objectively correct answer — the easiest
+thing to score, and the least likely to need a better model. Every unmeasured one was
+generative judgment work where quality is real and invisible. Coverage had grown toward
+what was easy to grade rather than what mattered if it broke.
+
+Audit for this directly: list every LLM call site, mark which have a floor, and look at
+the shape of the two groups. If the evaluated ones are all classifiers, the coverage is
+inverted.
+
+### A task at 100% cannot answer "should we upgrade"
+A floor is a regression guard, not a quality score. It catches a change making things
+worse; it says nothing about whether a change would make things better, and a task
+already at 100% has no headroom to show either.
+
+This matters when a deprecation or a price change forces a model decision. Asked "is
+there a better model for this", the honest answer splits three ways: *provably no* for
+tasks at ceiling, *yes and here is the evidence* for tasks with headroom, and **"we
+cannot tell you"** for everything unmeasured. That third answer is the expensive one,
+and it is the default until someone builds the set.
+
+So when choosing new golden sets, pick tasks hard enough to discriminate between models.
+A set that every candidate model passes is a regression gate and nothing more — useful,
+but it will not answer the next model question either.
+
 ### Build a golden/fixture dataset per AI feature
 For each feature (invoice extraction, email classification, draft generation, forecast),
 curate a set of representative `input → expected` examples — including the gnarly edge
@@ -377,3 +417,22 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **crumbl-ops** — Gemini invoice extraction (per-field accuracy) and email classification (precision/recall) are prime fixture-set candidates; the LightGBM demand forecast needs backtest error + drift tracking; gate any Gemini/Claude model bump behind these.
 - **command-center** — digest/classification quality and meeting-prep outputs; LLM-as-judge with human-validated samples; production sampling for drift.
 - **wealth-mgmt** — research/extraction accuracy in a "fortress" context; ground-truth verification and hallucination flags are load-bearing before any output is trusted.
+
+### Coverage audit, 2026-09-13
+
+Triggered by the Gemini 2.5 deprecation, which forced a model decision across 27 live
+call sites and found the inversion above.
+
+- **crumbl-ops** — three golden sets, all classifiers at 100%. CS draft house-style eval
+  added ([PR #2575](https://github.com/michaeladickson/crumbl-ops/pull/2575)); scores the
+  rules `_HOUSE_STYLE` already states, each traceable to a ticket that reached the queue.
+  Deterministic assertions rather than an LLM judge: when the thing under test is "did the
+  model stop following an instruction", asking a model is circular.
+- **Open gaps**, named rather than tracked — neither is committed work:
+  - wealth-mgmt `src/spending/categorizer.py`. The highest-stakes unmeasured site: a silent
+    quality regression corrupts data that reporting rests on, and there is already a
+    decision record and a cost measurement tied to that model with nothing connecting
+    either to output quality.
+  - best-practices `digest/practice_updater.py`. Auto-edits living docs weekly behind a
+    validator that only checks the H1 and required anchors survived; a quality regression
+    passes it and lands as an `[automated]` commit.
