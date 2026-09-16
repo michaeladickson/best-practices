@@ -139,7 +139,11 @@ def build(today: date):
     recent_burn = sum(cur["credits_by_day"].get(today - timedelta(days=i), 0)
                       for i in range(1, 8)) / 7
     projected = cur["credits_total"] + recent_burn * (days_in_month - days_elapsed)
-    if projected > CREDIT_QUOTA:
+    # Trajectory, not history: an overage already incurred with no burn in the
+    # last 7 days is a sunk cost that was alerted when it happened. Without the
+    # burn check this re-fires every week to month-end on an overage that
+    # stopped growing days ago.
+    if projected > CREDIT_QUOTA and recent_burn > 0:
         alerts.append(
             f"Copilot credits projected to {projected:,.0f} by month-end "
             f"(quota {CREDIT_QUOTA:,.0f}; used {cur['credits_total']:,.0f} "
