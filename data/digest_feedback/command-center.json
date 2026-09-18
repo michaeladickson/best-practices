@@ -156,6 +156,32 @@
           "reason": "Largely already built (`.claude/skills/` with an index, `MEMORY.md` with a defined capture/reconcile lifecycle), and a closely-related 'knowledge-curation' auto-tuned-memory idea was already specced and retired unbuilt 6/29/2026 for lack of a live input."
         }
       ]
+    },
+    "567": {
+      "title": "Weekly digest 2026-09-11: ideas to evaluate",
+      "closed_at": "2026-09-14",
+      "verdicts": [
+        {
+          "idea": "Evaluate OpenAI Agents API for scheduled automation",
+          "verdict": "rejected",
+          "reason": "No current pain point; the existing Python + Claude Code agents work, and this is vendor lock-in for infra that isn't broken."
+        },
+        {
+          "idea": "Develop a 'Pizza Bot' style inbox for agent observability",
+          "verdict": "tracked",
+          "reason": "Real gap, but a UI build that loses to acquisitions/reno/tax right now. → #581"
+        },
+        {
+          "idea": "Harden MCP/prompt-injection defenses",
+          "verdict": "tracked",
+          "reason": "does `verify_injection_registry.py` / `verify_write_registry.py` already catch the attack patterns the articles describe. → #580"
+        },
+        {
+          "idea": "Executable Architecture / pytest-archon for AI-generated code",
+          "verdict": "rejected",
+          "reason": "No evidence of actual architecture drift causing pain yet, and the source article itself flags rule-fatigue as a cost."
+        }
+      ]
     }
   }
 }
