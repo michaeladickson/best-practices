@@ -161,6 +161,22 @@
           "reason": "`.claude/hooks/check_dangerous_bash.py` (PreToolUse on Bash, #488) already interposes deterministically on agent-proposed commands, implementing the reasoning-vs-authority split at the tool-call chokepoint rather than a bespoke AST layer."
         }
       ]
+    },
+    "2547": {
+      "title": "Weekly digest 2026-09-11: ideas to evaluate",
+      "closed_at": "2026-09-12",
+      "verdicts": [
+        {
+          "idea": "Refine Claude Code Sessions with Persistent Memory and Restricted Mode",
+          "verdict": "tracked",
+          "reason": "`claude --restricted` does not exist, but subagent `memory: project` is real and is switched on for `parallel-session-auditor` in #2553, with utility to be judged after runs."
+        },
+        {
+          "idea": "Implement AI-Assisted Executable Architecture in CI/CD",
+          "verdict": "already-built",
+          "reason": "The repo already carries 44 AST tripwires and the `ast-tripwire` skill, so #2553 points that at layering: `tests/test_layer_boundary_canonical.py` fails on any import of `src.api` or `src.scheduler` from a domain package."
+        }
+      ]
     }
   }
 }
