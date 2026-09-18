@@ -1,7 +1,7 @@
 {
-  "fetched_at": "2026-09-13 21:03 UTC",
+  "fetched_at": "2026-09-18 22:28 UTC",
   "source": "https://openrouter.ai/api/v1/models",
-  "catalog_size": 445,
+  "catalog_size": 446,
   "models": {
     "anthropic/claude-opus-5": {
       "group": "Anthropic",
@@ -123,8 +123,8 @@
     "moonshotai/kimi-k3": {
       "group": "Open weight",
       "resolved_id": "moonshotai/kimi-k3",
-      "input": 2.6481380629999998,
-      "output": 13.282724250000001,
+      "input": 1.95,
+      "output": 10.92,
       "batch_input": 3.0,
       "batch_output": 15.0,
       "context": 1048576
@@ -134,8 +134,8 @@
       "resolved_id": "google/gemma-4-31b-it",
       "input": 0.09,
       "output": 0.33999999999999997,
-      "batch_input": 0.39,
-      "batch_output": 0.9700000000000001,
+      "batch_input": null,
+      "batch_output": null,
       "context": 262144
     }
   }
