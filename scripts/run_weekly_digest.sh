@@ -2,7 +2,7 @@
 # scripts/run_weekly_digest.sh
 #
 # Local weekly digest runner. Registered with Windows Task Scheduler as
-# CC-WeeklyDigest (Friday 6pm ET). Runs all three contexts, sends emails,
+# CC-WeeklyDigest (Friday 6pm ET). Runs each context in CONTEXTS, sends emails,
 # creates GH issues in target repos using local gh auth, then commits +
 # pushes the digest knowledge files back to best-practices.
 #
@@ -139,6 +139,26 @@ bash /mnt/c/Users/micha/best-practices/scripts/run_weekly_digest.sh
   exit 1
 }
 
+PARTIAL_TITLE="Weekly digest: partial failure"
+
+# Record a partial failure in one open issue: comment on it if it is already
+# open (a recurring failure stays one thread), else create it. Returns non-zero
+# only when gh could not write either, so the caller can fall back to exit 1.
+report_partial_failure() {
+  local body="$1" existing
+  existing=$(gh issue list --repo "$ALERT_REPO" --state open --search "\"$PARTIAL_TITLE\" in:title" --json number,title \
+               --jq ".[] | select(.title == \"$PARTIAL_TITLE\") | .number" 2>/dev/null | head -n1 || true)
+  if [ -n "$existing" ]; then
+    gh issue comment "$existing" --repo "$ALERT_REPO" --body "$body" >/dev/null 2>&1 \
+      && echo "Commented on $ALERT_REPO#$existing ($PARTIAL_TITLE)." && return 0
+  else
+    gh issue create --repo "$ALERT_REPO" --title "$PARTIAL_TITLE" --body "$body" >/dev/null 2>&1 \
+      && echo "Created $ALERT_REPO issue: $PARTIAL_TITLE." && return 0
+  fi
+  echo "WARNING: could not record the partial failure in $ALERT_REPO (gh error)." >&2
+  return 1
+}
+
 # Verify the alert channel FIRST — if gh is dead too, fail quietly (no channel
 # to alert through). Everything below routes failures through alert_and_exit.
 echo "=== Verifying gh auth (alert channel) ==="
@@ -175,18 +195,27 @@ fi
 export GEMINI_API_KEY SMTP_PASS
 export SMTP_USER="michael@bluegrasscookies.com"
 
+# command-center was retired 2026-09-21: its weekly idea issues closed with no
+# action in most weeks, so the run was manufacturing a triage chore.
+CONTEXTS="crumbl-ops wealth-mgmt"
+
 FAILED=0
 DIGESTS_FAILED=0
+DIGESTS_OK=0
 PRACTICE_FAILED=0
-for CTX in crumbl-ops command-center wealth-mgmt; do
+PRACTICE_COMMITTED=0
+FAILED_CONTEXTS=""
+for CTX in $CONTEXTS; do
   echo ""
   echo "=== Running $CTX digest ==="
   if ! python3 -m digest --context "digest/config/context-${CTX}.yaml" --days 7; then
     echo "WARNING: $CTX digest failed" >&2
     FAILED=$((FAILED + 1))
     DIGESTS_FAILED=$((DIGESTS_FAILED + 1))
+    FAILED_CONTEXTS="$FAILED_CONTEXTS $CTX"
     continue
   fi
+  DIGESTS_OK=$((DIGESTS_OK + 1))
 
   # Commit each context's knowledge file as soon as it lands, rather than once
   # at the end. This run is a long serial chain (3 digests + a 5-doc practice
@@ -255,6 +284,7 @@ if git diff --cached --quiet; then
 else
   git commit -m "Weekly practice update: living docs refreshed from digest articles [automated]"
   git push origin main
+  PRACTICE_COMMITTED=1
   echo "Committed and pushed practice-doc updates"
 fi
 
@@ -304,7 +334,33 @@ if [ "$FAILED" -gt 0 ]; then
     echo "  main checkout with GEMINI_API_KEY from Secret Manager (SA cc-digest@):"
     echo "    python3 -m digest.practice_updater --days 7"
   fi
-  exit 1
+
+  # Exit 1 only when the run delivered NOTHING. A partial failure used to exit 1
+  # too, so the task read FAILED in 3 of 4 weeks (8/28-9/18) while the emails
+  # went out, and the red stopped meaning anything. A partial failure still needs
+  # a human (a blocked doc's candidates are lost by next Friday), so it is carried
+  # by an open issue instead of the task's exit code. If that issue cannot be
+  # filed, fall back to exit 1: a silent partial failure is the worst outcome.
+  if [ "$DIGESTS_OK" -eq 0 ] && [ "$PRACTICE_COMMITTED" -eq 0 ]; then
+    echo "ERROR: nothing was delivered this run." >&2
+    exit 1
+  fi
+  PARTIAL_BODY="Weekly digest run $(date -Is) delivered partially.
+
+- Context digests sent: $DIGESTS_OK of $(echo $CONTEXTS | wc -w)${FAILED_CONTEXTS:+ (failed:$FAILED_CONTEXTS)}
+- Practice-doc update: $([ "$PRACTICE_FAILED" -eq 1 ] && echo 'BLOCKED doc(s), candidates are lost at the next Friday run unless re-run before then' || echo 'ok')
+
+Log: \`best-practices/logs/weekly_digest.log\` (search this run's date).
+Re-run a context: \`python3 -m digest --context digest/config/context-<name>.yaml --days 7\`
+Re-run the practice update after fixing the blocked doc: \`python3 -m digest.practice_updater --days 7\`
+Close this issue once handled; the next partial failure opens a new one."
+  if ! report_partial_failure "$PARTIAL_BODY"; then
+    echo "ERROR: partial failure could not be recorded in an issue; exiting 1 so it is not silent." >&2
+    exit 1
+  fi
+  echo ""
+  echo "=== Weekly digest complete, with the partial failure above (issue filed) ==="
+  exit 0
 fi
 
 echo ""

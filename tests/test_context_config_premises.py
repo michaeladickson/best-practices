@@ -43,8 +43,17 @@ ALL_CONFIGS = sorted(CONFIG_DIR.glob("context-*.yaml"))
 
 
 def test_configs_discovered():
-    """An empty glob would make every parametrised test below vacuous."""
-    assert len(ALL_CONFIGS) >= 3, f"found only {[p.name for p in ALL_CONFIGS]}"
+    """An empty glob would make every parametrised test below vacuous.
+
+    Pinned to the wrapper's CONTEXTS line rather than a count, so a config the
+    weekly run no longer uses (or a context with no config) fails here."""
+    import re
+    wrapper = (CONFIG_DIR.parent.parent / "scripts" / "run_weekly_digest.sh").read_text(encoding="utf-8")
+    m = re.search(r'^CONTEXTS="([^"]+)"', wrapper, re.M)
+    assert m, "CONTEXTS= line not found in run_weekly_digest.sh"
+    scheduled = {f"context-{c}.yaml" for c in m.group(1).split()}
+    assert scheduled, "CONTEXTS is empty"
+    assert {p.name for p in ALL_CONFIGS} == scheduled
 
 
 @pytest.mark.parametrize("path", ALL_CONFIGS, ids=lambda p: p.name)

@@ -22,7 +22,6 @@ on:
         options:
           - all
           - crumbl-ops
-          - command-center
           - wealth-mgmt
 
 jobs:
@@ -52,7 +51,7 @@ jobs:
         run: |
           INPUT="${{ inputs.context || 'all' }}"
           if [ "$INPUT" = "all" ]; then
-            echo "contexts=crumbl-ops command-center wealth-mgmt" >> $GITHUB_OUTPUT
+            echo "contexts=crumbl-ops wealth-mgmt" >> $GITHUB_OUTPUT
           else
             echo "contexts=$INPUT" >> $GITHUB_OUTPUT
           fi
