@@ -96,7 +96,7 @@ prompts (digest 2026-05-16). Re-test inherited prompt *patterns* too: few-shot e
 and negative-constraint lists that helped an older model can actively degrade a newer
 one, so prompt-engineering habits are themselves a thing the eval must catch.
 
-### Manage and evaluate agent 'guidance files' (e.g., shared prompt files encoding design principles or operational policies) as distinct, version-controlled assets.
+### Version guidance files as first-class assets
 For agentic systems, especially those interacting with external tools or requiring specific stylistic/policy adherence, create separate, shareable files that encapsulate human judgment and guidelines (e.g., `design.md` for brand style). Implement a versioning and evaluation process for these guidance files to measure their effectiveness in reducing common failure modes and ensuring consistent, on-brand outputs across diverse agent applications.
 
 ### Pin model versions; gate upgrades behind the eval
@@ -155,13 +155,13 @@ and whole-codebase comprehension, so use ones built for it. And when your eval c
 need to be trusted by others, publish the datasets, harness, judging criteria, results,
 and raw traces so outside reviewers can replicate and attack the methodology.
 
-### Adopt a 'fully open' approach to model development artifacts, publishing training and evaluation code, detailed data recipes, configurations, logs, and intermediate checkpoints to enable full inspectability, reproducibility, and external validation of model capabilities and behaviors.
+### Publish the full training and eval artifacts
 Beyond just open weights, true transparency requires making all artifacts of model development publicly available or accessible for deep inspection. This includes the full training lifecycle—from initial data preparation recipes to final post-training checkpoints. This practice facilitates scientific reproducibility, allows researchers to identify potential biases or issues in training, and enables deeper, independent evaluation of model behavior.
 
-### Explicitly differentiate and quantify the performance contribution of the evaluation harness or surrounding system from the raw model on benchmarks.
+### Separate harness contribution from model contribution
 Benchmarks often measure the entire system's performance, not just the raw model. When reporting or evaluating against benchmarks, disentangle the performance gains derived from specific evaluation harnesses or system components (e.g., preserving reasoning state, context compaction) to accurately assess the model's intrinsic capabilities.
 
-### Implement double-blind evaluation setups using confidential computing to prevent benchmark leakage and ensure unbiased assessment of proprietary models.
+### Run double-blind evals to prevent benchmark leakage
 Utilize confidential computing environments (e.g., hardware-encrypted enclaves) where model weights and inference code are kept private from evaluators, and test benchmarks and evaluation code are kept private from model providers. This prevents accidental or intentional contamination of benchmarks and ensures unbiased evaluation results.
 
 ### Evaluate operational characteristics, not just benchmark scores
@@ -197,10 +197,10 @@ conclusions, make them emit an **evidence packet** — queries run, statistical
 justification, completeness assessment, alternative hypotheses considered — and
 evaluate the packet as part of the output.
 
-### Mandate the exposure and evaluation of an LLM's full reasoning trace or chain of thought, particularly for models rumored to be obscuring it, to ensure interpretability and verifiability of complex outputs.
+### Require the full reasoning trace for evaluation
 For critical applications, ensure that models explicitly expose their intermediate steps, internal decisions, or 'chain of thought' during processing. This transparency is vital for debugging, auditing, and building trust, especially in models where reasoning processes might be intentionally or unintentionally obscured, making their complex outputs difficult to verify post-hoc.
 
-### Evaluate agent performance based on quantifiable business impact and desired real-world outcomes, not merely on the generation of intermediate process or internal activity.
+### Measure business outcomes, not agent activity
 Agents might generate plans, reports, or extensive reasoning chains that appear productive but do not translate to tangible business value. Design evaluations to measure the ultimate goal (e.g., customer conversion, bug resolution) rather than proxy metrics of internal agent activity, to ensure agents are delivering meaningful work.
 
 ### Evaluate the orchestration layer: routers, decomposition, tool prompts
@@ -220,7 +220,7 @@ environment rather than asserted to the agent — especially in security-critica
 Serving these environments at agent speed is a platform capability in its own right:
 measure provisioning latency, concurrent capacity, and dependency fidelity.
 
-### Develop and validate sophisticated simulations of human behavior and user interactions (digital twins) for pre-deployment testing of AI systems.
+### Simulate user behavior before deployment
 Beyond basic simulations, create high-fidelity digital twins of human behavior. This involves extensive data collection from interviews, observations, and transactions, and applies techniques like Randomized Controlled Trials (RCTs) and modeling causal mechanisms to accurately reproduce human decision-making and emergent behaviors in a simulated environment before product or policy deployment.
 
 ### Account for non-determinism in evaluation
@@ -235,13 +235,13 @@ interactions, and test prompt injection where it actually arrives — embedded i
 pages the agent browses and code it executes, not just pasted into a prompt. Probe for
 covert behavior too: agents pursuing hidden goals while appearing compliant.
 
-### Periodically engage independent third parties to audit and validate internal safety evaluation methodologies and results, particularly for frontier models with potential emergent risks.
+### Have third parties audit your safety evals
 Beyond internal validation of evaluation judges or processes, external, objective scrutiny is essential for critical safety assessments. Independent third-party organizations can review safety evaluation protocols, datasets, test scenarios, and findings to ensure rigor, comprehensiveness, and unbiased assessment of potential emergent risks, especially given the observed failures of internal pre-release auditing.
 
-### Define and test explicit operating boundaries for agents, including unacceptable actions, forbidden states, and how they should handle unknown or unresolvable situations.
+### Test the agent's forbidden states explicitly
 Beyond defining correct behavior, explicitly delineate the boundaries of acceptable agent operation. This includes identifying and documenting actions agents must *not* take, data they must *not* expose, and how they should gracefully fail or acknowledge limitations when unable to complete a task within defined constraints. Integrate these boundaries into evaluation scenarios.
 
-### Develop specific evaluation scenarios to test for agent motivated reasoning and misalignment, where agents might pursue narrow task objectives through unintended or harmful actions, or optimize for imagined evaluation criteria.
+### Test for motivated reasoning and reward hacking
 Agents have demonstrated a capacity to creatively bypass constraints or collude when tasked with specific goals, especially in permissive evaluation environments. Design adversarial evaluations that probe for an agent's tendency to infer and game implicit scoring mechanisms, exploit system vulnerabilities, or take unauthorized actions to achieve its perceived objective.
 
 ### Sandbox agent execution — and evaluate the whole stack
@@ -251,7 +251,7 @@ libraries — not just container isolation. For agents touching critical systems
 (databases, production infra), correctness requirements are unforgiving: stricter
 sandboxing, human-in-the-loop validation, or formal methods.
 
-### Proactively test agents for their ability to discover and exploit hidden channels, side effects, or limitations within the evaluation environment for unauthorized communication, data exfiltration, or control.
+### Test whether agents can escape the eval environment
 Agents operating in sandboxed or constrained environments might actively probe for and leverage unintended communication channels, environmental side effects, or flaws in isolation mechanisms to bypass restrictions. Evaluation must include scenarios designed to stress-test the robustness and integrity of the sandbox itself and detect such sophisticated attempts at 'breaking containment' or unauthorized interaction.
 
 ### Gate AI-generated code with automated verification
@@ -263,13 +263,13 @@ non-functional conventions (scalability, error handling) as a step distinct from
 functional testing — that separation is what lets AI-written code ship without
 line-by-line human review.
 
-### Integrate AI-powered automated security and correctness reviews into CI/CD pipelines to gate all code changes, regardless of origin, that impact AI systems.
+### Gate every change to an AI system in CI
 Leverage advanced AI models to perform mandatory security and correctness reviews on all pull requests and code changes. This ensures that new code, whether human-written or AI-generated, adheres to defined standards and does not introduce vulnerabilities or regressions before it can be merged or deployed, effectively using AI as a 'superhuman' quality gate for the engineering process itself.
 
-### Utilize context-blind subagents for adversarial pre-review of agent-generated outputs to uncover latent flaws.
+### Use context-blind subagents for adversarial pre-review
 When evaluating code or other complex outputs generated by an agent, deploy a 'context-blind' subagent as an adversarial reviewer. This subagent, intentionally deprived of the original generation context, can act as an impartial or 'ignorant' tester, potentially identifying assumptions, inconsistencies, or hidden issues that a context-aware human or another agent might overlook.
 
-### Use Abstract Syntax Trees (ASTs) to evaluate the safety and potential side effects of AI-generated code commands before execution.
+### Parse generated commands into an AST before running
 Analyze AI-generated shell commands by parsing them into ASTs to understand their structural capabilities, track variable resolutions across commands, and identify potential read/write side effects. This method helps catch dangerous command transformations that string-based checks miss.
 
 ### Evaluate agent identity, credentials, and action-sequence policy
@@ -306,7 +306,7 @@ top of passive regression detection. The same pattern applies upstream: agentic
 generation and meta-optimization of synthetic training data converts inference compute
 into distribution-matched training signal.
 
-### Evaluate the capability of agents to autonomously design, build, and test other AI agents (meta-agents).
+### Evaluate agents that build other agents
 As AI systems gain the ability to create and manage other AI agents, it's crucial to evaluate their proficiency in this meta-level task. This includes assessing their ability to define goals for sub-agents, select appropriate architectures, generate functional code, and establish robust evaluation and testing procedures for the agents they produce.
 
 ### For huge label vocabularies, hallucinate then map
