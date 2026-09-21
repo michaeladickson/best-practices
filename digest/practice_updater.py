@@ -225,8 +225,12 @@ Rules:
             and c.get("confidence") in ("high", "medium")]
 
 
-def _integrate(client, doc_text: str, topic: str, candidates: list[dict]) -> Optional[str]:
-    """Stage 2 — integrate candidates into the full document, return the new full text."""
+def _integrate(client, doc_text: str, topic: str, candidates: list[dict],
+               fix_note: str = "") -> Optional[str]:
+    """Stage 2 — integrate candidates into the full document, return the new full text.
+
+    fix_note carries a previous attempt's validation rejection, for the one retry
+    _process_doc allows on a title-level rejection."""
     cand_text = json.dumps(candidates, indent=2)
     prompt = f"""You are editing a curated engineering best-practices document (Markdown).
 Topic: {topic}
@@ -274,6 +278,13 @@ Editing rules — follow exactly:
   section in the existing format: **Title** (source) — one phrase. Digest: YYYY-MM-DD.
 - Do not invent sources, URLs, or claims beyond what the new practices state.
 - Return only the full Markdown document.
+"""
+    if fix_note:
+        prompt += f"""
+YOUR PREVIOUS ATTEMPT WAS REJECTED BY VALIDATION: {fix_note}
+Two practice titles whose first three content words match count as duplicates. If the
+two practices are the same idea, merge them into one; if they differ, reword one title
+so it leads with what distinguishes it. Titles stay at 12 words maximum.
 """
     resp = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
     if not resp.text:
@@ -357,6 +368,15 @@ def _overlong_titles(text: str) -> set[str]:
             if len(t.split()) > MAX_PRACTICE_TITLE_WORDS}
 
 
+def _where_used_lines(text: str) -> list[str]:
+    """Non-blank lines of the '## Where Used' section, to the end of the doc."""
+    lines = text.splitlines()
+    start = next((i for i, ln in enumerate(lines) if ln.strip().lower() == "## where used"), None)
+    if start is None:
+        return []
+    return [ln.rstrip() for ln in lines[start + 1:] if ln.strip()]
+
+
 def _validate(old: str, new: str, required_anchors: list[str]) -> tuple[bool, str]:
     if not new or not new.strip():
         return False, "empty response"
@@ -381,6 +401,13 @@ def _validate(old: str, new: str, required_anchors: list[str]) -> tuple[bool, st
     new_links = _count_md_links(new)
     if new_links < old_links:
         return False, f"markdown links dropped ({old_links} -> {new_links})"
+    # "## Where Used" is hand-written and never the model's to edit. On 2026-09-21 an
+    # integration of llm-evaluation.md dropped its three original bullets and the
+    # "Coverage audit" heading while the doc still grew, so no length bound saw it.
+    kept = set(_where_used_lines(new))
+    lost = [ln for ln in _where_used_lines(old) if ln not in kept]
+    if lost:
+        return False, f"Where Used content dropped ({len(lost)} line(s), e.g. {lost[0][:60]!r})"
     fresh_dupes = set(_duplicate_heading_pairs(new)) - set(_duplicate_heading_pairs(old))
     if fresh_dupes:
         h1, h2 = next(iter(fresh_dupes))
@@ -391,6 +418,10 @@ def _validate(old: str, new: str, required_anchors: list[str]) -> tuple[bool, st
         return False, (f"new practice title over {MAX_PRACTICE_TITLE_WORDS} words "
                        f"({len(t.split())}): {t!r}")
     return True, "ok"
+
+
+# _validate reasons the model can repair on a second attempt (see _process_doc).
+RETRYABLE_REJECTIONS = ("new duplicate practice heading", "new practice title over")
 
 
 def _process_doc(doc: dict, required_anchors: list[str], posts: list[dict],
@@ -439,6 +470,14 @@ def _process_doc(doc: dict, required_anchors: list[str], posts: list[dict],
 
     new_text = _integrate(client, doc_text, doc["topic"], candidates)
     ok, reason = _validate(doc_text, new_text or "", required_anchors)
+    if not ok and reason.startswith(RETRYABLE_REJECTIONS):
+        # A title collision or an over-long title is the model's to fix, and a
+        # rejection discards the whole week for this doc: llm-evaluation.md was
+        # blocked this way on 2026-08-28 and 2026-09-18. One retry with the reason
+        # attached. Structural rejections (links dropped, size) still need a human.
+        log.warning("practice_update_retry", doc=rel_path, reason=reason)
+        new_text = _integrate(client, doc_text, doc["topic"], candidates, fix_note=reason)
+        ok, reason = _validate(doc_text, new_text or "", required_anchors)
     if not ok:
         # Leave the doc untouched and do NOT mark articles seen — retry next week.
         log.error("practice_update_rejected", doc=rel_path, reason=reason)

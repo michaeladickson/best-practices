@@ -66,112 +66,121 @@ Separate the probabilistic reasoning of an LLM agent (proposing actions) from th
 ### 3. Leverage specialized 'System One' models for initial task classification and routing decisions.
 For the crucial first step of classifying a task before routing, utilize dedicated 'System One' models. These models are designed solely for rapid classification, routing, and scoring, offering significantly faster inference and lower costs compared to larger frontier LLMs, while ensuring calibration and reducing hallucination for initial decisions.
 
-### 4. Split the fast talker from the slow reasoner
+### 4. Employ zero-text models for routing
+For initial task classification, routing decisions, and context compaction, utilize highly specialized 'System One' models that return probabilities or structured data directly, without generating explanatory text. These models are typically faster and cheaper for binary or multi-class decisions.
+
+### 5. Split the fast talker from the slow reasoner
 When building real-time interactive agents (e.g., voice assistants), architect a split where a lightweight, low-latency model handles the immediate conversational flow without complex reasoning. Delegate deeper reasoning and tool execution to a separate, potentially more capable, backend reasoning model. The application layer should explicitly orchestrate the handoff and synthesis between these two models to maintain responsiveness while performing complex tasks.
 
-### 5. Keep secrets out of model context
+### 6. Keep secrets out of model context
 To prevent sensitive information exposure, agents should never directly ingest secrets or credentials into their model context. Instead, implement a Credentials API or similar mechanism that uses placeholders for secrets, processing them via trusted-domain egress proxying to ensure they are handled securely outside the model's direct access.
 
-### 6. Benchmark models under real budget and latency
+### 7. Retrieve API keys programmatically
+Agents should not hardcode or receive API keys directly in their context. Instead, implement a secure mechanism for agents to request and retrieve necessary API keys at runtime via a dedicated utility or service, separate from their primary conversational context.
+
+### 8. Benchmark models under real budget and latency
 Relying solely on vendor-published, unconstrained benchmark scores can be misleading. To make informed routing decisions, independently verify model efficacy and cost-efficiency within the practical limitations of your operational environment and typical usage patterns.
 
-### 7. Route model selection at runtime
+### 9. Route model selection at runtime
 Integrate a dedicated router as a critical architectural component in the AI stack to dynamically triage requests to the most appropriate model from a diverse catalog. This allows for granular, runtime optimization of cost and performance, moving beyond static model assignments or pre-execution prompts to a more adaptive, system-level approach for model selection.
 
-### 8. Pin trusted providers behind a routing gateway
+### 10. Pin trusted providers behind a routing gateway
 While dynamic model routing gateways offer flexibility and cost optimization, be aware that the same logical model ID might exhibit behavioral inconsistencies (e.g., feature availability, reasoning quality, output format) when served by different underlying providers. To ensure predictable and reliable agent workflows, either explicitly select preferred providers using gateway options or implement rigorous cross-provider validation during development and testing.
 
-### 9. Run the orchestration layer on CPUs
+### 11. Run the orchestration layer on CPUs
 While high-performance accelerators are optimal for model inference and training, CPUs are ideally suited for the agentic orchestration layer. This includes managing agent state, performing semantic routing, selecting tools, and efficiently spinning up secure, isolated sandboxes for code execution. Matching these specific workloads to CPU resources optimizes cost and efficiency.
 
-### 10. Distribute subagent inference across idle machines
+### 12. Distribute subagent inference across idle machines
 Employ a Personal AI Router (PAIR) on your local network to discover and utilize idle Macs and PCs for running smaller models and executing subagent inference requests. This allows a lead agent to distribute tasks across multiple subagents, which then use these local machines for parallel model execution, scaling agentic workflows efficiently without relying solely on cloud APIs.
 
-### 11. Give agents identities that persist across sessions
+### 13. Give agents identities that persist across sessions
 Design agents with durable profiles that maintain their state, access rights, and specific roles, allowing them to participate in ongoing workflows and seamlessly hand off tasks to other agents within a shared execution environment. This shifts the unit of reusability from individual conversations to the agent's enduring identity, streamlining complex multi-agent collaborations as 'coworkers' with continuous context.
 
-### 12. Scope subagent memory explicitly
+### 14. Scope subagent memory explicitly
 When configuring persistent memory for subagents, establish explicit memory scopes (e.g., 'project', 'user', 'local'). This allows subagents to store and retrieve specific facts or learned patterns relevant to that scope across sessions, eliminating the need to re-derive common knowledge (e.g., codebase facts) repeatedly and improving efficiency and consistency.
 
-### 13. Define what good looks like before delegating
+### 15. Define what good looks like before delegating
 To minimize human oversight and rework, explicitly communicate the desired outcome and quality standards to the agent upfront. This clarifies the target state, guides the agent's execution, and reduces the manual effort required for evaluating the results and intervening when expectations are not met, making delegation more efficient.
 
-### 14. Align agent metrics with system goals
+### 16. Align agent metrics with system goals
 Avoid defining agent success criteria based on singular, narrow metrics that can lead to unintended or harmful behaviors, such as optimizing for resolution rate by prematurely closing conversations. Instead, design a 'Graph Engineering' approach where agents operate within a broader understanding of system-wide goals and interconnected outcomes, preventing optimization for the 'cheapest route' at the expense of overall value.
 
-### 15. Learn from user edits automatically
+### 17. Learn from user edits automatically
 Design agent systems to observe and learn from user modifications to their outputs, rather than solely relying on explicit feedback loops. By incorporating implicit learning from user edits, agents can continuously refine their understanding of preferences, patterns, and desired outcomes over time, leading to more personalized and effective assistance with less direct instruction.
 
-### 16. Delegate mechanical and scoped work; keep judgment in the parent
+### 18. Delegate mechanical and scoped work; keep judgment in the parent
 The parent decides *which* skills to author, *whether* a finding is real, *how* a change fits the architecture. A subagent does *"read these four files and return the DocNumber assertion location"* or *"verify each of these 12 commands runs without error and return `{command, ok, error}`."* If a subtask can be defined by a fixed input and a **structured** output, it can probably be delegated.
 
-### 17. Distill expert judgment into agent skills
+### 19. Distill expert judgment into agent skills
 This involves capturing an expert's decision-making patterns, insights, and workflows from their contributions and structuring them for agent consumption. This empowers agents to handle a broader range of nuanced decisions independently, reducing the dependency on real-time human arbitration and freeing experts for higher-level work.
 
-### 18. Give the parent a rule, not a script
+### 20. Give the parent a rule, not a script
 Tell the parent the tier table above and let it route. Vincent's version: *"use your judgement to decide an appropriate lower power model."* Prescribing which model to spawn where kills the judgment that makes delegation win.
 
-### 19. Prompt frontier models briefly, not with scripts
+### 21. Prompt frontier models briefly, not with scripts
 For the latest frontier models, minimize prompt instructions by focusing only on the high-level objective, implicitly trusting the model's inherent ability to orchestrate complex tasks via subagents. This leverages advanced model capabilities for workflow generation and avoids hobbling them with excessive detail designed for weaker models.
 
-### 20. Orchestrate multiple subagents in parallel for complex tasks.
+### 22. Orchestrate multiple subagents in parallel for complex tasks.
 For highly demanding tasks, leverage the frontier model to coordinate several subagents working simultaneously on distinct workstreams. This approach, exemplified by 'ultra' effort levels, trades higher token usage for potentially stronger results and faster time-to-result, moving beyond simple sequential delegation.
 
-### 21. Track multi-stage workflows with a state machine
+### 23. Track multi-stage workflows with a state machine
 For tasks requiring distinct, sequential steps (e.g., bug triage: reproduce, diagnose, verify, fix), delegate each stage to a specialized subagent. Orchestrate these stages via an explicit state machine (e.g., using GitHub labels) to provide transparent progress tracking and coordination across the workflow, enabling a structured hand-off between subagents.
 
-### 22. Delegate multi-tool work in natural language
+### 24. Run continuous agentic project loops
+Design agent systems to operate in continuous loops, autonomously identifying, planning, and executing work towards a broad, defined goal. The agent system should audit project definitions, track metrics, add new tasks, update existing tasks, and work on non-blocked items, iterating until the goal is met or revised.
+
+### 25. Delegate multi-tool work in natural language
 To streamline user interaction and maximize agent autonomy, allow users to delegate multi-step, multi-tool tasks through a single, continuous natural language conversation. This requires agent interfaces that can interpret voice commands, understand screen context, and directly operate the computer to execute actions across various applications without manual intervention.
 
-### 23. Maintain continuous user interaction by delegating long-running tasks to background subagents.
+### 26. Maintain continuous user interaction by delegating long-running tasks to background subagents.
 When a task requires deeper reasoning or web search, delegate it to a subagent to execute in the background. The parent model should simultaneously maintain an active, continuous conversation with the user, filling pauses, acknowledging input, or providing status updates to manage user expectations. This prevents user idle time and improves conversational flow.
 
-### 24. Utilize persistent, cloud-hosted execution environments for long-running or unsupervised subagent tasks.
+### 27. Utilize persistent, cloud-hosted execution environments for long-running or unsupervised subagent tasks.
 To support subagents that need to operate continuously or without direct human supervision, deploy them in secure, persistent cloud development environments. This ensures tasks can progress even when the initiating local machine is offline and provides a reliable, scalable foundation for persistent agent work that transcends local sessions.
 
-### 25. Depth cap: 2. Team cap: small.
+### 28. Depth cap: 2. Team cap: small.
 One subagent tier under the parent — no nesting further. Depth-3+ orchestrations compound spawn overhead and lose reviewability. Small teams (≤ ~5 concurrent) match Anthropic's Claude Code cost docs: *"keep teams small, shut down teammates when they are done."*
 
-### 26. Shutdown discipline
+### 29. Shutdown discipline
 Every subagent shuts down as soon as its structured return lands in the parent. Long-lived teammates burn tokens and drift; short-lived ones are what make the economics work.
 
-### 27. Structured returns, never free-form prose
+### 30. Structured returns, never free-form prose
 Subagents return JSON or terse markdown against a small schema the parent can review at a glance. Free-form returns force the parent to re-read the raw material the subagent already consumed — that defeats the whole point of delegating.
 
-### 28. Standardize the cross-session recap
+### 31. Standardize the cross-session recap
 For complex or long-running tasks involving multiple parallel agent sessions, define a structured recap skill that requires agents to report key information. This should include the original goal, current status with verifiable evidence, clear identification of blocked-on-person vs. blocked-on-technical issues, and explicit next steps with ownership (agent vs. human), ensuring efficient human review and collaboration.
 
-### 29. Never delegate the judgment layer
+### 32. Never delegate the judgment layer
 The parent keeps: authoring decisions, drop / merge / route decisions, the final synthesis, and anything touching money movement, prod writes, deletes, or outbound comms. Subagents produce inputs to the parent's judgment; they never *perform* it.
 
-### 30. Log the delegation trail
+### 33. Log the delegation trail
 Record each spawn: subagent model, task summary, structured return. That's what makes the tree auditable, and what lets you retro whether the delegation ratio is actually cost-effective for this repo instead of a comforting story.
 
-### 31. Keep the pre-compaction context for audit
+### 34. Keep the pre-compaction context for audit
 To maintain transparency and facilitate debugging in LLM systems, especially those employing context compaction, always retain the full, original (pre-compacted) interaction history and context. This raw data should be accessible via agent tool calls or a dedicated logging mechanism, allowing maintainers to reconstruct the agent's thought process and diagnose issues even after context windows have been optimized.
 
-### 32. Execute delegated agent tasks within ephemeral, isolated sandboxes.
+### 35. Execute delegated agent tasks within ephemeral, isolated sandboxes.
 Implement isolated, agent-native compute environments, such as microVMs or perpetual sandboxes, for all delegated tasks. This ensures security by preventing sandbox escapes and provides a resilient environment for agents to investigate and fix issues without compromising internal systems, even for long-running or exploratory work.
 
-### 33. Give each parallel subagent its own worktree
+### 36. Give each parallel subagent its own worktree
 When orchestrating multiple subagents in parallel, ensure each agent operates within its own deeply isolated environment. This extends beyond a simple code sandbox to include a unique git worktree and dedicated runtime infrastructure (e.g., staging environments, databases), preventing resource contention and enabling true parallel development.
 
-### 34. Give each subagent a scale-to-zero database
+### 37. Give each subagent a scale-to-zero database
 To prevent database sprawl and manage costs when running fleets of AI agents, each agent requiring state or storage should be allocated its own serverless, multitenant database instance. These instances should scale to zero when idle, ensuring efficient resource utilization and isolated data layers for each agent.
 
-### 35. Watch for spawn-overhead-dominates
+### 38. Watch for spawn-overhead-dominates
 Every subagent spawn has fixed cost (context load, prompt, roundtrip). For very small tasks — *does this file exist* — inline is cheaper than delegating. Rule of thumb: if the task's own tokens are less than about 10× the spawn overhead, do it inline in the parent.
 
-### 36. Swap on purpose, for cost
+### 39. Swap on purpose, for cost
 Anthropic's safety mechanism swaps a Fable session to a lower tier when it detects unsafe content. Paweł Huryn's inversion (digest 2026-06-11): *"we can swap on purpose, for cost."* Explicitly drop the session tier when the remaining work is mechanical; explicitly raise it before the next judgment-heavy stretch.
 
-### 37. Utilize automated skills for runtime, iterative cost optimization of API calls.
+### 40. Utilize automated skills for runtime, iterative cost optimization of API calls.
 Implement or leverage dedicated skills that can automatically measure current API spend and iteratively explore different cost-saving strategies such as caching, batching, adjusting effort levels, or swapping models. These skills should measure the impact of each change, providing data-driven, runtime optimization to continuously manage token consumption and API costs.
 
-### 38. Use lowest-effort models for initial drafts to enable cost-effective iterative refinement.
+### 41. Use lowest-effort models for initial drafts to enable cost-effective iterative refinement.
 Start with a low-effort model to generate a first draft of complex artifacts like spreadsheets or presentations. Reviewing this initial output helps clarify the specific problems and areas requiring higher-cost judgment, ensuring expensive tokens are spent only after the problem is well-understood. This approach makes iterations cheaper and more useful for problem discovery.
 
-### 39. The model-picker prompt — classify before executing
+### 42. The model-picker prompt — classify before executing
 Nate Jones' habit-forming prompt makes classification automatic. Paste it into any chat window for a routing call *before* you start the real work:
 
     I need to choose the right AI tool for this task.
@@ -199,13 +208,13 @@ Nate Jones' habit-forming prompt makes classification automatic. Paste it into a
 
 Quoted with attribution from Nate Jones, *"Stop paying frontier prices…"* (paid), [natesnewsletter.substack.com/p/which-ai-model-to-use](https://natesnewsletter.substack.com/p/which-ai-model-to-use). **Why it works:** it forces classification *before* execution — the habit that closes the money leak.
 
-### 40. Test the cheap route on your own work
+### 43. Test the cheap route on your own work
 Benchmarks tell you a model deserves attention; only *your* work tells you whether it should run your proposal workflow, codebase, or research process. Jones' protocol:
 
 -   **30-minute version.** Pick one recurring artifact. Run it through your daily driver *and* one cheaper route. Time the review. Mark the output usable / repairable / rejected. Write down the failure mode (missed facts, flattened voice, lost structure, hallucination, or basically-right-but-slow-to-clean).
 -   **One-week version.** Choose five recurring artifacts. Test each twice. Track model, source material, review minutes, accepted output, sensitive-data constraint, and failure mode. Promote the cheap route only where **review stays cheap** — *"a cheap model that saves money and doubles review time is expensive."*
 
-### 41. Keep context portable; separate personal memory from job context
+### 44. Keep context portable; separate personal memory from job context
 Every model has its own private history with you (Claude remembers one thing, ChatGPT another, your coding agent knows the repo for a while, your image tool knows the prompt but not the project). If all of that stays separated by product, you become the router by hand — which is exhausting. Jones' split:
 
 -   **Personal memory** — preferences, taste, standards, recurring projects.
@@ -213,37 +222,40 @@ Every model has its own private history with you (Claude remembers one thing, Ch
 
 The more job context lives in files, folders, search, embeddings, project notes, and harnesses — not in one product's memory — the less any single model's memory dictates routing. *"Give a bounded worker the right packet of context."* Rent the intelligence you need; keep the context that makes the work yours.
 
-### 42. Audit provider independence regularly
+### 45. Audit provider independence regularly
 Systematically evaluate your agentic workflows and accumulated working context for portability across different AI providers. Periodically perform a 'Provider Independence Audit' using a set of standardized prompts and tests on a real project to determine if another AI could successfully continue the work, ensuring you can switch providers if needed due to changes in cost, policy, or capabilities.
 
-### 43. Pre-compile raw context data into a structured knowledge base for agents.
+### 46. Pre-compile raw context data into a structured knowledge base for agents.
 Before agents operate on raw information, implement a pre-processing step using an LLM to compile it into a structured, queryable knowledge representation (e.g., a wiki with summaries and backlinks). This 'context compilation' improves agent reliability by ensuring they reason over organized, precise context, not unstructured raw data, which is critical for overcoming agent reliability bottlenecks.
 
-### 44. Drop negative constraints and example padding
+### 47. Drop negative constraints and example padding
 Modern frontier models often perform better with concise, clear instructions rather than long lists of 'don't do X' or numerous examples. Such negative constraints and over-specification can sometimes reduce the quality of results from the latest models. Focus on conveying the desired outcome directly.
 
-### 45. Dynamically filter context for subagents based on the current task objective.
+### 48. Dynamically filter context for subagents based on the current task objective.
 Avoid context bloat by ensuring tools, skills, and plugins are only passed to the subagent when directly relevant to its immediate, bounded objective within a multi-step workflow, optimizing for efficiency.
 
-### 46. Implement adaptive context management to preserve and compact reasoning state across requests.
+### 49. Implement adaptive context management to preserve and compact reasoning state across requests.
 For complex, long-running agentic workflows, design the system to preserve opaque reasoning states between individual model requests. Utilize context compaction techniques to allow the model to reuse prior internal thinking and work, significantly improving performance and cost-efficiency over extended conversations.
 
-### 47. Implement robust access controls and permissions for data retrieved by agents.
+### 50. Implement robust access controls and permissions for data retrieved by agents.
 Ensure agents only access and reason over data for which the requesting user is explicitly authorized, integrating role-based access controls (RBAC) into the agent's data retrieval mechanisms to maintain security and compliance.
 
-### 48. Provide user-configurable interfaces for managing agent authorization and safety rules.
+### 51. Provide user-configurable interfaces for managing agent authorization and safety rules.
 Instead of relying on hard-coded logic, implement user-editable interfaces (e.g., a permissions tab) for defining and modifying 'allow', 'soft_deny', and 'hard_deny' rules for auto-mode classifiers. This enhances transparency, auditability, and dynamic control over probabilistic agent actions and access permissions, allowing for adaptive policy management.
 
-### 49. Delegate the verification of task completion to a separate, typically cheaper, subagent.
+### 52. Delegate the verification of task completion to a separate, typically cheaper, subagent.
 After a working subagent completes its assigned work, route the output and the defined completion condition to a smaller, faster model (e.g., Haiku) that acts as an independent verifier, preventing the working agent from 'grading its own homework'.
 
-### 50. Verify subjective output by visual comparison
+### 53. Build rich runtimes for agent verification
+Beyond delegating verification to a subagent, treat the underlying runtime as critical infrastructure. Provide a rich, inspectable execution environment that agents can drive, query, and receive structured answers from, enabling autonomous, iterative self-correction until tasks are complete and verified with high confidence.
+
+### 54. Verify subjective output by visual comparison
 When agents produce visual or generated artifacts where 'technically correct' may not equate to 'looks right,' use tools like Playwright to capture screenshots from predetermined viewpoints. Compare these visual outputs against known good examples or real-world references to detect subtle qualitative flaws that traditional tests might miss. This augments delegated verification by adding a visual, human-interpretable layer.
 
-### 51. Employ 'context-blind' subagents for unbiased adversarial pre-review of generated artifacts.
+### 55. Employ 'context-blind' subagents for unbiased adversarial pre-review of generated artifacts.
 When delegating verification of complex agent-generated outputs, such as code or designs, deploy a specialized subagent that is deliberately 'context-blind.' This ensures the review is unbiased, as the subagent evaluates the artifact purely on its merits and adherence to general principles or external standards, rather than being influenced by the generating agent's internal reasoning or process.
 
-### 52. Split critical work across different frontier models
+### 56. Split critical work across different frontier models
 One human can focus on test generation to highlight issues, while another implements fixes. Simultaneously, engage coding agents running different frontier models to contribute, ensuring multiple perspectives (human and AI) review each issue, particularly for high-stakes problem-solving like security audits.
 
 ## Anti-Patterns
@@ -270,6 +282,10 @@ Use [`reviews/model-hierarchy-review.md`](../../reviews/model-hierarchy.md) to h
 
 Saved articles synthesized here (full summaries in `data/digest_knowledge/`), and the Claude Code team's own guidance:
 
+-   **llm-keys-ui 0.1** (Simon Willison [ai_engineering]) — Agents should not hardcode or receive API keys directly in their context. Instead, implement a secure mechanism for agents to request and retrieve necessary API keys at runtime via a dedicated utility or service, separate from their primary conversational context. Digest: 2026-09-21.
+-   **TypeSafe Shipped a Model That Never Writes a Word. Here’s the Decision-Layer Playbook** (Ruben Dominguez (The AI Corner) [ai_strategy]) — For initial task classification, routing decisions, and context compaction, utilize highly specialized 'System One' models that return probabilities or structured data directly, without generating explanatory text. These models are typically faster and cheaper for binary or multi-class decisions. Digest: 2026-09-20.
+-   **Trying the Software factory pattern.** (Will Larson (Irrational Exuberance) [eng_management]) — Design agent systems to operate in continuous loops, autonomously identifying, planning, and executing work towards a broad, defined goal. The agent system should audit project definitions, track metrics, add new tasks, update existing tasks, and work on non-blocked items, iterating until the goal is met or revised. Digest: 2026-09-20.
+-   **One engineer shipped 2,000 PRs a month to production. Verification is the key.** (The New Stack [devops]) — Beyond delegating verification to a subagent, treat the underlying runtime as critical infrastructure. Provide a rich, inspectable execution environment that agents can drive, query, and receive structured answers from, enabling autonomous, iterative self-correction until tasks are complete and verified with high confidence. Digest: 2026-09-19.
 -   **[AINews] not much happened today** (Latent Space [ai_engineering]) — Secure agent credentials by keeping secrets out of model context through the use of placeholders and trusted-domain egress proxying. Digest: 2026-09-18.
 -   **[AINews] Jev: a “System One Model” that only decides/classifies/routes/scores — >100x faster, >200x cheaper than small frontier LLMs** (Latent Space [ai_engineering]) — Leverage specialized 'System One' models for initial task classification and routing decisions. Digest: 2026-09-16.
 -   **OpenAI’s voice model doesn’t think. That’s the point.** (The New Stack [devops]) — For real-time interactive agents, split conversational and complex reasoning duties between a low-latency interaction model and a dedicated backend reasoning model, with orchestration managed at the application layer. Digest: 2026-09-16.

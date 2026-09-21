@@ -323,6 +323,48 @@ def _load_inbox_posts(archive: dict) -> list[dict]:
     return posts
 
 
+# The structure the prompt below asks for, as a response schema (see _analyze_posts).
+_STR = {"type": "STRING"}
+ANALYSIS_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "top_posts": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "title": _STR, "source": _STR, "url": _STR,
+                    "relevance_score": {"type": "INTEGER"},
+                    "summary": _STR, "why_relevant": _STR,
+                },
+                "required": ["title", "source", "url", "relevance_score",
+                             "summary", "why_relevant"],
+                "property_ordering": ["title", "source", "url", "relevance_score",
+                                      "summary", "why_relevant"],
+            },
+        },
+        "project_recommendations": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "title": _STR, "recommendation": _STR, "inspired_by": _STR,
+                    "effort": {"type": "STRING", "enum": ["small", "medium", "large"]},
+                    "impact": _STR, "where_it_fits": _STR, "first_step": _STR,
+                    "risks": _STR,
+                },
+                "required": ["title", "recommendation", "inspired_by", "effort",
+                             "impact", "where_it_fits", "first_step", "risks"],
+                "property_ordering": ["title", "recommendation", "inspired_by", "effort",
+                                      "impact", "where_it_fits", "first_step", "risks"],
+            },
+        },
+    },
+    "required": ["top_posts", "project_recommendations"],
+    "property_ordering": ["top_posts", "project_recommendations"],
+}
+
+
 def _analyze_posts(posts: list[dict], context_prompt: str,
                    project_name: str) -> Optional[dict]:
     if not posts:
@@ -385,7 +427,13 @@ Rules:
     # JSON" instruction. On 2026-09-04 the crumbl-ops context came back malformed at
     # char 7885 and failed the whole weekly digest; the same fix is already house
     # practice in command-center's agents/shared/gemini_client.py for the same reason.
-    config = {"response_mime_type": "application/json"}
+    #
+    # JSON mode alone was not enough: on 2026-09-18 the wealth-mgmt response was a
+    # complete 11,906-char object that still broke mid-string at char 1870, the shape
+    # of an unescaped quote inside a value. A response schema switches Gemini to
+    # constrained decoding, which cannot emit that.
+    config = {"response_mime_type": "application/json",
+              "response_schema": ANALYSIS_SCHEMA}
 
     # One retry. A malformed response is a sampling accident, not a deterministic
     # failure, and the cost of the retry is one Flash call against a weekly job whose

@@ -41,6 +41,7 @@ Three places a fact can live, by scope:
 -   **Plan in the cloud, touch secrets on-premises.** To meet compliance and security requirements for sensitive data, separate cloud-based agent inference and planning from the execution of tool calls and interaction with internal services. This ensures that sensitive context, such as source code or secrets, remains within controlled, on-premises infrastructure.
 -   **Split tasks at a privacy gate.** Utilize a 'Privacy Gate' (running locally) to identify and keep sensitive information on the user's device. This allows for dynamic splitting of complex agent tasks, with non-sensitive parts processed by powerful cloud models and sensitive portions handled by smaller local models, balancing privacy, performance, and cost.
 -   **Test memory fidelity when migrating platforms.** When transitioning agents, it is crucial to preserve not only explicit memory tiers but also the subtle behavioral nuances and learned patterns that constitute an agent's 'personality' and 'routines'. This ensures consistent performance and avoids loss of efficiency or undesirable behavioral shifts post-migration, maintaining the agent's operational integrity.
+-   **Agents manage project goals via task system.** Design agents to operate within a common task management system, treating project goals and issues as dynamic, persistent context. Agents should audit goal definitions, review metrics, add new work, update task states, and prioritize unblocked items, driving the project forward in a continuous loop.
 
 ## Retrieval Contracts (Sources of Truth)
 
@@ -82,6 +83,7 @@ Format: pre-assembled markdown brief, newest-first, each fact tagged with its so
 -   **Return named objects, not positional arrays.** To prevent 'weaker models' from losing track of data, ensure that structured outputs from tools or retrieval processes are provided as arrays of named objects (e.g., JSON objects with keys) rather than simple positional arrays. This explicit naming convention significantly improves model comprehension and reliability.
 -   **Route agent tool access through one control plane.** Modern enterprises face 'AI leakage' where siloed agents operate on fragmented information from disparate systems (e.g., CRM, ERP, FSM). A control plane ensures agents can coalesce capabilities and data from multiple trusted sources, providing a comprehensive context and preventing information fragmentation across operational tasks.
 -   **Separate agent analysis from human decisions.** Agents excel at data gathering, pattern recognition, and synthesizing information ('analysis'), but critical decisions often require human oversight ('judgment'). Define agent contracts and context assembly to support the agent's analytical role while explicitly reserving and facilitating human judgment for high-stakes decisions, preventing the blurring of these roles.
+-   **Provide business context for prioritization.** Agents often need to prioritize tasks, such as triaging security vulnerabilities or feature requests. Ensure agents have access to critical business context, including impact, urgency, and resource implications, rather than relying solely on technical severity. This enables more accurate and effective prioritization decisions.
 
 ### Context Lake Architecture
 
@@ -125,6 +127,7 @@ The asymmetry drives the rule: a paragraph in root `CLAUDE.md` is paid in every 
 -   **Preserve reasoning state between requests.** Beyond explicit context, an effective harness should maintain the model's internal 'opaque reasoning state' across turns, especially for long-running tasks. This allows the model to resume its internal thought process without reconstruction, enhancing performance and reducing token cost for complex reasoning.
 -   **Manage the quadratic history tax.** LLM APIs are stateless, so the entire session history must be resent with each API call, causing a compounding 'quadratic history tax' where previous model outputs are re-billed as inputs. Implement strategies to aggressively compact or summarize history, especially when output tokens are significantly more expensive than inputs, to optimize token consumption.
 -   **Route subagent inference to idle local machines.** To scale subagent usage and reduce cloud costs, use a virtual inference router to discover and orchestrate local idle machines (Macs, PCs). This router directs subagent model requests to available local compute, allowing a lead agent to parallelize tasks while keeping inference geographically closer and potentially free.
+-   **Use decision-layer models for discrete choices.** Agents often make discrete choices mid-workflow. Employ non-generative "System One" models, which provide probabilistic answers from typed questions, to make these decisions rapidly and cost-effectively. This avoids using expensive generative models for simple decision points and requires context structured for direct query and classification.
 
 ## Training the Always-Loaded File (the Backward Pass)
 
@@ -218,6 +221,8 @@ When surfaced context is **AI-generated** (a model-written summary, a classifica
 -   **Defend against ASCII smuggling in context.** Attackers are using invisible Unicode tag characters to split keywords, bypassing filters and altering how LLM tokenizers parse text. This technique, sometimes called ASCII Smuggling, creates a mismatch between human-readable and software-processed text, demanding explicit protection for context integrity.
 -   **Sanitize tool descriptions, not just user input.** Attackers can exploit agents by embedding malicious instructions within seemingly benign context, such as public issue descriptions or unsanitized user input. Treat all incoming context, including tool documentation, as potentially hostile and validate it to prevent agents from misinterpreting text as executable commands or privileged instructions.
 -   **Gate high-risk capabilities behind an access program.** Extend access control beyond data to include specialized agent capabilities or models that pose higher risks, such as those performing vulnerability detection or automated patching. Restrict access to these powerful tools to a vetted group of 'trusted defenders' to ensure responsible and secure deployment.
+-   **Record agent internal monologue for debugging.** When agents fail without obvious errors, standard logs are insufficient. Implement mechanisms within the harness to record and analyze the agent's internal monologue, plans, and execution path. This visibility helps diagnose "creative" failures where an agent progresses but deviates from the desired outcome.
+-   **Agents verify code using a runtime.** Integrate a robust runtime environment into the agent's harness, allowing it to execute, inspect, and receive structured answers from its own generated code or plans. This "verification skill" enables agents to autonomously check their work, iterate on changes, and ensure correctness, significantly increasing throughput for agent-driven development.
 
 ## Enforcement (the frontier)
 
@@ -383,6 +388,11 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 -   **Claude Code now reads AGENTS.md if there is no Claude.md** (Hacker News) — architect a top-level coordinator agent for parallel work streams. Digest: 2026-09-19.
 -   **Code review is burning out your best engineers** (The New Stack) — mandate agents generating code to include their underlying reasoning and design choices in the output. Digest: 2026-09-18.
 -   **AWS agents will suggest your new flights. Code decides what gets booked.** (The New Stack) — implement a 'propose-then-validate' operational pattern for AI agents. Digest: 2026-09-16.
+-   **One engineer shipped 2,000 PRs a month to production. Verification is the key.** (The New Stack) — Agents verify code using a runtime. Digest: 2026-09-19.
+-   **Your AI agent failed. The model might not be the problem.** (The New Stack) — Record agent internal monologue for debugging. Digest: 2026-09-20.
+-   **Trying the Software factory pattern.** (Will Larson (Irrational Exuberance)) — Agents manage project goals via task system. Digest: 2026-09-20.
+-   **TypeSafe Shipped a Model That Never Writes a Word. Here’s the Decision-Layer Playbook** (Ruben Dominguez (The AI Corner)) — Use decision-layer models for discrete choices. Digest: 2026-09-20.
+-   **The critical vulnerability was a test database. That’s the whole triage problem.** (The New Stack) — Provide business context for prioritization. Digest: 2026-09-17.
 
 ## Where Used
 

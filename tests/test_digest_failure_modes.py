@@ -20,7 +20,7 @@ import pytest
 
 from digest import ai_digest
 
-CONTEXT = ["--context", "digest/config/context-command-center.yaml", "--days", "7"]
+CONTEXT = ["--context", "digest/config/context-crumbl-ops.yaml", "--days", "7"]
 RECENT = time.gmtime(time.time() - 3600)
 OLD = time.gmtime(time.time() - 400 * 86400)
 
@@ -273,6 +273,18 @@ def test_the_api_is_asked_for_json_not_just_the_prompt(monkeypatch):
     monkeypatch.setattr(ai_digest, "_get_gemini_client", lambda: rec)
     ai_digest._analyze_posts(POSTS, "ctx", "proj")
     assert rec.calls[0]["config"]["response_mime_type"] == "application/json"
+
+
+def test_the_api_is_given_a_schema_matching_what_the_email_reads(monkeypatch):
+    """JSON mode without a schema still broke mid-string on 9/18 (unescaped quote)."""
+    rec = _Recorder(GOOD)
+    monkeypatch.setattr(ai_digest, "_get_gemini_client", lambda: rec)
+    ai_digest._analyze_posts(POSTS, "ctx", "proj")
+    schema = rec.calls[0]["config"]["response_schema"]
+    post = schema["properties"]["top_posts"]["items"]
+    # _build_email indexes these keys directly, so every one must be required.
+    for key in ("relevance_score", "title", "source", "summary", "why_relevant", "url"):
+        assert key in post["required"], key
 
 
 # --- the hang guard -----------------------------------------------------

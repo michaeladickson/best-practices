@@ -53,8 +53,14 @@ Three digests, each targeted at a specific repo. Every digest:
 
 The full pipeline runs locally as Windows Task Scheduler task `CC-WeeklyDigest`,
 not in GitHub Actions. Reasons: avoids storing a cross-repo PAT in this public
-repo, and uses local `gh` auth to file issues across crumbl-ops, command-center,
-wealth-mgmt.
+repo, and uses local `gh` auth to file issues in crumbl-ops and wealth-mgmt (and
+failure alerts in command-center).
+
+**Exit status:** 1 only when the run delivered nothing (no digest email and no
+practice-doc update). A partial failure (one context down, a blocked practice doc)
+exits 0 and is carried by an open `Weekly digest: partial failure` issue in
+command-center, commented on each week it recurs. A red task used to mean "one
+sub-step failed" 3 weeks in 4 while the emails went out, so it stopped meaning anything.
 
 ```powershell
 # One-time registration:
@@ -63,7 +69,7 @@ powershell -ExecutionPolicy Bypass -File scripts/register_weekly_digest.ps1
 
 The wrapper at `scripts/run_weekly_digest.sh`:
 1. Pulls `gemini-api-key` and `smtp-password` from GCP Secret Manager (project `hybrid-elysium-471814-p2`)
-2. Runs all three digests via WSL bash
+2. Runs both digests (crumbl-ops, wealth-mgmt) via WSL bash. The command-center context was retired 2026-09-21: its idea issues closed with no action in most weeks, so each run only created a triage chore
 3. Creates GitHub issues in target repos using local `gh` auth
 4. Auto-updates the living practice docs from the same week's articles (`python -m digest.practice_updater`) — see below
 5. Commits and pushes the new knowledge files + any practice-doc updates back to `origin/main` (two separate `[automated]` commits)
@@ -99,7 +105,7 @@ Drop a video transcript, pasted article, or PDF-as-text into `data/digest_inbox/
 (gitignored — content may be copyrighted or private) as a `.md` with frontmatter
 `title:` and `source_url:` (optional `date:`, `source:`, `category:`). The next
 digest run scores it alongside feed posts for every context; the wrapper moves it
-to `processed/` after all three succeed. The archive dedups by `source_url`.
+to `processed/` after every context succeeds. The archive dedups by `source_url`.
 Citation-discovery issues that end "no feed — check manually" route here too.
 
 ### Manual / dev runs
@@ -110,7 +116,6 @@ pip install -r digest/requirements.txt
 
 # Dry-run any context
 python -m digest --context digest/config/context-crumbl-ops.yaml --dry-run
-python -m digest --context digest/config/context-command-center.yaml --dry-run
 python -m digest --context digest/config/context-wealth-mgmt.yaml --dry-run
 
 # Preview the practice-doc auto-update (shows diffs, writes nothing, touches no ledger)
@@ -146,7 +151,6 @@ there dies silently (the WM-WeeklyDigest lesson).
 
 - `digest/config/feeds.yaml` — All RSS feed sources
 - `digest/config/context-crumbl-ops.yaml` — Crumbl-ops digest (target: `michaeladickson/crumbl-ops`)
-- `digest/config/context-command-center.yaml` — Command-center digest (target: `michaeladickson/command-center`)
 - `digest/config/context-wealth-mgmt.yaml` — Wealth-mgmt digest (target: `michaeladickson/wealth-mgmt`)
 - `digest/config/practice-docs.yaml` — Living docs the weekly run auto-edits (topic, scope, keyword prefilter, required anchors)
 - Secrets: pulled from GCP Secret Manager at runtime; no `.env` in this public repo
