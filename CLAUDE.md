@@ -75,6 +75,9 @@ Each weekly run also feeds the week's archived articles to `digest/practice_upda
 which **auto-edits** the living practice docs in place:
 - `practices/claude-code/context-memory-management.md`
 - `practices/claude-code/code-review-and-ai-slop.md`
+- `practices/ai-safety/agent-action-safety.md`
+- `practices/ai/llm-evaluation.md`
+- `practices/claude-code/model-hierarchy-delegation.md`
 
 Config is `digest/config/practice-docs.yaml` (topic, scope, keyword prefilter, required
 anchors). Guardrails, since this also edits the anti-slop doc itself:
@@ -84,6 +87,10 @@ anchors). Guardrails, since this also edits the anti-slop doc itself:
 - **Structural validation before write** — H1 + required anchors (`## Sources`,
   `## Where Used`) must survive and length must stay in bounds, else the write is
   rejected and the doc is left untouched (retries next week). Git history is the backstop.
+- **Practice titles capped at 12 words** (`MAX_PRACTICE_TITLE_WORDS`) — both prompts
+  ask for the short hand-written register and the validator rejects any edit that adds
+  a longer one. New-only, so the 151 pre-existing long titles do not block future runs;
+  they need a human backfill pass.
 - Most weeks change nothing. Review the `[automated]` practice commits like any other diff.
 
 ### One-off inputs (digest inbox)

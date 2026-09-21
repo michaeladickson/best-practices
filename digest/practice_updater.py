@@ -63,6 +63,19 @@ MAX_LEN_RATIO = 2.5
 MAX_DOC_BYTES = 70_000
 NEAR_CAP_RATIO = 0.85
 
+# Practice titles must read like the hand-written ones ("Prune the toolkit",
+# "Keep diffs small and scoped"), not like the model's default register
+# ("Leverage integrated, multiplayer supervision environments that provide
+# real-time visibility into an AI agent's plans, diffs, and execution for
+# effective human oversight and intervention" — a real heading this job added).
+# Measured 2026-09-20 on code-review-and-ai-slop.md: 49 practices, hand-written
+# ones 3-8 words, auto-added ones 20-28, median 15, and 26/49 over this cap.
+# The doc is the anti-slop reference, so its own headings being slop is the
+# failure the prompt alone did not prevent — the prompt asked for "one-line
+# imperative", which consultant-ese satisfies. New-only, like the other
+# structural guards: the 26 legacy offenders must not reject every future run.
+MAX_PRACTICE_TITLE_WORDS = 12
+
 
 def _load_doc_config(path: Optional[str] = None) -> tuple[list[dict], list[str]]:
     p = Path(path) if path else CONFIG_DIR / "practice-docs.yaml"
@@ -167,7 +180,7 @@ Return a JSON object:
 {{
   "candidates": [
     {{
-      "practice": "One-line imperative best practice (concrete, actionable).",
+      "practice": "Imperative practice title, MAX 12 WORDS. See title rules below.",
       "detail": "2-3 sentences a maintainer can paste into the doc body.",
       "source_title": "exact article title",
       "source_name": "publication/author",
@@ -178,6 +191,21 @@ Return a JSON object:
     }}
   ]
 }}
+
+Title rules (the document is an anti-slop reference; its own headings must not read
+like AI output):
+- HARD LIMIT 12 words. Aim for 4-8. A title over 12 words is rejected outright.
+- Write like these real titles from the doc: "Prune the toolkit", "Keep diffs small
+  and scoped", "Stop the self-correction spiral", "Make the agent defend its
+  reasoning", "Name an owner for every deployed agent".
+- NOT like this (a real heading this job wrongly added): "Leverage integrated,
+  multiplayer supervision environments that provide real-time visibility into an AI
+  agent's plans, diffs, and execution for effective human oversight and intervention".
+- Ban the consultant register in the title: "leverage", "utilize", "facilitate",
+  "robust", "comprehensive", "holistic", "seamless", "rigorous", "proactive",
+  "in order to", "ensuring", "enabling". Say the plain verb instead.
+- No trailing period. Plain verb + object. Put every qualification in "detail",
+  never in the title.
 
 Rules:
 - Only include high or medium confidence items. Drop low-confidence ones.
@@ -235,6 +263,12 @@ Editing rules — follow exactly:
   anti-pattern table if it fits, and/or refine an adjacent existing practice.
   Keep numbering consistent.
 - Be surgical and concise. Do not pad. Match the existing formatting exactly.
+- **Practice titles: 12 words maximum, no trailing period.** Use the candidate's
+  "practice" field as the heading; if it exceeds 12 words, shorten it to a plain
+  verb-and-object phrase and move the qualifications into the body. Match the short
+  register of the existing hand-written headings. An over-long title fails validation
+  and the whole edit is discarded. Do NOT rewrite existing over-long headings as part
+  of this — leave them byte-for-byte per the no-cosmetic-churn rule.
 - For EVERY article you draw from — whether it produces a new numbered practice
   OR a Sources-only addition — append a matching bullet to the "## Sources"
   section in the existing format: **Title** (source) — one phrase. Digest: YYYY-MM-DD.
@@ -317,6 +351,12 @@ def _duplicate_heading_pairs(text: str) -> list[tuple[str, str]]:
     return pairs
 
 
+def _overlong_titles(text: str) -> set[str]:
+    """Practice titles longer than MAX_PRACTICE_TITLE_WORDS words."""
+    return {t for t in _practice_titles(text)
+            if len(t.split()) > MAX_PRACTICE_TITLE_WORDS}
+
+
 def _validate(old: str, new: str, required_anchors: list[str]) -> tuple[bool, str]:
     if not new or not new.strip():
         return False, "empty response"
@@ -345,6 +385,11 @@ def _validate(old: str, new: str, required_anchors: list[str]) -> tuple[bool, st
     if fresh_dupes:
         h1, h2 = next(iter(fresh_dupes))
         return False, f"new duplicate practice heading: {h1!r} vs {h2!r}"
+    fresh_long = _overlong_titles(new) - _overlong_titles(old)
+    if fresh_long:
+        t = next(iter(fresh_long))
+        return False, (f"new practice title over {MAX_PRACTICE_TITLE_WORDS} words "
+                       f"({len(t.split())}): {t!r}")
     return True, "ok"
 
 
