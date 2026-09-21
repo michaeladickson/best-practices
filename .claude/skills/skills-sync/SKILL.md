@@ -1,7 +1,7 @@
 ---
 name: skills-sync
 description: Weekly cross-repo scan of Claude skill changes across best-practices, crumbl-ops, command-center, and wealth-mgmt. Detects .claude/skills/ commits since the last run, judges which changes are portable patterns vs repo-specific content, and opens one adapted [skills-sync] PR per target repo. Run weekly by the weekly-skills-sync scheduled task, or manually anytime.
-user_invocable: true
+user-invocable: true
 ---
 
 # /skills-sync — Cross-Repo Skills Sync
@@ -125,7 +125,63 @@ Source commits covered:
 
 "Source commits covered" is the dedup key for future runs — always list every assessed commit, even when everything landed in "not ported".
 
-### 5. Close out
+### 5. Frontmatter lint — every run, including a quiet week
+
+Runs whether or not step 1 found candidate commits. It checks what is *on disk now*, not
+what changed, because both failures it catches are silent and arrive by being copied.
+
+```bash
+python - <<'EOF'
+import glob, io, os, yaml
+OK = {"name","description","when_to_use","argument-hint","arguments",
+      "disable-model-invocation","user-invocable","allowed-tools","disallowed-tools",
+      "model","effort","context","agent","background","hooks","paths","shell",
+      "metadata","license","compatibility"}
+for r in ["C:/Users/micha/best-practices","C:/Users/micha/crumbl-ops",
+          "C:/Users/micha/command-center","C:/Users/micha/wealth-mgmt"]:
+    for f in glob.glob(os.path.join(r,".claude","skills","**","SKILL.md"), recursive=True):
+        s = io.open(f, encoding="utf-8", errors="replace").read()
+        if not s.startswith("---"):
+            print("NO FRONTMATTER", f); continue
+        try:
+            d = yaml.safe_load(s.split("---",2)[1]) or {}
+        except Exception as e:
+            print("INVALID YAML  ", f, "--", str(e).splitlines()[0]); continue
+        for k in d:
+            if k not in OK:
+                print("UNKNOWN KEY   ", f, "--", k)
+EOF
+```
+
+**`INVALID YAML`** is almost always an unquoted `: ` inside a long `description:`. The
+harness parser is lenient enough that the skill still loads — crumbl-ops `start-morning`
+has been invalid since it was written and appears in 82 transcripts — so nothing visibly
+breaks, and that is the problem: the file is one parser change away from silently
+disappearing, and a strict reader (this lint, a plugin packager, any future tooling) sees
+a skill with no name and no description. Fix by quoting the whole value.
+
+**`UNKNOWN KEY`** is a field the harness does not read. Measured 2026-09-20: official
+Anthropic skills use `user-invocable` (8) and `disable-model-invocation` (12) and never
+the underscore spelling, while all four of these repos use `user_invocable` in 100 files
+and the hyphenated form in none. That particular key is inert and harmless, because
+user-invocability is the default and `: true` is what everyone meant anyway.
+
+It is still worth reporting, because the cost is not in the key that is wrong today. It
+is in the habit: the same underscore reflex applied to `disable-model-invocation` gives a
+skill the model invokes anyway, and applied to `allowed-tools` gives one that runs with
+every tool. Both fail open, and neither prints anything. Report unknown keys with the
+field the author probably meant; do not mass-rename inert ones — churn across 100 files
+for no behavior change is worse than the finding. The policy is grandfathering, not
+tolerance: a **new or edited** skill uses the documented spelling (`wait-what` is the
+reference), and the inert keys already in place stay until the file is being touched for
+another reason. An unknown key on a skill whose diff you are already reviewing in step 2
+is a free fix; one sitting untouched is not worth a PR of its own.
+
+Report both classes in the step 6 summary under `Lint:`. Do not auto-fix: these live in
+other repos and go out as a normal `[skills-sync]` PR like any other port, or as an issue
+when there is nothing else to send that repo.
+
+### 6. Close out
 
 1. Remove all sync worktrees (`worktree remove --force` + `worktree prune` in each repo touched).
 2. Write `state.json`: the SHAs recorded in step 1 for every fully-assessed source, `last_run` = today.
@@ -136,6 +192,7 @@ Skills sync YYYY-MM-DD.
 Changes: <repo> N commits / M skills, ...  (or "none")
 PRs: <repo>#<n> — <gist>, ...  (or "none needed")
 Issues: <repo>#<n>, ...  (or none)
+Lint: <n> invalid YAML, <n> unknown keys  (or "clean")
 Skipped/errors: ...  (state not advanced for: ...)
 ```
 

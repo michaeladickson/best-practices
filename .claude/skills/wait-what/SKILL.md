@@ -1,7 +1,7 @@
 ---
 name: wait-what
 description: "Stop. That last message did not land: re-pitch it."
-user_invocable: true
+user-invocable: true
 disable-model-invocation: true
 ---
 
