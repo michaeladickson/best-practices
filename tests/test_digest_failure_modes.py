@@ -79,7 +79,7 @@ def _fetch_one(feed_info, parsed, monkeypatch):
 
 
 @pytest.fixture
-def run_digest(monkeypatch):
+def run_digest(monkeypatch, tmp_path):
     """Invoke main() against a scripted set of feed results."""
     from click.testing import CliRunner
 
@@ -93,6 +93,10 @@ def run_digest(monkeypatch):
         monkeypatch.setattr(ai_digest, "_load_archive", lambda: {})
         monkeypatch.setattr(ai_digest, "_save_archive", lambda archive: None)
         monkeypatch.setattr(ai_digest, "_save_digest_knowledge", lambda *a, **k: None)
+        # ...or the real inbox. data/digest_inbox/ is gitignored and per-checkout,
+        # so reading it made the result depend on local state: two stranded inbox
+        # items in one worktree turned the quiet-week case into "posts found".
+        monkeypatch.setattr(ai_digest, "INBOX_DIR", tmp_path / "digest_inbox")
         monkeypatch.setattr(ai_digest, "_analyze_posts",
                             lambda *a, **k: {"top_posts": [],
                                              "project_recommendations": []})
