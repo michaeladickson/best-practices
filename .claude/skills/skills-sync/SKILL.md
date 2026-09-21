@@ -181,14 +181,17 @@ is a free fix; one sitting untouched is not worth a PR of its own.
 byte-identical to the canonical copies in best-practices. Compare them on `origin/main`:
 
 ```bash
-C=$(MSYS_NO_PATHCONV=1 git -C C:/Users/micha/best-practices rev-parse origin/main:.claude/hooks/lint_on_write.py)
+C=$(MSYS_NO_PATHCONV=1 git -C C:/Users/micha/best-practices rev-parse --verify -q origin/main:.claude/hooks/lint_on_write.py)
 for r in crumbl-ops command-center wealth-mgmt; do
-  H=$(MSYS_NO_PATHCONV=1 git -C C:/Users/micha/$r rev-parse origin/main:.claude/hooks/lint_on_write.py 2>/dev/null)
-  [ "$H" = "$C" ] && echo "hook ok     $r" || echo "HOOK DRIFT  $r  (${H:-absent})"
+  H=$(MSYS_NO_PATHCONV=1 git -C C:/Users/micha/$r rev-parse --verify -q origin/main:.claude/hooks/lint_on_write.py 2>/dev/null)
+  if   [ -z "$H" ];      then echo "hook absent $r"
+  elif [ "$H" = "$C" ]; then echo "hook ok     $r"
+  else                       echo "HOOK DRIFT  $r"; fi
 done
 ```
 
-Blob ids compare content after git's line-ending normalization, so a CRLF working copy
+`--verify -q` matters: without it `rev-parse` echoes its argument back when the path is
+absent, so an uninstalled repo reads as DRIFT instead of `absent`. Blob ids compare content after git's line-ending normalization, so a CRLF working copy
 is not drift. A copy that differs is either a local fix that belongs in the canonical
 file or a stale copy; port in whichever direction is right, as a normal `[skills-sync]`
 change. `absent` before the install PRs merge is expected, not drift.
