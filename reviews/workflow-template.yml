@@ -32,6 +32,7 @@ on:
     - cron: '51 13 22 * *'  # 22nd monthly — CTO strategic review
     - cron: '37 13 1 * *'   # 1st monthly — context & memory self-assessment
     - cron: '37 13 15 * *'  # 15th monthly — model-hierarchy / delegation self-assessment
+    - cron: '19 13 8 * *'   # 8th monthly — AI-slop & code-review self-assessment
   workflow_dispatch:
     inputs:
       review_type:
@@ -44,6 +45,7 @@ on:
           - cto
           - context-memory
           - model-hierarchy
+          - ai-slop
 
 permissions:
   contents: read
@@ -70,6 +72,7 @@ jobs:
               '51 13 22 * *') echo "type=cto"             >> $GITHUB_OUTPUT ;;
               '37 13 1 * *')  echo "type=context-memory"  >> $GITHUB_OUTPUT ;;
               '37 13 15 * *') echo "type=model-hierarchy" >> $GITHUB_OUTPUT ;;
+              '19 13 8 * *')  echo "type=ai-slop"         >> $GITHUB_OUTPUT ;;
               *)              echo "type=changes"         >> $GITHUB_OUTPUT ;;
             esac
           fi
@@ -185,4 +188,5 @@ jobs:
               - cto             -> title "Monthly CTO Review — YYYY-MM-DD", labels "cto-review,automated"
               - context-memory  -> title "Context & Memory Review — YYYY-MM-DD", labels "context-memory-review,automated"
               - model-hierarchy -> title "Model Hierarchy Review — YYYY-MM-DD", labels "model-hierarchy-review,automated"
+              - ai-slop         -> title "AI-Slop & Code-Review Self-Assessment — YYYY-MM-DD", labels "ai-slop-review,automated"
               (fall back to no labels if a label doesn't exist)

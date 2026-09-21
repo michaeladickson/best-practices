@@ -36,7 +36,7 @@ or dispatch the workflow manually where applicable.
 
 | File | Audit |
 |------|-------|
-| `ai-slop-review.md` | AI-slop / code-review process — spec discipline, validation loop, destructive-action gating, cleanup-tax telemetry |
+| `ai-slop-review.md` | AI-slop / code-review process — spec discipline, validation loop, destructive-action gating, cleanup-tax telemetry (also scheduled monthly, 8th) |
 | `agent-action-safety-review.md` | Agent action safety — action tiers, least-privilege, judge layer, human-in-the-loop, audit trail |
 | `llm-eval-review.md` | LLM evaluation — fixture datasets, regression gates, model-upgrade gating, drift monitoring |
 | `context-memory-review.md` | Context/memory self-assessment (also scheduled monthly, 1st) |

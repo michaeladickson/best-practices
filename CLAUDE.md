@@ -22,8 +22,9 @@ best-practices/
     claude-code/       # CLAUDE.md templates, CLI patterns
     writing/           # voice-memory capture mechanism, email drafting
   reviews/             # Claude-only, diff-scoped review system — see reviews/README.md
-    workflow-template.yml  # 5 scheduled types: changes (Mon), data-qa (Thu),
-                       #   cto (22nd), context-memory (1st), model-hierarchy (15th).
+    workflow-template.yml  # 6 scheduled types: changes (Mon), data-qa (Thu),
+                       #   ai-slop (8th), context-memory (1st), model-hierarchy (15th),
+                       #   cto (22nd).
                        #   Consumed by wealth-mgmt; crumbl-ops self-hosts its own
                        #   prompts; command-center has no review workflow.
     *-review.md        # Scheduled prompts + on-demand audits (ui, devops, ai-slop, ...)
