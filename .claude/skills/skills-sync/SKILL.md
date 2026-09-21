@@ -177,7 +177,23 @@ reference), and the inert keys already in place stay until the file is being tou
 another reason. An unknown key on a skill whose diff you are already reviewing in step 2
 is a free fix; one sitting untouched is not worth a PR of its own.
 
-Report both classes in the step 6 summary under `Lint:`. Do not auto-fix: these live in
+**Hook drift.** `.claude/hooks/lint_on_write.py` and its test are meant to be
+byte-identical to the canonical copies in best-practices. Compare them on `origin/main`:
+
+```bash
+C=$(MSYS_NO_PATHCONV=1 git -C C:/Users/micha/best-practices rev-parse origin/main:.claude/hooks/lint_on_write.py)
+for r in crumbl-ops command-center wealth-mgmt; do
+  H=$(MSYS_NO_PATHCONV=1 git -C C:/Users/micha/$r rev-parse origin/main:.claude/hooks/lint_on_write.py 2>/dev/null)
+  [ "$H" = "$C" ] && echo "hook ok     $r" || echo "HOOK DRIFT  $r  (${H:-absent})"
+done
+```
+
+Blob ids compare content after git's line-ending normalization, so a CRLF working copy
+is not drift. A copy that differs is either a local fix that belongs in the canonical
+file or a stale copy; port in whichever direction is right, as a normal `[skills-sync]`
+change. `absent` before the install PRs merge is expected, not drift.
+
+Report both classes, and any hook drift, in the step 6 summary under `Lint:`. Do not auto-fix: these live in
 other repos and go out as a normal `[skills-sync]` PR like any other port, or as an issue
 when there is nothing else to send that repo.
 

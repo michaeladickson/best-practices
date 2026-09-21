@@ -33,6 +33,7 @@ best-practices/
     config/            # feeds.yaml, 3 context files
     requirements.txt   # Python dependencies
   knowledge/           # Learning log
+  .claude/hooks/       # Canonical write-time hooks, copied into the other repos
 ```
 
 ## Using Practices
@@ -146,6 +147,28 @@ every other standing job live in [`AUTOMATION.md`](AUTOMATION.md) — one row pe
 weekly by `scripts/check_heartbeats.py`. Read it before adding, changing, or diagnosing any
 scheduled work, and add a row when you add a job: a job that exists but is not registered
 there dies silently (the WM-WeeklyDigest lesson).
+
+## Write-time hooks
+
+Review catches slop after it is written; a hook catches it while the model is still in
+the turn that wrote it. `.claude/hooks/lint_on_write.py` is the canonical copy, with
+`test_lint_on_write.py` beside it (`python3 -m pytest .claude/hooks -q`).
+
+- **What:** PostToolUse on Edit/Write of a `.py` file. Runs `ruff --select F,E9` on the
+  file now and at `HEAD`, and exit-2s only on violations the edit *introduced*: invented
+  names (F821), leftover imports (F401), dead variables (F841), shadowed defs (F811).
+- **New-only, by multiset, not by changed line.** Three repos carry an F backlog, so a
+  whole-file lint would nag on every edit. Filtering by changed lines misses an import
+  whose last use was just deleted. Violations are matched on `(code, message)` with line
+  numbers normalised out, so shifts are silent and a genuinely new instance still fires.
+- **Loud-but-harmless failure:** no ruff, or a path the interpreter cannot see, produces
+  one non-blocking notice per session rather than a gate that silently does not exist.
+- **Installed in:** best-practices, crumbl-ops, command-center, wealth-mgmt, each with an
+  identical copy wired in `.claude/settings.json`. Change the canonical copy first, then
+  re-copy. `/skills-sync` step 5 compares blob ids weekly and reports drift.
+- **The test fails under CI if ruff is missing, rather than skipping.** A skipped suite is
+  a green check that tested nothing; wealth-mgmt's CI installs only its runtime lock, so
+  it carries an explicit pinned `pip install ruff` step for this.
 
 ## Configuration
 
