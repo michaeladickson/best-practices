@@ -64,18 +64,27 @@ jobs:
         id: review-type
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "type=${{ inputs.review_type }}" >> $GITHUB_OUTPUT
+            TYPE="${{ inputs.review_type }}"
           else
             case "${{ github.event.schedule }}" in
-              '23 13 * * 1')  echo "type=changes"         >> $GITHUB_OUTPUT ;;
-              '23 13 * * 4')  echo "type=data-qa"         >> $GITHUB_OUTPUT ;;
-              '51 13 22 * *') echo "type=cto"             >> $GITHUB_OUTPUT ;;
-              '37 13 1 * *')  echo "type=context-memory"  >> $GITHUB_OUTPUT ;;
-              '37 13 15 * *') echo "type=model-hierarchy" >> $GITHUB_OUTPUT ;;
-              '19 13 8 * *')  echo "type=ai-slop"         >> $GITHUB_OUTPUT ;;
-              *)              echo "type=changes"         >> $GITHUB_OUTPUT ;;
+              '23 13 * * 1')  TYPE=changes         ;;
+              '23 13 * * 4')  TYPE=data-qa         ;;
+              '51 13 22 * *') TYPE=cto             ;;
+              '37 13 1 * *')  TYPE=context-memory  ;;
+              '37 13 15 * *') TYPE=model-hierarchy ;;
+              '19 13 8 * *')  TYPE=ai-slop         ;;
+              *)              TYPE=changes         ;;
             esac
           fi
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
+          # Single source of truth for "does this type consume a week diff?".
+          # Both the Build-week-diff gate and the Run-review gate read `scoped`,
+          # so they cannot drift apart. A new diff-scoped type is added here and
+          # nowhere else.
+          case "$TYPE" in
+            changes|data-qa) echo "scoped=true"  >> $GITHUB_OUTPUT ;;
+            *)               echo "scoped=false" >> $GITHUB_OUTPUT ;;
+          esac
 
       - name: Fetch review prompts
         run: |
@@ -113,7 +122,7 @@ jobs:
 
       - name: Build week diff
         id: diff
-        if: steps.review-type.outputs.type == 'changes' || steps.review-type.outputs.type == 'data-qa'
+        if: steps.review-type.outputs.scoped == 'true'
         run: |
           BASE_REF=$(git rev-list -1 --before="8 days ago" HEAD || true)
           if [ -z "$BASE_REF" ]; then
@@ -147,7 +156,11 @@ jobs:
           fi
 
       - name: Run review
-        if: steps.diff.outputs.commits != '0'
+        # A skipped 'Build week diff' leaves commits as the empty string, and
+        # GitHub Actions coerces '' to 0 in a != comparison -- so the old
+        # `commits != '0'` silently skipped EVERY full-scope review. Gate on
+        # `scoped` first: unscoped types always run, scoped types need commits.
+        if: steps.review-type.outputs.scoped != 'true' || steps.diff.outputs.commits != '0'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
