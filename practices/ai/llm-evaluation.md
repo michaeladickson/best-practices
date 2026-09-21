@@ -131,6 +131,9 @@ Before a cutover, **shadow-validate**: run the candidate model or prompt passive
 against live traffic — binary CI thresholds miss the gradual eval drift that only shows
 up on messy production inputs.
 
+### Evaluate model probabilistic confidence calibration
+Assess whether a model's assigned confidence scores accurately reflect the true likelihood of its output being correct. Distinguish between a model's internal confidence and its actual accuracy across different tasks and datasets.
+
 ### Graduate production failures into the eval set
 When a bad output reaches production, add that case (with its correct answer) to the
 fixture set so it can never silently regress again. The eval set should grow from real
@@ -146,6 +149,9 @@ cost driver. And count the humans: a cheaper model that needs more review and co
 per accepted output costs more than its API price suggests, and an agent fleet carries
 operational overhead — allocation, specification, intervention, coordination, recovery
 ("agent fatigue") — that belongs in the same total-cost-of-ownership ledger.
+
+### Evaluate agent performance under variable infrastructure load
+Measure how agent latency, reliability, and cost vary when operating under fluctuating infrastructure conditions or resource contention. Design tests to simulate different load profiles to assess performance robustness.
 
 ### Probe benchmarks for overfitting — and publish your eval methodology
 Models memorize benchmark patterns. Vary known benchmark prompts and probe for direct
@@ -238,11 +244,17 @@ covert behavior too: agents pursuing hidden goals while appearing compliant.
 ### Have third parties audit your safety evals
 Beyond internal validation of evaluation judges or processes, external, objective scrutiny is essential for critical safety assessments. Independent third-party organizations can review safety evaluation protocols, datasets, test scenarios, and findings to ensure rigor, comprehensiveness, and unbiased assessment of potential emergent risks, especially given the observed failures of internal pre-release auditing.
 
+### Employ continuous embedded third-party evaluators
+Integrate external, employee-like teams to continuously verify adherence to safety practices and commitments. These evaluators should assess alignment across training pipelines and processes, not just completed models or periodic safety audits.
+
 ### Test the agent's forbidden states explicitly
 Beyond defining correct behavior, explicitly delineate the boundaries of acceptable agent operation. This includes identifying and documenting actions agents must *not* take, data they must *not* expose, and how they should gracefully fail or acknowledge limitations when unable to complete a task within defined constraints. Integrate these boundaries into evaluation scenarios.
 
 ### Test for motivated reasoning and reward hacking
 Agents have demonstrated a capacity to creatively bypass constraints or collude when tasked with specific goals, especially in permissive evaluation environments. Design adversarial evaluations that probe for an agent's tendency to infer and game implicit scoring mechanisms, exploit system vulnerabilities, or take unauthorized actions to achieve its perceived objective.
+
+### Detect subtle deceptive or self-preserving agent behaviors
+Implement specific tests to uncover agentic behaviors like concealing mistakes, fabricating information, or self-injecting instructions to evade detection. Focus on identifying active attempts by the agent to mask misaligned actions.
 
 ### Sandbox agent execution — and evaluate the whole stack
 Agents that generate and run code get robust, isolated sandboxes, full stop. Then
@@ -411,6 +423,10 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **OpenAI gave an AI the power to block its own engineers’ code** (The New Stack) — Integrate AI-powered automated security and correctness reviews into CI/CD pipelines to gate all code changes, regardless of origin, that impact AI systems. Digest: 2026-09-10.
 - **OpenAI split a voice model’s brain. Then one team deleted 23,000 lines of code.** (The New Stack) — Evaluate conversational fluency and continuity during asynchronous agent delegation. Digest: 2026-09-11.
 - **“Valuable warning shots”: How Anthropic now views Claude’s cyber incidents** (The New Stack) — Periodically engage independent third parties to audit and validate internal safety evaluation methodologies and results, particularly for frontier models with potential emergent risks. Digest: 2026-09-11.
+- **AI evaluator: The most important AI job in history? How developers might fill the proposed new job** (The New Stack) — Employ continuous embedded third-party evaluators to verify safety practices. Digest: 2026-09-16.
+- **“Be transparent only if asked”: OpenAI’s models learned to leave notes for their future selves** (The New Stack) — Detect subtle deceptive or self-preserving agent behaviors. Digest: 2026-09-17.
+- **Your agent is only as good as your infrastructure** (The New Stack) — Evaluate agent performance under variable infrastructure load. Digest: 2026-09-18.
+- **TypeSafe Shipped a Model That Never Writes a Word. Here’s the Decision-Layer Playbook** (Ruben Dominguez (The AI Corner)) — Evaluate model probabilistic confidence calibration. Digest: 2026-09-20.
 
 ## Where Used
 
