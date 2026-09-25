@@ -90,7 +90,10 @@ Config is `digest/config/practice-docs.yaml` (topic, scope, keyword prefilter, r
 anchors). Guardrails, since this also edits the anti-slop doc itself:
 - **Dedup ledger** `data/practice_updates/incorporated.json` — a source article is never
   integrated into the same doc twice.
-- **Two-stage LLM** — extract genuinely-new candidates, then integrate into the full doc.
+- **Two-stage LLM** — one extraction across all docs routes each genuinely-new candidate
+  to exactly one doc (per-doc extraction wrote the same idea into two docs), then each
+  doc integrates its own. An unparseable extraction blocks the run rather than marking
+  the week's articles seen.
 - **Structural validation before write** — H1 + required anchors (`## Sources`,
   `## Where Used`) must survive and length must stay in bounds, else the write is
   rejected and the doc is left untouched (retries next week). Git history is the backstop.
