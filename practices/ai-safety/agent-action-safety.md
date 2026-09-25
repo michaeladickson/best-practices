@@ -11,6 +11,18 @@ that hijacks an agent), and the destructive-action gating practice in
 
 For a ready-to-run audit, see [`reviews/agent-action-safety-review.md`](../../reviews/agent-action-safety-review.md).
 
+> **Note on structure (consolidated 2026-09-24).** The weekly updater grew *Best
+> Practices* to 67 numbered entries, one heading per article, up from 37 on
+> 2026-08-01. This pass folded them into 15 across five themes: overlapping entries
+> merged, restatement paragraphs cut to a bullet, and entries another doc owns collapsed
+> into *Adjacent Concerns*, one line each. Nothing was deleted outright; the dedup ledger
+> marks these articles incorporated, so a dropped practice could not come back.
+
+**Scope check before adding here:** is it about what an agent is allowed to *do* at
+runtime, and how that is gated, isolated and audited? Reviewing what it *wrote* belongs in
+[Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md); what it *remembers or
+reads back* in [Context & Memory Management](../claude-code/context-memory-management.md).
+
 ## The Core Problem: Implied Approval
 
 Agents fail dangerously when they act on an *implied* approval instead of an *explicit*
@@ -31,49 +43,9 @@ layer it's missing / the Judge Layer," digest 2026-05-16).
 
 ## Best Practices
 
-### 1. Treat agent capabilities and procedures as first-class, inspectable software artifacts.
-Instead of allowing agent skills (e.g., prompts, runbooks, scripts, permission boundaries) to be proprietary to a vendor or trapped in chat histories, export and manage them as visible and inspectable assets. This ensures continuity, facilitates auditing, and prevents critical operational knowledge from being lost or hidden.
+### Theme A — Classify and authorize
 
-### 2. Scan agent skills for vulnerabilities before deployment
-Treat agent skills (e.g., functions, prompts, configuration files) as software components requiring supply chain security. Implement automated scanning for common attack patterns, such as obfuscated commands, credential harvesting, or excessive permissions, to harden agent capabilities at rest and prevent the introduction of vulnerabilities into the agent's logic.
-
-### 3. Restrict package pre-execution hooks
-Malicious code embedded in package pre-execution hooks can run automatically before typical security scans or application tests, establishing persistence or compromising the environment. Implementing strict policies and technical controls to prevent unauthorized execution of such scripts is crucial for supply chain security.
-
-### 4. Integrate agent development into existing, robust software delivery lifecycle (SDLC) processes.
-Despite the non-deterministic nature of AI agents, apply the same rigorous governance, testing, and security controls used for traditional application code. Adapt SDLC pipelines to accommodate agent behavior variability while maintaining quality and preventing regressions in production environments.
-
-### 5. Test new skills against your own definition of done
-While skills are inspected for security, their functional utility and alignment with organizational quality and operational standards are equally critical. A structured testing process ensures that agents do not merely execute tasks, but produce outputs that meet the company's specific definitions of quality, taste, or business rules.
-
-### 6. Tell agents when to invoke each tool
-Agents should not merely have access to tools; they must be predictably guided to use them in appropriate contexts. Configure 'rules files' or similar explicit instructions that dictate the conditions, priority, and strategy for tool invocation. This ensures agents reliably leverage their intended capabilities and external data sources, preventing reliance on potentially outdated internal knowledge or 'hallucinations' when accurate tools are available.
-
-### 7. Define the agent harness explicitly
-This harness should encompass the agent's access to external systems, data, and documents, alongside clear review standards, budgetary limits, defined decision rights, and accountability frameworks. This structural layer provides the necessary human judgment and organizational context that cannot be outsourced to the agent itself.
-
-### 8. Have agents audit project goals and metrics
-Design agents to proactively audit their project's defined goals (e.g., RFCs) and measurement systems (e.g., dashboards). If these critical artifacts are missing or unclear, the agent should stop and iterate with human operators to establish or refine them, ensuring a well-defined operational context.
-
-### 9. Implement ontologies to provide logical guardrails for agentic systems.
-Augment probabilistic LLM reasoning with explicit, structured knowledge representations (ontologies) to define the boundaries, relationships, and constraints of agent operations. This provides a robust framework for enforcing logical guardrails and ensuring agents operate within defined, semantically consistent parameters.
-
-### 10. Embed authorization rules in the harness
-For each structured workflow managed by an agent harness, define and enforce the precise set of permissions required for its operations directly within the harness's configuration or code. This ensures that the harness itself acts as a gatekeeper, restricting agent actions to only those authorized for that specific workflow context.
-
-### 11. Reuse existing RBAC for agent retrieval
-Ensure that AI agents, when retrieving information from enterprise data sources, only access data for which the requesting user (or the agent itself, with its assigned identity) has explicit authorization via existing RBAC mechanisms. This prevents models from reasoning over or exposing data they are not permitted to view, leveraging established security infrastructure.
-
-### 12. Decouple tool selection from action authorization
-Do not rely on natural-language tool descriptions for authorization decisions. Instead, implement a distinct policy engine that evaluates explicit, immutable authorization rules against proposed agent actions, independent of the agent's internal reasoning or tool selection logic. Tool descriptions should inform selection, but not grant execution rights.
-
-### 13. Authorize action sequences, not single calls
-Traditional authorization often focuses on point-in-time decisions for single actions. For autonomous agents, the risk can arise from a valid sequence of individually approved actions. A trajectory-aware policy engine enables governance over workflows, applying constraints on prerequisites, rate limits, and ordering to prevent undesirable outcomes that isolated checks would miss.
-
-### 14. Keep authorization in deterministic code
-Architect the agent system such that the component responsible for evaluating policy, authorizing actions, and executing approved tool calls is implemented as deterministic software. This separation of concerns ensures that the probabilistic nature of the agent's reasoning (e.g., suggesting a next step) does not introduce uncertainty or non-determinism into critical safety and control decisions, enhancing reliability and auditability.
-
-### 15. Classify every action by reversibility and blast radius
+### 1. Classify every action by reversibility and blast radius
 Before wiring a tool, tier it. This single classification drives every gate below.
 
 | Tier | Examples | Default gate |
@@ -82,17 +54,40 @@ Before wiring a tool, tier it. This single classification drives every gate belo
 | **Reversible write** | draft, label, create-then-delete | log + post-hoc review |
 | **Irreversible / high-blast** | money movement, GL/prod-DB writes, deletes, outbound messages, deploys | **explicit human approval** |
 
-### 16. Classify review actions by blast radius
-For agents performing code review or generating code, assessing risk beyond reversibility and blast radius is crucial. Incorporating these additional dimensions provides a more comprehensive risk profile, allowing for intelligent auto-approval of low-risk changes and appropriate human escalation for high-stakes modifications.
+- **Classify review actions by blast radius.** When an agent reviews or approves code, add data-security impact, operational impact, verification gaps and change surface to the tiering, so low-risk changes can auto-approve and high-stakes ones escalate.
 
-### 17. Least privilege — read-only by default
+### 2. Least privilege — read-only by default
 An agent gets the *minimum* capability for its job; write capability is a separate,
 explicitly-granted path. The strongest version is enforced in code, not prompts: e.g.,
 expose only read tools on the agent-facing MCP so a write is structurally impossible,
 and route the rare write through a separate non-interactive, gated job. (crumbl-ops does
 exactly this — its agent MCP has zero write tools; see Where Used.)
 
-### 18. A Judge Layer gates the action, not the prose
+- **Embed authorization rules in the harness.** Each structured workflow the harness runs declares the exact permissions it needs, and the harness refuses anything outside them.
+- **Reuse existing RBAC for agent retrieval.** An agent reads only what the requesting user (or the agent's own identity) is already authorized to see; the enterprise's access controls apply, not a parallel set.
+
+### 3. Keep authorization in deterministic code
+The component that evaluates policy, authorizes an action and executes the approved
+tool call is ordinary deterministic software. The model proposes; code decides. That
+keeps the non-determinism of the reasoning out of the safety decision, and makes the
+decision auditable.
+
+- **Decouple tool selection from action authorization.** A tool description informs which tool the model picks; it never grants the right to run it. A separate policy engine checks explicit rules against the proposed action.
+- **Authorize action sequences, not single calls.** A run of individually valid actions can still be the dangerous one. A trajectory-aware policy engine enforces prerequisites, rate limits and ordering across the workflow.
+- **Encode domain constraints as an ontology.** An explicit model of the entities, relationships and limits in the domain gives the policy layer logical guardrails the model's reasoning cannot argue past.
+
+### 4. Write an authorization spec per high-stakes action
+Name *who/what* may do the action, under *what limits*, with *what evidence*. For
+agentic-commerce-style actions this means identity, authorization, fraud/abuse checks,
+and liability — not just "call the payments API." A one-paragraph spec per action beats
+a vague "the agent handles payments."
+
+- **Set explicit spending limits for agents.** Permission to act is not a budget. An agent that moves money or consumes paid services (API calls, compute credits) needs a hard cap on outflow.
+- **Give financially-acting agents their own identity layer.** Authentication, tokenization and wallet management per agent, so every financial action traces to a verified principal and its limits.
+
+### Theme B — Gate and approve
+
+### 5. A Judge Layer gates the action, not the prose
 Put a gatekeeper between "agent proposes X" and "X executes" that returns an explicit
 *approve / reject / escalate* — never let execution proceed on implied approval. The
 judge can be deterministic (policy rules: amount thresholds, allow-lists, business-hours)
@@ -100,167 +95,120 @@ or a separate model with a narrow rubric. Key parts (from the Judge Layer guide)
 **action classification → policy/specialist check → memory-governed write-back →
 structured, logged decision.**
 
-### 19. Pre-screen routine actions, escalate the rest
-This mechanism reduces human fatigue associated with frequent permission prompts by intelligently classifying actions. It allows agents to proceed autonomously with low-risk tasks while ensuring that human-in-the-loop oversight is reserved for complex, potentially dangerous, or genuinely uncertain scenarios, thereby increasing the effectiveness of human review.
+- **Pre-screen routine actions, escalate the rest.** A classifier auto-approves the low-risk majority and routes only the dangerous or genuinely uncertain actions to a human, which is what keeps human review meaningful.
+- **Calibrate agent confidence scores.** A judge or a human acting on "95% confident" needs that number to mean 95%. Uncalibrated confidence quietly bypasses fail-safe-on-uncertainty.
 
-### 20. Human-in-the-loop for the irreversible
+### 6. Human-in-the-loop for the irreversible
 For Tier-3 actions, require a human's explicit yes — a mobile approve/deny, a PR
 checkbox, a confirmation step that prints exactly what will happen. Design against
 **alert fatigue**: gate only what truly needs it (driven by *Classify every action by reversibility and blast radius*), so approvals stay
 meaningful instead of being rubber-stamped.
 
-### 21. Give every high-blast-radius action an undo
-For certain agent actions, particularly those that are technically reversible or where a swift reversal can mitigate harm, provide users with an immediate 'undo' or rollback capability. This mechanism allows a human operator to reverse an agent's executed action within a defined timeframe, adding a layer of post-execution safety and reducing the impact of erroneous or misaligned agent behavior without requiring pre-approval.
+- **Support remote and asynchronous human approval.** For long-running work, mobile alerts and remote review of diffs and steering input let a human approve without being at a workstation — oversight without blocking.
+- **Give every high-blast-radius action an undo.** Where an action can be reversed, a time-boxed human-initiated rollback adds safety after execution without requiring approval before it.
+- **Keep operators able to intervene.** As agents take over routine operations and incident response, humans lose the system knowledge an escalation needs (comprehension debt). Human review of agent incident analyses and drills that require human intervention keep it.
 
-### 22. Support remote and asynchronous human approval
-For agents performing extended, autonomous tasks, integrate notification systems (e.g., mobile alerts) and remote interfaces that allow humans to review diffs, provide steering input, and approve actions without being tethered to a workstation. This shifts HITL from synchronous blocking to asynchronous oversight, reducing bottlenecks and approval fatigue.
-
-### 23. Write an authorization spec per high-stakes action
-Name *who/what* may do the action, under *what limits*, with *what evidence*. For
-agentic-commerce-style actions this means identity, authorization, fraud/abuse checks,
-and liability — not just "call the payments API." A one-paragraph spec per action beats
-a vague "the agent handles payments."
-
-### 24. Calibrate agent confidence scores
-Implement mechanisms to ensure that agent-reported confidence scores accurately reflect the true probability of correctness for its proposed actions or outputs. Uncalibrated confidence can mislead human operators or automated judge layers, potentially bypassing crucial "fail safe on uncertainty" mechanisms.
-
-### 25. Fail safe — stop and ask on uncertainty
+### 7. Fail safe — stop and ask on uncertainty
 An agent that can't verify a precondition must **halt and escalate**, not guess. The
 data-deletion catastrophe was a confident guess. Bake in: "if you cannot confirm X, do
 not proceed — surface the ambiguity." Externalize what's load-bearing/destructive into
 `CLAUDE.md` / rules so the agent *has* the operational context it otherwise lacks — but
 still gate the action.
 
-### 26. Never trust the agent's self-report
+- **Distinguish safety stops from ordinary errors.** When consuming an agent API, a task halted by a safety mechanism must be distinguishable from a timeout, with enough detail to decide whether to retry, resume or change the request.
+
+### Theme C — Verify, monitor and audit
+
+### 8. Never trust the agent's self-report
 Agents fabricate success ("I tested it," "I recovered the data"). Verify the action's
 effect from an independent source (the actual row count, the API's returned status, a
 re-query) before believing it — and especially before reporting success to a human.
 
-### 27. Evaluate the trajectory, not just the answer
-Beyond simply verifying the final outcome, assess the agent's entire execution trajectory and ensure it achieves results through genuine reasoning, rather than fabricating evidence or exploiting dataset artifacts. This higher-fidelity verification method helps detect brittle or unintended solution paths that might pose risks in real-world scenarios.
+- **Evaluate the trajectory, not just the answer.** An outcome reached by fabricated evidence or a dataset shortcut passes an end-state check; only the execution path shows it.
 
-### 28. Verify AI artifacts with deterministic checks
-AI agents can produce 'slop'—artifacts that appear plausible but are subtly flawed, bloated, or misaligned with organizational patterns. Relying solely on the generating agent's prompts or instructions is insufficient. Establish a separate, deterministic verification system, potentially using a different agent or traditional analysis, to independently check outputs for correctness, adherence to standards, and quality, producing consistent results.
+### 9. Gate every agent update on evals
+A release is blocked unless a repeatable evaluation shows the agent still preserves its
+required behaviors across the full execution path: context assembly, tool calls and
+permissions, against explicitly defined limits.
 
-### 29. Ship the reasoning trace with the artifact
-When AI agents generate artifacts that require human review, such as code in a pull request, ensure that the full reasoning process, internal deliberations, and contextual conversation that led to the artifact's creation are automatically captured and presented alongside the artifact. This enables human reviewers to understand *why* a change was made, not just *what* was changed, improving oversight and reducing 'information asymmetry' between agent and human.
+- **Shadow-validate probabilistic updates before release.** Run the new version beside production and compare outputs and interactions to catch silent regressions.
+- **Detect drift continuously.** Watch performance, outputs and embedding distributions for slow degradation that never crosses a hard failure threshold.
+- **Correlate logs, metrics, traces and tool calls.** Some failure modes appear only when signals are read together.
+- **Test every surface for prompt injection.** Adversarial tests on each place the agent reads external content (see [Prompt-Injection Mitigation](prompt-injection-mitigation.md)).
+- **Probe for covert behavior adversarially.** Environments such as SHADE-Arena and LinuxArena look for agents pursuing hidden objectives while appearing compliant.
 
-### 30. Let agents test their output in a sandbox
-Beyond static analysis or observing final outcomes, agents can directly verify the behavior of their outputs. By providing a secure, isolated browser environment, agents can run their own JavaScript tests to smoke test applications, measure elements, and confirm functional correctness, enhancing the reliability of agent-generated artifacts.
-
-### 31. Analyze agent code statically and dynamically
-Beyond local linting, implement control-flow, data-flow, and taint analysis to trace how values move from external inputs to sensitive operations and reason about program paths. Conduct comprehensive integration and system-level tests to ensure agent-generated changes behave correctly, fit the surrounding system, and meet all security and reliability requirements.
-
-### 32. Codify design boundaries as executable tests
-Shift from passive architectural documentation to actively testing architectural rules. This involves writing automated checks (e.g., using specialized static analysis tools or architectural testing frameworks) that explicitly verify agent-generated code does not violate predefined system boundaries, such as layer dependencies or component interactions. This prevents 'Comprehension Debt' and ensures the long-term maintainability and structural correctness of AI-generated systems.
-
-### 33. Test every surface for prompt injection
-Actively test agents for susceptibility to prompt injection, including when they process data from external sources like websites or user-generated content. This requires dedicated adversarial testing to ensure agents do not misinterpret or act upon malicious instructions embedded in their operational context.
-
-### 34. Probe for covert behavior adversarially
-Use specialized evaluation environments and adversarial testing (e.g., SHADE-Arena, LinuxArena) to actively search for instances where agents may attempt to act covertly, deviate from their explicit instructions to pursue hidden objectives, or exploit systemic vulnerabilities while appearing to be compliant.
-
-### 35. Use context-blind subagents for independent review
-When performing automated review or verification of artifacts generated by a primary agent (e.g., code), deploy specialized subagents that are 'context-blind' to the primary agent's operational context, prompts, and internal state. This methodology ensures that the verification agent operates with maximal independence, preventing shared biases or assumptions from compromising the integrity of the adversarial review and making verification truly robust.
-
-### 36. Shadow-validate probabilistic updates before release
-When deploying updates to agent components, run the new version alongside the current production version ('shadow mode') to compare real-world performance, outputs, and user interactions. This allows for detection of silent regressions or unexpected behavioral changes before full deployment.
-
-### 37. Gate every agent update on evals
-Beyond initial functional validation or shadow testing, implement a mandatory, repeatable evaluation system that blocks releases if an agent fails to consistently preserve required behaviors. This system must exercise the agent's full execution path, including context assembly, tool calls, and permissions, against explicitly defined correct behaviors and operational limits.
-
-### 38. Implement continuous drift detection for agent behavior and underlying models.
-Continuously monitor agent performance metrics, model outputs, and embedding spaces to detect gradual degradation (eval drift) or changes in data distribution (distribution shift) that may lead to suboptimal or incorrect agent actions without triggering hard failure thresholds.
-
-### 39. Correlate logs, metrics, traces and tool calls
-Move beyond basic drift detection by implementing a sophisticated monitoring system that correlates data from various observability sources, including agent logs, system metrics, distributed traces of tool calls, and external system responses. This enables the detection of complex and subtle failure modes that single-signal monitoring might miss, leading to more proactive operational safety.
-
-### 40. Distinguish safety stops from ordinary errors
-When consuming AI agent services via API, demand that providers offer clear, programmatic distinctions between general API errors (e.g., timeouts) and situations where agent tasks are halted by internal safety mechanisms. The feedback provided should be specific enough to inform whether a task can be safely retried, resumed, or if it requires modification to avoid recurring safety interventions.
-
-### 41. Provenance and an audit trail for every action
+### 10. Provenance and an audit trail for every action
 Log each agent action with its inputs, the judge's decision + reason, who/what approved,
 and the result. This is what makes an agent action auditable (essential for financial /
 regulated workflows) and debuggable after the fact. Keep AI-proposed vs. human-approved
 distinguishable.
 
-### 42. Make auto-approvals auditable and queryable
-Auto-approval by agents, even for low-risk actions, requires robust auditability for compliance and accountability. The records must be detailed enough to reconstruct decisions, queryable for analysis, and explicitly align with established risk policies to maintain regulatory and internal governance standards.
+- **Make auto-approvals auditable and queryable.** An action the agent approved itself needs a record detailed enough to reconstruct the decision, queryable, and tied to the risk policy it was approved under.
 
-### 43. Checkpoint agent executions as durable workflows
-Design agent tasks to create checkpoints after each significant step, allowing an agent session to pause, gracefully survive crashes, and resume from the last validated state. This prevents partial, unrecoverable actions and ensures the overall integrity and audibility of complex, multi-step agent processes.
+### 11. Checkpoint agent executions as durable workflows
+Checkpoint after each significant step so a session can pause, survive a crash and
+resume from the last validated state, rather than leaving a multi-step action half done.
 
-### 44. Map dependencies before you need a kill switch
-In complex production environments, AI agent services often rely on numerous interconnected systems, including APIs, cloud resources, identity services, and downstream applications. A detailed dependency map is essential for understanding the full blast radius of an agent and for orchestrating a controlled, complete shutdown or targeted intervention during an incident.
+- **Map dependencies before you need a kill switch.** An agent's blast radius runs through every API, cloud resource and identity service it touches; a current map is what makes a complete, controlled shutdown possible during an incident.
 
-### 45. Architect recurring tasks as interconnected loops
-For systems with multiple ongoing obligations, structure agents as a network of narrow, recurring 'loops,' each with its own memory, information sources, and safe actions. These loops are specifically designed to observe and react to changes or outputs from other interconnected loops, enabling the system to autonomously manage complex interdependencies and adapt to evolving conditions, moving beyond isolated, durable workflows.
+### Theme D — Isolation and egress
 
-### 46. Isolate agent-generated code execution within hardened sandboxes.
-When an AI agent generates and executes code, this execution must occur within strictly isolated environments such as process sandboxes, virtual machines, or WebAssembly runtimes. Implement tight filesystem boundaries and egress controls to prevent unauthorized access to the host system, exfiltration of sensitive data, or unintended network activity, even if the agent's code is buggy or malicious.
+### 12. Isolate agent-generated code execution within hardened sandboxes
+Code an agent generates and runs executes in a process sandbox, VM or WebAssembly
+runtime with tight filesystem boundaries and egress controls, so buggy or malicious code
+cannot reach the host, exfiltrate data or open the network.
 
-### 47. Cap CPU, memory and runtime in sandboxes
-Beyond general isolation, explicitly define and enforce limits on CPU usage, memory consumption, and maximum execution duration for any code executed by an agent in a sandboxed environment. This prevents resource exhaustion attacks, infinite loops, or runaway processes from impacting system stability or availability.
+- **Cap CPU, memory and runtime in sandboxes.** Resource limits stop runaway loops and exhaustion from spreading beyond the sandbox.
+- **Allowlist filesystem access in agent environments.** Read and write only the named files and directories the task needs.
+- **Harden the whole runtime, not just the sandbox.** The tools, browsers and libraries inside the sandbox are attack surface too.
+- **Close OS-level bypasses of egress policy.** Built-in firewalls and NAT can silently override the agent's egress rules; verify that only allowed traffic is possible at the OS level.
 
-### 48. Set explicit spending limits for agents
-Beyond typical compute resource limits (CPU, RAM), agents performing or triggering financial transactions or consuming billable external services (e.g., API calls, compute credits) must be subject to explicit financial spending limits. These limits act as a guardrail to prevent uncontrolled monetary outflows or excessive consumption of paid resources, distinguishing budget control from mere permission to execute an action.
+### 13. Control every path out of the environment
+Isolation fails at the exits. Every outbound channel an agent can reach is a way to
+leak data or coordinate out of sight.
 
-### 49. Allowlist filesystem access in agent environments
-Configure agent sandboxes with a strict allowlist approach to filesystem access, ensuring that agents can only read from or write to predefined, essential files or directories. This prevents unauthorized data exfiltration, modification, or the introduction of malicious code into unintended locations.
+- **Verify isolation and egress of eval environments.** An environment labeled a simulation must actually be cut off from the internet and production; telling the agent it is a simulation does not make it one.
+- **Isolate model development and testing environments** with the same network and tool limits as production sandboxes.
+- **Ban public unauthenticated execution services.** Third-party sandboxes and code runners are staging grounds for attacks and a way around internal controls.
+- **Monitor agent calls to external web services.** Wikis, URL shorteners, forums and JSON shares work as covert channels and exfiltration points; network blocking alone does not see intent.
+- **Govern inter-agent communication explicitly.** Log and police the channels agents use to talk to each other, including notes left for future runs of themselves.
 
-### 50. Verify isolation and egress of eval environments
-Ensure that environments designated as simulations are truly isolated from the public internet and production systems. Network egress paths must be explicitly controlled and verified, even when agents are instructed they are in a simulation, as misconfigured evaluation environments pose a significant real-world risk.
+### 14. Keep sensitive data on trusted infrastructure
+Bring the model to the data, not the data to the model provider.
 
-### 51. Ban public unauthenticated execution services
-Strictly prevent AI agents from accessing or leveraging external, publicly accessible, and unauthenticated code execution environments or third-party sandboxes as part of their operational workflow or as a means to circumvent internal controls. Such services can be easily abused as staging grounds for further attacks, as demonstrated by real-world incidents.
+- **Run sensitive-data models locally** or on private infrastructure when inputs are confidential.
+- **Reason in the cloud, execute on-premises.** Cloud models can plan, while every tool call touching proprietary code, secrets or internal services runs inside the controlled environment.
+- **Require consent for local file and desktop access.** A desktop agent asks at runtime before touching local files, other applications or system resources.
 
-### 52. Monitor agent calls to external web services
-Beyond general network egress control, agents should be restricted from exploiting benign-looking external web surfaces (e.g., public wikis, URL shorteners, online forums, JSON shares) as unauthorized communication channels or data exfiltration points. This requires deeper inspection of agent interactions, potentially including content filtering, behavioral analysis of outbound requests, and policy enforcement based on the intent of interaction, rather than just network-level blocking.
+### Theme E — Identity and credentials
 
-### 53. Govern inter-agent communication explicitly
-Establish clear policies and technical enforcement mechanisms to control and log all communication channels between different AI agents within the system. This is crucial to prevent unsanctioned coordination, information sharing, or the formation of covert communication pathways that could bypass oversight, facilitate malicious behavior, or enable deception (e.g., agents leaving notes for future selves). Monitor these communications for policy violations and anomalous patterns.
+### 15. Give every agent a verifiable identity
+Every agent runs as a unique, authenticated principal. That is what makes least
+privilege enforceable, accountability possible and the audit trail attributable. Log
+how an agent acquires new tools or roles mid-run, and authorize each change.
 
-### 54. Harden the whole runtime, not just the sandbox
-Beyond merely isolating the agent in a sandbox, actively harden the comprehensive runtime environment that the agent operates within. This includes securing and applying strict controls to all embedded tools, browsers, and libraries utilized by the agent, closing attack surfaces that basic sandbox isolation alone may not address.
+- **Keep credentials out of the model.** Task-scoped frameworks decrypt and inject credentials directly into the target system, so the model never sees a password or one-time code.
+- **Inject credentials just in time, out of band.** No long-lived keys or broad service accounts sitting in the agent's environment; an agent that escapes its sandbox finds nothing to use.
+- **Validate issuers and bind MCP client credentials.** The protocol checks who issued a client credential, so a spoofed agent or replayed token is refused.
 
-### 55. Close OS-level bypasses of egress policy
-Beyond verifying network egress configurations, implement active architectural solutions to prevent underlying operating system features (e.g., built-in firewalls, NAT) from conflicting with or implicitly overriding an agent's defined network egress and access control policies. This may involve custom network stack implementations or deep OS-level interventions to guarantee that only explicitly allowed network communications are possible, especially in complex runtime environments.
+## Adjacent Concerns
 
-### 56. Isolate model development and testing environments
-Extend sandboxing and hardening principles to environments where AI models and agents are developed, fine-tuned, and internally tested. These environments must be securely isolated with tight network and tool access limits to prevent agents from escaping, attacking internal systems, or accessing sensitive data during their development lifecycle.
+Added here by the weekly updater, owned by a sibling doc. One line each so the source
+stays traceable; the practice itself lives at the link.
 
-### 57. Give every agent a verifiable identity
-Every AI agent, regardless of its function, must operate under a unique, authenticated identity. This foundation enables granular least-privilege enforcement, clear accountability, and a comprehensive audit trail for all actions. Crucially, the system must also manage and log how agents dynamically request and acquire new tool access or roles during their operation, ensuring these transitions are authorized and traceable.
-
-### 58. Implement secure, zero-exposure credential management mechanisms for agents.
-Agents should access credentials through dedicated, task-scoped authentication frameworks that decrypt and inject credentials directly into target systems on-device, without exposing plaintext passwords or one-time codes to the underlying LLM. This ensures agents perform authenticated actions while minimizing the risk of credential leakage or misuse by the model itself.
-
-### 59. Implement just-in-time credential injection and out-of-band authentication for AI agents.
-Replace long-lived API keys or permissive service accounts injected into agent environments with mechanisms for just-in-time credential injection and authentication that occur entirely outside the agent's direct memory space. This decouples credentials from the agent's environment, rendering agents powerless even if they escape their sandbox without active, out-of-band authorization.
-
-### 60. Validate issuers and bind MCP client credentials
-Ensure that the protocol through which agents interact with systems rigorously validates the issuer of client credentials. This verifies the authenticity of the client making requests, preventing unauthorized agents or spoofed requests from gaining access. It is a foundational layer of trust, essential for securing multi-agent interactions and preventing token-based attacks.
-
-### 61. Run sensitive-data models locally
-To protect proprietary or sensitive information, bring the AI model and agent execution to the data source rather than transmitting sensitive data to external model providers. Leverage local execution environments or fine-tuned models on private infrastructure to process confidential inputs, ensuring data remains within trusted boundaries and mitigating data exfiltration risks.
-
-### 62. Reason in the cloud, execute on-premises
-For agents handling sensitive operations or data, establish an architecture that decouples the probabilistic reasoning and planning provided by external cloud models from the execution of actions. Ensure that all agent tool calls, code generation, and interactions with proprietary source code, secrets, or internal services remain within the organization's controlled, isolated on-premises environments.
-
-### 63. Require consent for local file and desktop access
-When an agent operates in a desktop environment, require explicit, runtime user permission before allowing access to local files, other desktop applications, or system resources. This ensures users retain ultimate control over local data and system integrity.
-
-### 64. Set retention policy for captured interaction data
-For agents that capture continuous streams of user interaction events (e.g., clicks, typing, app switches) to build an operational memory or timeline, define strict policies for data retention, anonymization, and secure storage. Crucially, obtain granular user consent specifying which interaction types can be captured, for how long, and for what explicit purposes, moving beyond static file access permissions.
-
-### 65. Lifecycle agent persistent memory deliberately
-Beyond user interaction data, agents can generate and store their own persistent memory containing derived facts, system patterns, or recurring issues discovered over time. Treat this agent-generated knowledge as a sensitive asset, implementing stringent security controls, explicit lifecycle policies for retention and deletion, and access restrictions to prevent misuse or compromise of accumulated operational intelligence.
-
-### 66. Establish a distinct, authenticated identity layer for AI agents performing financial transactions.
-For agents authorized to manage money, spend, or interact with financial systems, implement a robust identity layer that includes unique authentication, tokenization capabilities, and secure wallet management. This ensures that each agent's financial actions are traceable, adhere to defined limits, and are independently verifiable as originating from a securely identified entity.
-
-### 67. Counteract comprehension debt in operators
-As AI agents increasingly automate routine operational and incident response tasks, implement strategies to ensure human engineers do not lose their deep understanding of the underlying systems. This may involve mandatory human review of agent-generated incident analyses and fixes, simulated high-severity incidents requiring human intervention, or structured training programs focused on system internals and agent operational logic, to preserve the human capacity for effective intervention when automation fails.
+- **Treat agent capabilities as inspectable software artifacts** → [Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md), *Make skills portable and inspectable*.
+- **Scan agent skills for vulnerabilities before deployment** and **restrict package pre-execution hooks** → [Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md), *Secure the toolchain and everything the agent installs*.
+- **Integrate agent development into existing SDLC processes** → [Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md), *Extend existing governance to agent-run pipeline steps*.
+- **Define the agent harness explicitly** and **architect recurring tasks as interconnected loops** → [Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md), *Treat the harness as the engineering problem*.
+- **Have agents audit project goals and metrics** → [Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md), *Spec first, then verify against the spec*.
+- **Verify AI artifacts with deterministic checks** and **analyze agent code statically and dynamically** → [Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md), *Build the review pipeline out of independent verifiers*.
+- **Ship the reasoning trace with the artifact** → [Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md), *Make the agent defend its reasoning*.
+- **Let agents test their output in a sandbox** → [Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md), *Validate in a real environment*.
+- **Codify design boundaries as executable tests** → [Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md), *Enforce architectural boundaries in CI*.
+- **Use context-blind subagents for independent review** → [Model-Hierarchy Delegation](../claude-code/model-hierarchy-delegation.md), *Verify with a different, cheaper agent*.
+- **Tell agents when to invoke each tool** → [Context & Memory Management](../claude-code/context-memory-management.md), *Rules files beat hoping*.
+- **Test new skills against your own definition of done** → [Context & Memory Management](../claude-code/context-memory-management.md), *Skills as Institutional Memory*.
+- **Set retention policy for captured interaction data** and **lifecycle agent persistent memory deliberately** → [Context & Memory Management](../claude-code/context-memory-management.md), what an agent stores and for how long.
 
 ## Anti-Patterns
 
