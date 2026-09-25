@@ -39,6 +39,7 @@ or dispatch the workflow manually where applicable.
 | `ai-slop-review.md` | AI-slop / code-review process — spec discipline, validation loop, destructive-action gating, cleanup-tax telemetry (also scheduled monthly, 8th) |
 | `agent-action-safety-review.md` | Agent action safety — action tiers, least-privilege, judge layer, human-in-the-loop, audit trail |
 | `llm-eval-review.md` | LLM evaluation — fixture datasets, regression gates, model-upgrade gating, drift monitoring |
+| `database-review.md` | Database structure and performance — live read-only stats (seq scans, index hygiene, cache, timeouts) plus schema types, keys, migrations, pooling, query patterns |
 | `context-memory-review.md` | Context/memory self-assessment (also scheduled monthly, 1st) |
 | `model-hierarchy-review.md` | Model-hierarchy delegation self-assessment (also scheduled monthly, 15th) |
 | `ui-review.md` | UI/UX audit — consistency, accessibility, responsiveness (reclassified on-demand 2026-07-26) |
