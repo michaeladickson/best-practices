@@ -40,6 +40,9 @@ catch it getting worse? Gating what an agent may *do* belongs in
 
 ### Theme A — What to measure
 
+### Analyze AI product failure modes before metrics
+Prioritize a thorough analysis of potential failure modes and unintended behaviors in AI products before defining evaluation metrics. Understanding how a system can fail is crucial to ensuring that the right things are measured for effective improvement.
+
 ### Decide which calls earn a floor — and check you did not only measure the easy ones
 Not every LLM call needs an eval. The line that has held up: **an LLM call whose output
 reaches someone outside the team, or is written to a durable artifact without review,
@@ -135,6 +138,9 @@ one, so prompt-engineering habits are themselves a thing the eval must catch.
 
 - **Version guidance files and evaluate them too.** Shared files encoding judgment (a `design.md` for brand style, a policy prompt) change output as much as a prompt edit does; version them and measure whether they reduce the failures they target.
 
+### Track code changes from PR to production
+Establish a continuous pipeline to track individual code changes from pull request through deployment to production. Monitor their behavior and performance to verify they act as intended and to quickly identify regressions introduced by AI-generated code.
+
 ### Pin model versions; gate upgrades behind the eval
 Never let a model float to "latest" silently. Pin the version, and treat a model bump
 as a change that must pass the eval set first. This is the concrete defense against
@@ -226,6 +232,9 @@ when selecting a model, weigh non-functional criteria — cost, control, vendor 
 open-weight viability — alongside raw capability.
 
 ### Theme D — Benchmarks, infrastructure and optimization
+
+### Estimate full benchmark scores from a subset
+For efficient evaluation of frequently changing agents, develop methods to reliably estimate full benchmark scores from a statistically significant subset of questions. This allows for faster re-testing cycles with quantifiable error margins.
 
 ### Probe benchmarks for overfitting — and publish your eval methodology
 Models memorize benchmark patterns. Vary known benchmark prompts and probe for direct
@@ -367,6 +376,9 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **“Be transparent only if asked”: OpenAI’s models learned to leave notes for their future selves** (The New Stack) — Detect subtle deceptive or self-preserving agent behaviors. Digest: 2026-09-17.
 - **Your agent is only as good as your infrastructure** (The New Stack) — Evaluate agent performance under variable infrastructure load. Digest: 2026-09-18.
 - **TypeSafe Shipped a Model That Never Writes a Word. Here’s the Decision-Layer Playbook** (Ruben Dominguez (The AI Corner)) — Evaluate model probabilistic confidence calibration. Digest: 2026-09-20.
+- **Advanced evals: How to find (and fix) hidden AI failures in your product** (Lenny's Newsletter) — analyze potential failure modes before defining evaluation metrics. Digest: 2026-09-22.
+- **Cursor acquired Firetiger. A month later, it launched a bot that tracks code changes from PR to production.** (The New Stack) — establish a continuous pipeline to track and monitor code changes from PR to production for regressions. Digest: 2026-09-24.
+- **Papers You Should Know About** (Pascal Biese (LLM Watch)) — estimate full benchmark scores from a statistically significant subset of questions for efficient evaluation. Digest: 2026-09-25.
 
 ## Where Used
 

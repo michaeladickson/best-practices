@@ -42,6 +42,7 @@ Three places a fact can live, by scope:
 -   **Maintain memory locally, not globally.** Optimize the segments actual usage touches rather than periodically reorganizing the whole store; no single memory architecture dominates, and global reshuffles cost more than they return.
 -   **Make session context durable with event logs.** Log intermediate steps so a long-horizon task can resume, and run it where detached, persistent execution is supported.
 -   **Per-agent memory is its own scope.** Claude Code subagents accept `memory: project` (or `user`, `local`) in their frontmatter, which gives the agent a persistent directory under `.claude/agent-memory/` that it reads on start and writes as it works — so a code-reviewer stops re-deriving the same codebase patterns every session. The tier test extends: *true for this agent's role, regardless of session?* → agent memory, not the repo `CLAUDE.md` (every session pays for that) and not session context (evaporates). Two rules: tell the agent what to accumulate ("update your agent memory with patterns and recurring issues you discover") — a memory directory with no write instruction accumulates nothing; and treat it as agent-*written* memory for validation purposes (see Retrieval Contracts) — it drifts like any other doc, just without a human editor.
+-   **Provide agents persistent organizational context.** Integrate persistent organizational context into agent identity and state management. This includes structured understanding of company policies, roles, and structure to enable more accurate and aligned agent behavior.
 -   **Test memory fidelity when migrating platforms.** An agent's value is partly its learned routines; check they survive a move, not just the explicit memory files.
 -   **Set retention and lifecycle for stored memory.** Interaction streams an agent captures and facts it derives are sensitive assets: decide what is kept, for how long, with whose consent, and when it is deleted.
 
@@ -74,6 +75,7 @@ Format: pre-assembled markdown brief, newest-first, each fact tagged with its so
 - **Embedding proximity does not scale cleanly.** Pure vector/RAG memory is provably prone to hallucination and forgetting as the store grows — plan hybrid approaches and guardrails rather than assuming more embeddings fix it.
 - **Validate agent-*written* memory.** Probabilistic extraction feeding a shared store poisons it silently; capture confidence or validate before ingest.
 -   **Validate compaction summaries before reusing them.** A model can write instructions or a persona shift into its own summary; check the summary before it becomes context.
+-   **Validate input schema for data analysis skills.** For agents performing data analysis, implement explicit input schema validation (e.g., an 'EXPORT MAP') to define expected data structures and formulas. This ensures consistent data interpretation and prevents errors before any calculations or reports are generated.
 - **Structured handoff records between agents.** When work moves tool-to-tool, the output should carry state, original sources and limits — otherwise a human is the integration layer.
 - **Keep it portable.** Don't couple storage, access or semantics to one vendor's proprietary format, or the accumulated memory can't follow you to another model.
 - **Codify voice/style as a reusable context file.** A dedicated tone/persona file injected into the prompt keeps register consistent instead of re-described each time.
@@ -114,13 +116,16 @@ The asymmetry drives the rule: a paragraph in root `CLAUDE.md` is paid in every 
 | `Esc Esc` / `/rewind` | after a bad turn (don't argue in-context — that keeps the failure) |
 
 -   **Protect the cache.** Lock `--model` and the MCP set at session start; adding an MCP or swapping models mid-session rebuilds the prefix (~10× per miss). See [Token Efficiency](token-efficiency.md).
+-   **Preserve cached context despite reasoning changes.** Design caching mechanisms to intelligently preserve and reuse earlier context even when minor agent parameters, such as reasoning effort levels or tool availability, change. This improves cache hit rates and reduces re-processing costs.
 -   **Curate the harness footprint.** Every tool from every connected MCP sits in context *every* turn — the same always-loaded tax as a fat `CLAUDE.md`. Prefer narrow, single-purpose MCP servers; disable unused ones.
 -   **Prune the session deliberately.** Named categories worth dropping: superseded standing instructions, unused tool definitions, transient files, stale screenshots, dead browser results, repeated command output, rejected answers. Reported to cut reused input by up to 90%.
+-   **Prevent context packers discarding relevant information.** Rigorously evaluate context packing mechanisms to ensure that relevant information is not unintentionally discarded after query decomposition and retrieval. The packing stage should be optimized to retain all necessary context for the agent's task.
 -   **Structure prompts for prefix caching.** Most spend is resending the same system prompt, tool list and static docs every call; ordering for cache hits is the single biggest lever.
 -   **Use effort controls.** Raise depth for work that needs reasoning, lower it for routine work, rather than paying one rate for everything.
 -   **Rules files beat hoping.** Agents default to internal training knowledge even when tools and knowledge bases exist; an explicit rules file forcing external-context-first is what makes retrieval reliable.
 -   **Enterprise tasks want holistic context.** Real workflows need broader assembly than benchmarks imply — interconnected decisions, not isolated snippets.
 -   **Don't tokenmaxx.** Token volume is not productivity. Tie consumption to delivered outcomes, or the budget grows without the value.
+-   **Enforce token budgets per developer or team.** Implement and enforce token consumption budgets at the individual developer or team level. This drives accountability for AI efficiency and cost management, encouraging developers to optimize prompt engineering and agent designs.
 -   **Preserve reasoning state between requests.** A harness that carries the model's opaque reasoning state across turns spares it reconstructing its own thinking on long tasks.
 -   **Manage the quadratic history tax.** Stateless APIs re-bill the whole history as input on every call; compact or summarize it, and keep the pre-compaction history in a log for audit and debugging.
 
@@ -193,6 +198,7 @@ The failure mode a retrieval contract prevents is *two homes for one fact that d
 
 Version-controlled skills are how recurring workflows become durable, discoverable memory instead of prose re-explained each session. Move a recurring agent workflow into a `skills/` file with a clear trigger and an input/output contract: it loads only when invoked (unlike root `CLAUDE.md`), so it is institutional memory *and* lean context. This also kills "shadow skills" — the same instructions retyped every session — keeping behavior consistent across runs and across repos.
 
+-   **Structure agent skills as self-contained files.** Organize agent skills and domain guidance as modular, self-contained files (e.g., 'SKILL.md' in dedicated folders). This promotes reusability, inspectability, and easier management of the agent's knowledge base.
 - **Make skills granular and composable.** Small, semantically precise commands an agent applies iteratively beat one-shot instructions — more control, more predictable results.
 - **Agents can extract skills from their own successful trajectories**, turning past runs into reusable procedure — the self-improvement end of governed write-back.
 -   **Capture human corrections as structured feedback.** Record the task, the agent's wrong attempt and the correction together, so the correction can improve later context.
@@ -290,6 +296,18 @@ Use [`reviews/context-memory-review.md`](../../reviews/context-memory-review.md)
 
 Synthesized from saved digest articles (`data/digest_knowledge/`) plus production use:
 
+-   **Microsoft’s new Copilot agents get their own email, calendar — and a place in the org chart** (The New Stack [devops]) — Provide agents persistent organizational context. Digest: 2026-09-25.
+-   **Tutorial: Replace Your $3K/month Data Analyst With a Claude Skill** (The AI Break [ai_engineering]) — Validate input schema for data analysis skills. Digest: 2026-09-25.
+-   **Query decomposition doesn’t fix context starvation — it just moves it** (The New Stack [devops]) — Prevent context packers discarding relevant information. Digest: 2026-09-24.
+-   **AI spending can run negative. Qodo’s CEO built an ROI equation to fix it.** (The New Stack [devops]) — Enforce token budgets per developer or team. Digest: 2026-09-23.
+-   **OpenAI cut GPT-6 token prices in half. The bigger lever may be the cache.** (The New Stack [devops]) — Preserve cached context despite reasoning changes. Digest: 2026-09-23.
+-   **Tutorial: Replace Your $3K/month Copywriter With a Claude Skill** (The AI Break [ai_engineering]) — Structure agent skills as self-contained files. Digest: 2026-09-22.
+-   **Self-generated prompt injections in compaction summaries** (Simon Willison) — implement validation and integrity checks for AI-generated compaction summaries. Digest: 2026-09-18.
+-   **Code review is burning out your best engineers** (The New Stack) — mandate agents generating code to include their underlying reasoning and design choices in the output. Digest: 2026-09-18.
+-   **The critical vulnerability was a test database. That’s the whole triage problem.** (The New Stack) — Provide business context for prioritization. Digest: 2026-09-17.
+-   **One engineer shipped 2,000 PRs a month to production. Verification is the key.** (The New Stack) — Agents verify code using a runtime. Digest: 2026-09-19.
+-   **Your AI agent failed. The model might not be the problem.** (The New Stack) — Record agent internal monologue for debugging. Digest: 2026-09-20.
+-   **Trying the Software factory pattern.** (Will Larson (Irrational Exuberance)) — Agents manage project goals via task system. Digest: 2026-09-20.
 -   **This week in Claude Code, 2026-08-28** (Claude Code team newsletter, via digest inbox) — per-agent persistent memory: `memory:` frontmatter → `.claude/agent-memory/`. Added 2026-08-28.
 -   **Your AI agent is rediscovering 85% of its context every run** (Nate Jones) — assembly vs. rediscovery, the knowledge layer. Digests: 2026-05-16, 2026-05-18.
 -   **Why agent harnesses fail inside cloud-native systems** (The New Stack) — harness footprint, feedback loops. Digest: 2026-05-18.
@@ -385,12 +403,6 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 -   **You pay for two frontier models and route almost everything to one. Both Mac apps are yours for an email, and the guide walks the verbatim prompt, the 65-check list, the job-by-job casting call, and where my own test was unequal.** (Nate Jones) — actively leverage iterative feedback loops to refine agent behavior and accumulate task-specific context. Digest: 2026-09-10.
 -   **"Six tools, one harness": Salesforce loops together a six-pack of favorites** (The New Stack) — implement a unified AI control plane to integrate diverse enterprise systems and tools for agents. Digest: 2026-09-11.
 -   **Omarchy lets an AI agent rewrite the whole desktop. Here are 8 changes you can make on your Mac instead.** (Nate Jones) — provision dedicated, persistent computational environments for long-running agents. Digest: 2026-09-11.
--   **Self-generated prompt injections in compaction summaries** (Simon Willison) — implement validation and integrity checks for AI-generated compaction summaries. Digest: 2026-09-18.
--   **Code review is burning out your best engineers** (The New Stack) — mandate agents generating code to include their underlying reasoning and design choices in the output. Digest: 2026-09-18.
--   **One engineer shipped 2,000 PRs a month to production. Verification is the key.** (The New Stack) — Agents verify code using a runtime. Digest: 2026-09-19.
--   **Your AI agent failed. The model might not be the problem.** (The New Stack) — Record agent internal monologue for debugging. Digest: 2026-09-20.
--   **Trying the Software factory pattern.** (Will Larson (Irrational Exuberance)) — Agents manage project goals via task system. Digest: 2026-09-20.
--   **The critical vulnerability was a test database. That’s the whole triage problem.** (The New Stack) — Provide business context for prioritization. Digest: 2026-09-17.
 
 ## Where Used
 
