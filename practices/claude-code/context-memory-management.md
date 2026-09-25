@@ -4,7 +4,7 @@ How an agent decides *what to remember, where to put it, and when to read it bac
 
 Sibling docs: [Token Efficiency](token-efficiency.md) (cache, `/clear`, `/compact`, model routing) and [CLAUDE.md Structure](claude-md-structure.md) (knowledge system, layered architecture). For a ready-to-run audit, see [`reviews/context-memory-review.md`](../../reviews/context-memory-review.md).
 
-> **Note on structure (consolidated 2026-08-01).** This doc had reached 56.5KB — 81% of the
+> **Note on structure (consolidated 2026-08-01, trimmed again 2026-09-24).** This doc had reached 56.5KB — 81% of the
 > updater's 70KB cap — carrying 70 auto-appended bullets, each a bold sentence followed by a
 > paragraph restating it. Two problems, both fixed here. **Bulk:** those bullets are now
 > one line each, folded into the section they belong to. **Drift:** six sections
@@ -14,6 +14,10 @@ Sibling docs: [Token Efficiency](token-efficiency.md) (cache, `/clear`, `/compac
 > pointing at the doc that actually owns the topic. **Nothing was deleted outright** — every
 > practice survives as a line, because the dedup ledger already marks these articles
 > incorporated and dropping one would make it unrecoverable.
+>
+> By 2026-09-24 the updater had re-grown it to 58.7KB the same way: 33 bullets were back to a
+> bold lead plus a restating paragraph, 15 of them off-scope. The second pass cut them to one
+> line each and moved the off-scope ones into *Adjacent Concerns*, by the same rule.
 
 **Scope check before adding here:** does this change what an agent *remembers, stores, or
 reads back*? If it's about what the agent is allowed to *do*, it belongs in
@@ -36,12 +40,10 @@ Three places a fact can live, by scope:
 
 -   **A local/on-device tier is now viable** as small models get good enough to run offline — worth treating as a distinct tier where privacy, data residency or offline operation matter.
 -   **Maintain memory locally, not globally.** Optimize the segments actual usage touches rather than periodically reorganizing the whole store; no single memory architecture dominates, and global reshuffles cost more than they return.
--   **Make session context durable with event logs.** For agents performing complex, long-horizon tasks, ensure their operational state and context is robustly maintained, logging intermediate steps for resumability, designing for persistent background execution, and deploying to cloud environments that support detached operations.
+-   **Make session context durable with event logs.** Log intermediate steps so a long-horizon task can resume, and run it where detached, persistent execution is supported.
 -   **Per-agent memory is its own scope.** Claude Code subagents accept `memory: project` (or `user`, `local`) in their frontmatter, which gives the agent a persistent directory under `.claude/agent-memory/` that it reads on start and writes as it works — so a code-reviewer stops re-deriving the same codebase patterns every session. The tier test extends: *true for this agent's role, regardless of session?* → agent memory, not the repo `CLAUDE.md` (every session pays for that) and not session context (evaporates). Two rules: tell the agent what to accumulate ("update your agent memory with patterns and recurring issues you discover") — a memory directory with no write instruction accumulates nothing; and treat it as agent-*written* memory for validation purposes (see Retrieval Contracts) — it drifts like any other doc, just without a human editor.
--   **Plan in the cloud, touch secrets on-premises.** To meet compliance and security requirements for sensitive data, separate cloud-based agent inference and planning from the execution of tool calls and interaction with internal services. This ensures that sensitive context, such as source code or secrets, remains within controlled, on-premises infrastructure.
--   **Split tasks at a privacy gate.** Utilize a 'Privacy Gate' (running locally) to identify and keep sensitive information on the user's device. This allows for dynamic splitting of complex agent tasks, with non-sensitive parts processed by powerful cloud models and sensitive portions handled by smaller local models, balancing privacy, performance, and cost.
--   **Test memory fidelity when migrating platforms.** When transitioning agents, it is crucial to preserve not only explicit memory tiers but also the subtle behavioral nuances and learned patterns that constitute an agent's 'personality' and 'routines'. This ensures consistent performance and avoids loss of efficiency or undesirable behavioral shifts post-migration, maintaining the agent's operational integrity.
--   **Agents manage project goals via task system.** Design agents to operate within a common task management system, treating project goals and issues as dynamic, persistent context. Agents should audit goal definitions, review metrics, add new work, update task states, and prioritize unblocked items, driving the project forward in a continuous loop.
+-   **Test memory fidelity when migrating platforms.** An agent's value is partly its learned routines; check they survive a move, not just the explicit memory files.
+-   **Set retention and lifecycle for stored memory.** Interaction streams an agent captures and facts it derives are sensitive assets: decide what is kept, for how long, with whose consent, and when it is deleted.
 
 ## Retrieval Contracts (Sources of Truth)
 
@@ -71,19 +73,18 @@ Format: pre-assembled markdown brief, newest-first, each fact tagged with its so
 - **Validate retrieval at runtime, not just at design time.** Monitor relevance and completeness live; retrieval degrades at scale and the failure is fluent, not loud.
 - **Embedding proximity does not scale cleanly.** Pure vector/RAG memory is provably prone to hallucination and forgetting as the store grows — plan hybrid approaches and guardrails rather than assuming more embeddings fix it.
 - **Validate agent-*written* memory.** Probabilistic extraction feeding a shared store poisons it silently; capture confidence or validate before ingest.
--   **Validate compaction summaries before reusing them.** Agent systems using compaction to manage context window limits must implement mechanisms to detect and mitigate self-generated instructions or persona shifts injected by the model itself during summarization. This ensures the integrity of the agent's internal memory and prevents unintended deviations from its core directives by guarding against internal memory contamination.
+-   **Validate compaction summaries before reusing them.** A model can write instructions or a persona shift into its own summary; check the summary before it becomes context.
 - **Structured handoff records between agents.** When work moves tool-to-tool, the output should carry state, original sources and limits — otherwise a human is the integration layer.
 - **Keep it portable.** Don't couple storage, access or semantics to one vendor's proprietary format, or the accumulated memory can't follow you to another model.
 - **Codify voice/style as a reusable context file.** A dedicated tone/persona file injected into the prompt keeps register consistent instead of re-described each time.
 - **Live data needs a streaming foundation.** Fragmented sources plus legacy access control is the usual blocker for agents reasoning over current business state.
 - **Cache hot context on fast storage** when retrieval latency starts to matter.
 -   **Declarative orchestration over ad-hoc chaining.** Blueprint languages and named patterns (supervisor, delegation, fan-out) make multi-agent context flow reviewable.
--   **Integrate agent environments with live application states to enable direct, editable interaction.** Implement a local MCP server within desktop applications, allowing coding agents to directly access and modify live project scenes. This ensures agents operate with real-time, editable context, with changes seamlessly integrated into the application's undo history, creating a truly interactive feedback loop.
--   **Combine knowledge graphs with vector search.** Standard RAG, relying solely on chunked text, often fails at multi-hop questions requiring connections across multiple text segments. GraphRAG introduces structured knowledge from knowledge graphs alongside semantic search, allowing agents to perform more sophisticated reasoning and comprehensive summarization by explicitly mapping relationships between concepts.
--   **Return named objects, not positional arrays.** To prevent 'weaker models' from losing track of data, ensure that structured outputs from tools or retrieval processes are provided as arrays of named objects (e.g., JSON objects with keys) rather than simple positional arrays. This explicit naming convention significantly improves model comprehension and reliability.
--   **Route agent tool access through one control plane.** Modern enterprises face 'AI leakage' where siloed agents operate on fragmented information from disparate systems (e.g., CRM, ERP, FSM). A control plane ensures agents can coalesce capabilities and data from multiple trusted sources, providing a comprehensive context and preventing information fragmentation across operational tasks.
--   **Separate agent analysis from human decisions.** Agents excel at data gathering, pattern recognition, and synthesizing information ('analysis'), but critical decisions often require human oversight ('judgment'). Define agent contracts and context assembly to support the agent's analytical role while explicitly reserving and facilitating human judgment for high-stakes decisions, preventing the blurring of these roles.
--   **Provide business context for prioritization.** Agents often need to prioritize tasks, such as triaging security vulnerabilities or feature requests. Ensure agents have access to critical business context, including impact, urgency, and resource implications, rather than relying solely on technical severity. This enables more accurate and effective prioritization decisions.
+-   **Give agents live, editable application state.** A local MCP server inside the application (Spline's editor) lets the agent read and change the real scene, with its edits in the app's undo history.
+-   **Combine knowledge graphs with vector search.** Chunked-text RAG fails at multi-hop questions; GraphRAG adds explicit relationships between concepts.
+-   **Return named objects, not positional arrays.** Keyed JSON objects keep weaker models from losing track of which value is which.
+-   **Route agent tool access through one control plane.** Siloed agents on fragmented CRM/ERP data reason from partial context; one plane assembles it from trusted sources.
+-   **Provide business context for prioritization.** Triage by technical severity alone misranks; give the agent impact, urgency and resource cost.
 
 ### Context Lake Architecture
 
@@ -91,8 +92,8 @@ Format: pre-assembled markdown brief, newest-first, each fact tagged with its so
 - **A context *warehouse* adds active components:** a miner that continuously crawls heterogeneous sources for deltas, and a composer that assembles a purpose-built brief for the task at hand instead of serving static retrieval.
 - **Compile knowledge, don't just store it.** An LLM pass that turns raw sources into wikis, summaries and linked concept articles gives agents something queryable, with outputs feeding back in.
 -   **Scale to zero.** Agent retrieval load is bursty; serverless components avoid paying for idle.
--   **Add a semantic cache to stop token bleed.** Deploy a Semantic Cache before expensive model invocations to store results of common queries or processed contexts. This allows agents to quickly retrieve relevant information without re-running retrievals or model inferences for identical or semantically similar inputs, significantly reducing token usage and latency in multi-agent systems.
--   **Build one retrieval layer for agent context.** As agent deployments grow, individual agents generate waves of queries against data sources, leading to concurrency issues and data staleness. Consolidate fragmented retrieval mechanisms into a unified architectural layer to efficiently manage high-volume requests, guaranteeing fresh, relevant, and performant context delivery.
+-   **Add a semantic cache to stop token bleed.** Cache results for identical or semantically similar queries in front of expensive retrievals and model calls.
+-   **Build one retrieval layer for agent context.** As agents multiply, their queries overload and stale fragmented sources; one layer manages volume and freshness.
 
 ## Context Budget
 
@@ -117,15 +118,11 @@ The asymmetry drives the rule: a paragraph in root `CLAUDE.md` is paid in every 
 -   **Prune the session deliberately.** Named categories worth dropping: superseded standing instructions, unused tool definitions, transient files, stale screenshots, dead browser results, repeated command output, rejected answers. Reported to cut reused input by up to 90%.
 -   **Structure prompts for prefix caching.** Most spend is resending the same system prompt, tool list and static docs every call; ordering for cache hits is the single biggest lever.
 -   **Use effort controls.** Raise depth for work that needs reasoning, lower it for routine work, rather than paying one rate for everything.
--   **Let the orchestrator pick subagent models** by task type and cost — and write the routing decision back as a memory rule so it persists. Parent reviews before committing the subagent's output.
--   **Fan out for genuinely large work.** Codebase-scale migrations suit dynamic planning plus many parallel subagents, with a verification step before integrating.
 -   **Rules files beat hoping.** Agents default to internal training knowledge even when tools and knowledge bases exist; an explicit rules file forcing external-context-first is what makes retrieval reliable.
 -   **Enterprise tasks want holistic context.** Real workflows need broader assembly than benchmarks imply — interconnected decisions, not isolated snippets.
 -   **Don't tokenmaxx.** Token volume is not productivity. Tie consumption to delivered outcomes, or the budget grows without the value.
--   **Escalate reasoning effort only when the draft needs it.** For knowledge work, leverage cheaper model settings (e.g., 'Low') to generate initial drafts and iterate quickly. Reserve more expensive, higher-judgment settings (e.g., 'High' or 'Extra') for critical refinement steps once the core problem is understood, optimizing the context budget across the iterative workflow.
--   **Preserve reasoning state between requests.** Beyond explicit context, an effective harness should maintain the model's internal 'opaque reasoning state' across turns, especially for long-running tasks. This allows the model to resume its internal thought process without reconstruction, enhancing performance and reducing token cost for complex reasoning.
--   **Manage the quadratic history tax.** LLM APIs are stateless, so the entire session history must be resent with each API call, causing a compounding 'quadratic history tax' where previous model outputs are re-billed as inputs. Implement strategies to aggressively compact or summarize history, especially when output tokens are significantly more expensive than inputs, to optimize token consumption.
--   **Route subagent inference to idle local machines.** To scale subagent usage and reduce cloud costs, use a virtual inference router to discover and orchestrate local idle machines (Macs, PCs). This router directs subagent model requests to available local compute, allowing a lead agent to parallelize tasks while keeping inference geographically closer and potentially free.
+-   **Preserve reasoning state between requests.** A harness that carries the model's opaque reasoning state across turns spares it reconstructing its own thinking on long tasks.
+-   **Manage the quadratic history tax.** Stateless APIs re-bill the whole history as input on every call; compact or summarize it, and keep the pre-compaction history in a log for audit and debugging.
 
 ## Training the Always-Loaded File (the Backward Pass)
 
@@ -198,10 +195,11 @@ Version-controlled skills are how recurring workflows become durable, discoverab
 
 - **Make skills granular and composable.** Small, semantically precise commands an agent applies iteratively beat one-shot instructions — more control, more predictable results.
 - **Agents can extract skills from their own successful trajectories**, turning past runs into reusable procedure — the self-improvement end of governed write-back.
-- **Capture human corrections as structured feedback.** Establish a process where human interventions, especially corrections to agent-generated outputs (e.g., code), are meticulously recorded alongside the original task and the agent's incorrect attempt, using this structured correction data to improve future context interpretation.
--   **Externalize domain guidance into loadable prompt files.** To ensure consistent behavior and reduce failures across agents, especially when operating outside an internal codebase, extract human judgment and domain expertise (like design rules) into public, loadable prompt files. This makes institutional memory portable and consumable by any agent or tool.
--   **Mine user edits for new skills.** Develop automated systems that observe user interactions, such as edits to agent outputs, to continuously improve agent performance. These loops can autonomously learn new internal jargon, detect patterns of inefficiency, and propose new skills or refine existing rules without explicit, manual feedback.
--   **Distill human judgment into agent skills automatically.** To offload repeatable decision-making and reduce human bottlenecks, proactively capture human expertise (e.g., from public statements, writings, workflows) and integrate it into agent skills. Automate the updates to these distilled skills to ensure agents always operate with the most current human-derived judgment.
+-   **Capture human corrections as structured feedback.** Record the task, the agent's wrong attempt and the correction together, so the correction can improve later context.
+-   **Externalize domain guidance into loadable prompt files.** Design rules and similar judgment, extracted into files any agent can load, travel beyond one codebase.
+-   **Mine user edits for new skills.** Watching how users edit agent output surfaces jargon, inefficiencies and candidate skills without explicit feedback.
+-   **Distill human judgment into agent skills automatically.** Capture an expert's recurring decisions from their writing and workflows, and keep the distilled skill updated.
+-   **Test new skills against your own definition of done.** A skill that passes a security scan can still produce output below the team's quality bar; test it against that bar before relying on it.
 
 ## Decision Journal
 
@@ -212,21 +210,15 @@ Choices that outlive today's task go in `decisions/YYYY-MM-DD-{topic}.md` (see [
 When surfaced context is **AI-generated** (a model-written summary, a classification), mark it where it's shown, so a reader can tell synthesis from ground truth and knows to verify before acting. Raw data and AI synthesis should stay visually distinguishable. The same applies to *assembled* context: tag each fact with its source (especially for financial or compliance work), so a reviewer can trust or challenge a specific claim instead of the whole answer.
 
 - **Tag context by trust boundary — operator vs. external.** An agent cannot otherwise tell your instructions from instructions embedded in a web page or a GitHub issue it read. This is the context-layer half of prompt-injection defense; the action-layer half is in `../ai-safety/agent-action-safety.md`.
--   **Inspect decrypted context before the agent acts.** Recognize that agents' code execution environments can be exploited to decrypt and act upon malicious instructions, even if security filters inspect incoming/outgoing plaintext. Design context handling to prevent agents from executing code within encrypted payloads, or ensure decryption processes are strictly sandboxed and verified before any output is passed to the agent's main execution flow.
+-   **Inspect decrypted context before the agent acts.** Cryptographic context injection hides instructions in an encrypted payload the agent decrypts itself, past filters that only see ciphertext; sandbox and check decryption output before it reaches the main flow.
 - **Require an evidence packet with consequential decisions:** the queries run, completeness of the data, approximations made, and alternatives tested — not just the records retrieved.
--   **Make agents record alternatives they ruled out.** AI-generated code often lacks the human-accessible context of intent and trade-offs, making review difficult and prone to errors. By requiring agents to articulate their reasoning alongside the code, human engineers gain critical insight into the agent's decision-making process, improving review quality and preventing the adoption of poorly reasoned solutions. This effectively makes the agent's 'thinking process' a form of provenance.
--   **Defend against ASCII smuggling in context.** Attackers are using invisible Unicode tag characters to split keywords, bypassing filters and altering how LLM tokenizers parse text. This technique, sometimes called ASCII Smuggling, creates a mismatch between human-readable and software-processed text, demanding explicit protection for context integrity.
--   **Sanitize tool descriptions, not just user input.** Attackers can exploit agents by embedding malicious instructions within seemingly benign context, such as public issue descriptions or unsanitized user input. Treat all incoming context, including tool documentation, as potentially hostile and validate it to prevent agents from misinterpreting text as executable commands or privileged instructions.
--   **Gate high-risk capabilities behind an access program.** Extend access control beyond data to include specialized agent capabilities or models that pose higher risks, such as those performing vulnerability detection or automated patching. Restrict access to these powerful tools to a vetted group of 'trusted defenders' to ensure responsible and secure deployment.
--   **Record agent internal monologue for debugging.** When agents fail without obvious errors, standard logs are insufficient. Implement mechanisms within the harness to record and analyze the agent's internal monologue, plans, and execution path. This visibility helps diagnose "creative" failures where an agent progresses but deviates from the desired outcome.
--   **Agents verify code using a runtime.** Integrate a robust runtime environment into the agent's harness, allowing it to execute, inspect, and receive structured answers from its own generated code or plans. This "verification skill" enables agents to autonomously check their work, iterate on changes, and ensure correctness, significantly increasing throughput for agent-driven development.
 
 ## Enforcement (the frontier)
 
 None of the above is self-enforcing — docs drift from code silently. The maturity endpoint is an audit/maintenance agent that detects drift: *deterministically* for status snapshots (issues referenced in a status file that are now closed; file mtime), and via an *AI pass* for semantic drift (a per-module `CLAUDE.md` whose described inputs no longer match its code). Until that exists, drift is caught only when a human or agent happens to read both sides.
 
 - **Probabilistic release gates** — baseline evals, drift detection, shadow validation, cost/latency guardrails — are the CI-side equivalent for pipelines whose regressions are gradual rather than binary.
--   **Evaluate context assembly, not just final answers.** Move beyond ad-hoc demos by defining correct agent behaviors, jobs, and limits upfront. Implement automated, repeatable evaluations that run fixed scenarios along the execution path, recording evidence to ensure context assembly, tool calls, and permissions consistently meet release gates.
+-   **Evaluate context assembly, not just final answers.** Fixed scenarios that record what was assembled, which tools ran and what permissions applied, run as a release gate.
 
 ## Adjacent Concerns
 
@@ -248,6 +240,8 @@ this kind to the owning doc, not here.**
 - Multi-layer kill switches — application, platform, network, identity, cloud.
 - Explicit human approval and "send boundaries" before any outward-facing action.
 - Data portability and ownership policies for agent-generated memory, especially on vendor-managed runtimes.
+- Plan in the cloud, keep secrets and tool execution on-premises; a local privacy gate splits sensitive steps to local models.
+- Gate specialized high-risk capabilities (vulnerability detection, automated patching) behind a vetted access program.
 
 **Agent architecture and harness** → `model-hierarchy-delegation.md` and `code-review-and-ai-slop.md`
 
@@ -258,6 +252,9 @@ this kind to the owning doc, not here.**
 - Harnesses as a platform-engineering layer, for standardization and guardrail enforcement.
 - Design tool schemas defensively against model-specific tool-use bias.
 - Cross-vendor governance layer for shared context and reusable agentic processes.
+- Let the orchestrator pick subagent models by task and cost; fan out to parallel subagents for codebase-scale work; draft at low effort and escalate only for refinement; route subagent inference to idle local machines.
+- Keep agent analysis separate from human judgment on high-stakes decisions.
+- Agents that run a project through a task system in a continuous loop (the software-factory pattern).
 
 **Reasoning and planning** → `code-review-and-ai-slop.md`
 
@@ -276,11 +273,18 @@ this kind to the owning doc, not here.**
 - Hostile/fuzzing environments for agent-generated code.
 - A language-agnostic conformance suite as the prerequisite for large-scale agentic refactors.
 - Judge agent contribution by production outcomes, not usage volume.
+- Record the agent's internal monologue and plans to debug failures that raise no error.
+- Agents verifying their own code through a runtime they can drive, and their visual output through screenshot comparison.
+- Agents recording the alternatives they ruled out alongside the code, as review provenance.
+
+**Prompt injection in context** → `../ai-safety/prompt-injection-mitigation.md`
+
+- ASCII smuggling: invisible Unicode tag characters split keywords so filters and tokenizers read different text.
+- Treat tool descriptions and public issue text as hostile input, not just user messages.
 
 ## Self-Assessment
 
 Use [`reviews/context-memory-review.md`](../../reviews/context-memory-review.md) to have a repo grade itself against these practices and emit a tracked checklist of fixes — paste it into a Claude Code session in the target repo, or wire it into the shared review workflow.
--   **Let agents check their own visual output.** For agents generating visual content (e.g., UIs, 3D scenes), integrate a visual testing framework like Playwright into the development loop. Capture screenshots from predetermined viewpoints and compare them against expected references or real-world photos to identify subtle visual errors or unintended changes.
 
 ## Sources
 
