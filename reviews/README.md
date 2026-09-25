@@ -1,7 +1,7 @@
 # Shared Review System
 
 Centralized review prompts + a single GitHub Actions workflow template. Claude-only
-(`claude-fable-5`, `--effort max`), rebuilt 2026-07-26. `workflow-template.yml` is
+(`claude-opus-5-5`, `--effort high`; was `claude-fable-5` at `max` until 2026-09-25), rebuilt 2026-07-26. `workflow-template.yml` is
 ground truth — this README is just the router.
 
 **Consumers:** wealth-mgmt runs the template as-is. crumbl-ops self-hosts its own
@@ -76,7 +76,9 @@ staggered (see `AUTOMATION.md`). Each files one issue labeled `depth-review` wit
 
 Edit the `.md` files in this directory. Prompts are fetched at runtime from this
 repo's `main`, so changes take effect on the next run across all consumers — no PRs
-needed in target repos.
+needed in target repos. The workflow file is different: each consumer holds a copy,
+so a change to `workflow-template.yml` (model, effort, schedule) needs a PR in each
+consumer repo too.
 
 ## Per-Repo Customization
 
