@@ -177,6 +177,22 @@
           "reason": "The repo already carries 44 AST tripwires and the `ast-tripwire` skill, so #2553 points that at layering: `tests/test_layer_boundary_canonical.py` fails on any import of `src.api` or `src.scheduler` from a domain package."
         }
       ]
+    },
+    "2701": {
+      "title": "Weekly digest 2026-09-18: ideas to evaluate",
+      "closed_at": "2026-09-19",
+      "verdicts": [
+        {
+          "idea": "Agents Propose, Code Validates for financial ops",
+          "verdict": "already-built",
+          "reason": "Already the architecture here, with every QBO poster running behind the action-tier gate registry and the persist-then-post gate, and the month-end variance narrative and receipt classifier already live."
+        },
+        {
+          "idea": "System One classifier in place of Gemini",
+          "verdict": "rejected",
+          "reason": "Not now, as cost is not the constraint, and adding a second model vendor to the egress allowlist, secret roster, and model-string pin test is the primary blocker."
+        }
+      ]
     }
   }
 }
