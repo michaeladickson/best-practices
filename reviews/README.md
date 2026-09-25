@@ -42,20 +42,20 @@ or dispatch the workflow manually where applicable.
 | `database-review.md` | Database structure and performance — live read-only stats (seq scans, index hygiene, cache, timeouts) plus schema types, keys, migrations, pooling, query patterns |
 | `tenant-isolation-review.md` | Tenant boundary — isolation model, live DB grants / secret IAM / bucket layout, tenant resolution, shared caches, outbound channels, inherited config, lifecycle |
 | `module-boundaries-review.md` | Structure and dependencies — measured import graph, cycles, lazy imports, size, dependency direction, SQL spread, git co-change hotspots; domain decomposition, layering, extension points, enforcement |
+| `context-memory-review.md` | Context/memory self-assessment (also scheduled monthly, 1st) |
+| `model-hierarchy-review.md` | Model-hierarchy delegation self-assessment (also scheduled monthly, 15th) |
+| `ui-review.md` | UI/UX audit — consistency, accessibility, responsiveness (reclassified on-demand 2026-07-26) |
+| `devops-review.md` | DevOps/SRE audit — deployment, secrets, monitoring, scaling (reclassified on-demand 2026-07-26) |
 
 **Depth reviews vs. weekly diff checks.** `database-review.md`,
-`tenant-isolation-review.md` and `module-boundaries-review.md` are *depth reviews*: full scope, a specialist's view,
-graded from live evidence (the database's own statistics, real grants, the measured
-import graph and git history), each ending in a
+`tenant-isolation-review.md` and `module-boundaries-review.md` are *depth reviews*:
+full scope, a specialist's view, graded from live evidence (the database's own
+statistics, real grants, the measured import graph and git history), each ending in a
 Good / Gap / Missing scorecard. The weekly prompts do not repeat their questions. They
 keep a narrow check on the same failure classes, scoped to the week's diff, so a
 regression is caught in the week it is written (`data-review.md` §7 and §9,
 `qa-review.md` §4). A whole-repo question in a diff-scoped prompt cannot be answered
 from the diff, so it belongs in a depth review.
-| `context-memory-review.md` | Context/memory self-assessment (also scheduled monthly, 1st) |
-| `model-hierarchy-review.md` | Model-hierarchy delegation self-assessment (also scheduled monthly, 15th) |
-| `ui-review.md` | UI/UX audit — consistency, accessibility, responsiveness (reclassified on-demand 2026-07-26) |
-| `devops-review.md` | DevOps/SRE audit — deployment, secrets, monitoring, scaling (reclassified on-demand 2026-07-26) |
 
 ## Setup for a New Repo
 
