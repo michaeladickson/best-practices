@@ -54,15 +54,12 @@ Check for:
    - Are there time entries where length_hours = 0 but end_time is set (corrupt data)?
    - Are there days where total labor hours are significantly below historical DOW average for a store (suggests missing punches even if entries exist)?
 
-7. **Database Schema Health**
-   - Are there tables that exist in the DB but are never referenced in any Python code?
-   - Are there API routes or sync functions querying tables that no longer exist (dropped by migrations)?
-   - Are there columns that are always NULL or always the same value (dead columns)?
-   - Are code references to dropped columns still present? (e.g., `net_sales`, `avg_order_value`, `desserts_sold` were removed from `store_daily_metrics` — verify no code still reads them)
-   - Are there missing indexes on columns used in WHERE/JOIN clauses?
-   - Are there tables being populated by multiple independent data feeds with overlapping data?
-   - Are there physical tables that could be replaced by views over source-of-truth tables?
-   - Are there derived tables that can't be re-created from source tables (data only exists in derived form)?
+7. **Schema Changes in This Diff** (whole-schema health is `database-review.md`, run on demand)
+   - Does a new or altered table have a primary key, a UNIQUE constraint on its natural or external key, and foreign keys for its `*_id` columns?
+   - Is new money stored as `numeric` (never `real`/`double precision`), new instants as `timestamptz`, new business dates as `date`?
+   - Does a new query filter or join on a column no index leads with, on a table that is large or growing?
+   - Does the diff drop or rename a column that code still reads?
+   - Does the diff add a second table, feed or derived copy for a fact that already has a home?
 
 8. **Data Feed Efficiency**
    - Are there API calls fetching data that's already available from another call?
@@ -72,12 +69,10 @@ Check for:
    - Is the trailing window for order/data syncs wider than necessary?
    - Are API calls parallelized across stores where possible?
 
-9. **Schema Evolution & Migration Hygiene**
-   - Are migration files applied in sorted order and idempotent (safe to re-run)?
-   - Are there CREATE TABLE statements in schema.sql that conflict with migration-created tables?
-   - Are foreign key relationships correctly defined for all ID reference columns?
-   - Are UNIQUE constraints on all tables to prevent duplicates on re-runs?
-   - Are there tables still using patterns from an older architecture?
+9. **Migrations in This Diff** (migration discipline as a whole is `database-review.md`)
+   - Is each new migration idempotent and safe to re-run?
+   - Is it lock-safe on a large table (`CREATE INDEX CONCURRENTLY`, no rewrite under an exclusive lock, a `lock_timeout`)?
+   - Does it edit an already-applied migration instead of adding a new one?
 
 10. **API Integration Health**
     - Are API response schemas being validated or just assumed correct?

@@ -31,11 +31,11 @@ Check for:
    - Is there monitoring for data freshness (e.g., last successful daily_sales sync)?
    - Are Cloud Run cold start times, error rates, and latency tracked?
 
-4. **Database & Infrastructure**
-   - Are database connections properly pooled and recycled?
-   - Are migrations tested before production application?
-   - Is there a backup and recovery plan for Cloud SQL?
-   - Are indexes adequate for current query patterns? Any missing indexes for new tables?
+4. **Database Operations** (schema, indexing, pooling and migration discipline are
+   `database-review.md`; do not duplicate them here)
+   - Are automated backups enabled on the instance, verified from its live config rather than the docs?
+   - Has a restore been rehearsed, and how long did it take? Per tenant, if tenants share an instance?
+   - Is point-in-time recovery on, and is the instance tier sized for its database?
 
 5. **CI/CD Pipeline**
    - Do builds include type checking and basic validation?
@@ -58,11 +58,6 @@ Check for:
    - Are there failed Cloud Run job executions that ran full duration before failing (wasted compute)?
    - Are there external API calls that could be cached or batched to reduce volume?
    - Is the Cloud SQL tier appropriate for current usage (not over-provisioned)?
-
-8. **Migration Hygiene**
-   - Are there a large number of accumulated migrations that should be consolidated?
-   - Are migrations idempotent and safe to re-run?
-   - Is the migration runner resilient to partial failures?
 
 Format your findings as a markdown document with:
 - Executive summary (2-3 sentences on operational readiness)

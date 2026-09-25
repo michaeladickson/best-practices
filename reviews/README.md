@@ -40,6 +40,16 @@ or dispatch the workflow manually where applicable.
 | `agent-action-safety-review.md` | Agent action safety — action tiers, least-privilege, judge layer, human-in-the-loop, audit trail |
 | `llm-eval-review.md` | LLM evaluation — fixture datasets, regression gates, model-upgrade gating, drift monitoring |
 | `database-review.md` | Database structure and performance — live read-only stats (seq scans, index hygiene, cache, timeouts) plus schema types, keys, migrations, pooling, query patterns |
+| `tenant-isolation-review.md` | Tenant boundary — isolation model, live DB grants / secret IAM / bucket layout, tenant resolution, shared caches, outbound channels, inherited config, lifecycle |
+
+**Depth reviews vs. weekly diff checks.** `database-review.md` and
+`tenant-isolation-review.md` are *depth reviews*: full scope, a specialist's view,
+graded from live evidence (the database's own statistics, real grants), each ending in a
+Good / Gap / Missing scorecard. The weekly prompts do not repeat their questions. They
+keep a narrow check on the same failure classes, scoped to the week's diff, so a
+regression is caught in the week it is written (`data-review.md` §7 and §9,
+`qa-review.md` §4). A whole-repo question in a diff-scoped prompt cannot be answered
+from the diff, so it belongs in a depth review.
 | `context-memory-review.md` | Context/memory self-assessment (also scheduled monthly, 1st) |
 | `model-hierarchy-review.md` | Model-hierarchy delegation self-assessment (also scheduled monthly, 15th) |
 | `ui-review.md` | UI/UX audit — consistency, accessibility, responsiveness (reclassified on-demand 2026-07-26) |
