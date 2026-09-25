@@ -39,7 +39,11 @@ boundary; one that a test or linter enforces is.
 6. **Change hotspots from git history** (last ~90 days): most-changed files, and pairs
    of files in *different* packages that change together most often. A file edited in
    a large share of all commits is a merge-conflict magnet; frequent cross-package
-   co-change means the boundary between them is drawn in the wrong place.
+   co-change means the boundary between them is drawn in the wrong place. Count across
+   the whole repository, not only the source tree: test manifests, registries and
+   config files are often the worst hotspots. And split each hotspot's count before
+   and after its most recent structural change; a 90-day total can report a hotspot
+   that was fixed a month ago.
 
 ## Part B — Grade the boundaries (judgment, with evidence)
 
