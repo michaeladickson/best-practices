@@ -31,8 +31,13 @@ can have.
    kind each job is.
 3. **Detection.** List every alert that exists: monitoring policies, uptime checks,
    log-based alerts, the app's own health or data-quality checks. For each: what
-   condition fires it, where it goes, and whether it has ever fired. Then measure
-   error volume in the logs over the last week against how many alerts fired.
+   condition fires it, where it goes, and whether it has ever fired. Read the cloud
+   alert policies live: they usually live outside the repo, and a code-only review
+   will call them missing. For each, confirm the signal it watches still exists (a
+   heartbeat on a log line nobody writes any more is inert), and that a heartbeat
+   uses an absence condition: a count-below-threshold condition does not fire when
+   the data stops arriving. Then measure error volume in the logs over the last week
+   against how many alerts fired.
 4. **Recovery posture.** Backup configuration and point-in-time recovery read from the
    live instance (not the docs); the last rehearsed restore; how failed work is retried
    or backfilled; which operations are idempotent.
@@ -64,6 +69,8 @@ file/path. Count; do not characterize without a number.
 6. **Idempotency and repair.** Can every job be re-run safely for a past date? Is
    there a backfill path, and is it the same code as the nightly or a separate script?
 7. **Alert quality.** Do alerts reach a human who will act, on a channel they watch?
+   An issue or message authored with the owner's own token does not notify the owner.
+   Measure it: median time from a recorded failure to its resolution.
    Noise ratio: alerts that fire and are ignored train people to ignore the real one.
    Is there a dead-man's switch for the alerting itself?
 8. **Blast radius and shared limits.** Shared credentials, rate limits and quotas
