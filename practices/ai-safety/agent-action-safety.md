@@ -7,7 +7,7 @@ covers the code an agent *writes*; this covers what an agent *does at runtime*.
 
 Related: [Prompt-Injection Mitigation](prompt-injection-mitigation.md) (untrusted input
 that hijacks an agent), and the destructive-action gating practice in
-[Code Review & AI Slop](../cla Claude-code/code-review-and-ai-slop.md#best-practices).
+[Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md#best-practices).
 
 For a ready-to-run audit, see [`reviews/agent-action-safety-review.md`](../../reviews/agent-action-safety-review.md).
 
