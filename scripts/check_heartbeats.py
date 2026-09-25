@@ -50,6 +50,14 @@ CHECKS = [
         "path": str(HOME / ".claude" / "backward-pass" / "*.json"),
         "max_age_days": 40,
     },
+    # Quarterly depth reviews of crumbl-ops, one state file each so a single dead
+    # review is not hidden by the others (a newest-of-glob check would be).
+    *({
+        "name": f"depth-review-{r} (quarterly)",
+        "type": "json_last_run",
+        "path": str(HOME / ".claude" / "depth-reviews" / f"{r}.json"),
+        "max_age_days": 100,
+    } for r in ("database", "tenant-isolation", "module-boundaries", "failure-modes")),
 ]
 
 REPO = "michaeladickson/best-practices"

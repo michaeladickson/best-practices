@@ -24,6 +24,7 @@ When adding a job here, add its check there too.
 | **CC-Heartbeats** (independent dead-man's check) | Tue 9am | Windows Task Scheduler → `scripts/check_heartbeats.cmd` | files a GitHub issue when anything is stale | n/a | Only if the whole estate shrinks to the point of pointlessness |
 | **monthly-voice-sync** (voice memory reconcile, command-center) | monthly | Claude Code scheduled task (app storage) | app task history | — | Voice captures dry up for a quarter |
 | **monthly-thesis-check** (wealth-mgmt thesis review → PR) | 10th, 8:15am | Claude Code scheduled task (app storage) | `knowledge/thesis-checks/` files in wealth-mgmt | — | Two consecutive quarters of PRs closed unread |
+| **Quarterly depth reviews of crumbl-ops** (`reviews/{database,tenant-isolation,module-boundaries,failure-modes}-review.md` → one `depth-review` issue each, compared with the previous run) | each quarterly, 9am: module boundaries 5 Feb/May/Aug/Nov, failure modes 20 Feb/May/Aug/Nov, database 5 Mar/Jun/Sep/Dec, tenant isolation 20 Mar/Jun/Sep/Dec | Claude Code scheduled tasks (app storage); local because they need the Cloud SQL proxy and `gcloud`, which the Actions review workflow deliberately lacks | `~/.claude/depth-reviews/<review>.json` last_run ≤ 100d, per review | ✓ | A review whose previous Highs are all still open at its next run twice running: the findings are not being used, so fix the loop or drop the review |
 
 Not in this repo but part of the estate: crumbl-ops self-hosts its review
 workflows (rethink tracked in crumbl-ops#1920); wealth-mgmt consumes
@@ -37,3 +38,8 @@ Task Scheduler entries and Claude Code app tasks don't travel with git:
 2. `powershell -ExecutionPolicy Bypass -File scripts/register_heartbeat.ps1`
 3. Recreate the two Claude Code app tasks (Mon 8am skills-sync; monthly 1st 8am
    backward-pass) pointing at their SKILL.md files under `.claude/skills/`.
+4. Recreate the four quarterly depth-review app tasks from crumbl-ops
+   `.claude/scheduled-prompts/depth-review-*.md` (private repo: the prompts name its
+   databases and cloud account), with the crons in the table above. State lives in
+   `~/.claude/depth-reviews/`; seed each file from the latest `depth-review` issue
+   in crumbl-ops, or the next run has nothing to compare against.

@@ -33,6 +33,24 @@ One line per review type (changes, data-qa, context-memory, model-hierarchy). Gr
 
 Flag any type producing low-value findings or missing critical areas.
 
+## 1b. Depth-Review Trend (skip if the repo has no `depth-review` issues)
+
+Depth reviews (database, tenant isolation, module boundaries, failure modes) run
+quarterly, each filing one issue labeled `depth-review`. Read all of them, open and
+closed (`gh issue list --label depth-review --state all`, then view each with its
+comments; a baseline scorecard may be in a comment rather than the body). Each carries
+one line in the exact form `Scorecard: Good N / Gap N / Missing N`.
+
+- **Trend table:** one row per review type, one column per run date, cells
+  `Good/Gap/Missing`. Direction per type: improving (Good up or Missing down),
+  flat, or regressing.
+- **Previous Highs:** for each review's most recent issue, count its High checkboxes
+  checked vs unchecked, and name any High that has now been open across two runs.
+- **Overdue:** a review type whose latest issue is more than ~100 days old has
+  stopped running; flag it.
+- **The question the owner asked:** is the codebase moving toward world-class? Answer
+  it in one sentence from the table, not from impressions.
+
 ## 2. Trajectory & Systemic Issues
 
 - What patterns recur **across multiple reviews**? (Same module flagged by changes +

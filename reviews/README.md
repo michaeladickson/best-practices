@@ -59,6 +59,11 @@ regression is caught in the week it is written (`data-review.md` §7 and §9,
 `qa-review.md` §4). A whole-repo question in a diff-scoped prompt cannot be answered
 from the diff, so it belongs in a depth review.
 
+Depth reviews need live access (the Cloud SQL proxy, `gcloud`), which this workflow
+deliberately does not hold, so they run as local scheduled tasks, quarterly and
+staggered (see `AUTOMATION.md`). Each files one issue labeled `depth-review` with a
+`Scorecard: Good N / Gap N / Missing N` line, and `cto-review.md` §1b tracks the trend.
+
 ## Setup for a New Repo
 
 1. Copy `workflow-template.yml` to `.github/workflows/weekly-reviews.yml`
