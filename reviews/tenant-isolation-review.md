@@ -33,7 +33,12 @@ does not, say so in the scorecard and mark those findings *inferred*.
 4. **Credentials and identity.** Per tenant: which service account runs its workload,
    which secrets it can read, which database roles it can use. Measure it: list the
    grants and look for any principal that can read two tenants' secrets or connect to
-   two tenants' databases. Project-wide roles count as access to every tenant.
+   two tenants' databases. Project-wide roles count as access to every tenant. In the
+   database, check CONNECT granted to PUBLIC on each tenant database, role membership
+   (an operator or runtime login that is a member of a tenant's role holds that
+   tenant's privileges), and measure actual table privileges per role: CONNECT alone
+   reads nothing. A shared app tier necessarily holds every tenant's credentials; say
+   so, and check it is the only principal that does.
 
 ## Part B — Grade the boundary (static)
 
@@ -43,7 +48,11 @@ file/path. Count; do not characterize without a number.
 1. **Tenant resolution.** How each request, job run and CLI invocation learns which
    tenant it serves. Is it explicit and required, or defaulted? What happens when it
    is missing: an error, or a silent fall-back to the first or "home" tenant? A
-   default tenant is the most common silo leak.
+   default tenant is the most common silo leak. Then follow the tenant context across
+   every concurrency boundary: raw threads, thread-pool `map`, callbacks and
+   fire-and-forget writers. In Python, `contextvars` do not cross into a new
+   `threading.Thread`, so code that resolves the tenant from a context variable inside
+   a thread gets the default tenant.
 2. **Data access.** Every query path that can reach tenant data without passing through
    the boundary mechanism. In pooled designs, every query that omits the tenant key;
    in silo designs, every connection opened without the tenant's resolver.
@@ -63,7 +72,11 @@ file/path. Count; do not characterize without a number.
 7. **Configuration and reference data.** What each tenant inherits from the operator's
    own setup (chart of accounts, rates, templates, store lists). Inherited config is a
    correctness leak: the tenant runs on someone else's numbers. Separate genuinely
-   shared reference data from tenant data that was copied by accident.
+   shared reference data from tenant data that was copied by accident. Read every
+   migration that INSERTs rows, not just the schema: seed migrations replayed into each
+   tenant database carry the operator's own rows, notes and IDs into the customer's.
+   Where live access exists, query one tenant's reference tables for the operator's
+   name.
 8. **Operator and admin paths.** Scripts, migrations, backfills and support tools that
    take a tenant argument: do they default to one tenant, and can one run against the
    wrong tenant without a confirmation? Are migrations applied to every tenant, and is
