@@ -12,8 +12,9 @@ step). Safeguards, since this also edits the very doc about preventing AI slop:
 
   1. Dedup ledger (data/practice_updates/incorporated.json): a source article is never
      integrated into the same doc twice.
-  2. Two-stage LLM: (a) extract NEW, actionable candidates not already covered;
-     (b) integrate them into the full doc.
+  2. Two-stage LLM: (a) one extraction across ALL docs, routing each NEW candidate
+     to exactly one doc and dropping any idea a doc already covers; (b) integrate
+     each doc's candidates into that doc.
   3. Structural validation before any write: H1 preserved, required anchors present,
      length within sane bounds. On failure the doc is left untouched and the articles
      are NOT marked incorporated (so it retries next week). Git history is the backstop.
@@ -140,10 +141,6 @@ def _unwrap_markdown_fence(text: str) -> str:
     return t.strip() + "\n"
 
 
-def _existing_headings(doc_text: str) -> list[str]:
-    return [ln.strip() for ln in doc_text.splitlines() if ln.lstrip().startswith("#")]
-
-
 def _posts_block(posts: list[dict]) -> str:
     block = ""
     for i, p in enumerate(posts, 1):
@@ -156,30 +153,63 @@ def _posts_block(posts: list[dict]) -> str:
     return block
 
 
-def _extract_candidates(client, topic: str, scope: str,
-                        headings: list[str], posts: list[dict]) -> list[dict]:
-    """Stage 1 — find NEW, concretely-actionable practices not already in the doc."""
-    prompt = f"""You maintain a curated engineering best-practices document.
+def _docs_block(docs: list[dict]) -> str:
+    block = ""
+    for d in docs:
+        block += f"\n=== {d['path']} ===\n"
+        block += f"Topic: {d['topic']}\n"
+        if d.get("target"):
+            block += f"Scope:\n{d.get('scope', '').strip()}\n"
+        else:
+            block += "(Covered-only: NOT a valid target this week. Use it only to drop ideas it already covers.)\n"
+        block += "Practices already in it:\n"
+        block += "".join(f"- {t}\n" for t in d["titles"])
+    return block
 
-Topic of the document: {topic}
 
-Scope it already covers:
-{scope}
+def _extract_candidates(client, docs: list[dict], posts: list[dict]) -> Optional[list[dict]]:
+    """Stage 1 — find NEW practices, each routed to exactly ONE doc.
 
-Section headings already in the document (do NOT propose anything already covered by these):
-{chr(10).join('- ' + h for h in headings)}
+    One call sees every doc at once. It used to run once per doc, blind to the
+    others, so an article whose keywords matched several docs was mined once per
+    doc: the 2026-09-18 run wrote comprehension debt, the coordinator agent,
+    compaction integrity and provider variability into two docs each. A candidate
+    now carries a single "doc", and an idea any doc already covers is dropped.
+
+    `docs` items: path, topic, scope, titles, target (False = no unseen articles or
+    at capacity; shown only so its coverage counts), eligible_urls (links that doc
+    has not yet seen).
+    A candidate is kept only if its source is in its target's eligible_urls, so the
+    per-doc ledger still means "never integrated into this doc twice".
+
+    Returns None when the response is unusable, so the caller can block the run
+    rather than mark the week's articles seen on the strength of a parse error."""
+    targets = [d for d in docs if d.get("target")]
+    prompt = f"""You maintain a set of curated engineering best-practices documents.
+
+Here they are, with the practices each one already contains:
+{_docs_block(docs)}
 
 Here are this week's articles:
 {_posts_block(posts)}
 
-Identify only GENUINELY NEW, concretely-actionable best practices on this exact topic
-that the document does not already cover. Be strict: most weeks will yield 0-2. Ignore
-vendor news, pricing, model-release chatter, and anything generic or off-topic.
+Identify only GENUINELY NEW, concretely-actionable best practices that NONE of the
+documents above already cover. Be strict: most weeks will yield 0-3 across all of them.
+Ignore vendor news, pricing, model-release chatter, and anything generic or off-topic.
+
+Routing — each practice goes in exactly ONE document:
+- Set "doc" to the single path it fits best. Never propose the same idea twice for
+  two documents; pick one.
+- If ANY document (including a covered-only one) already has a practice with the
+  same idea, in any wording, drop the candidate. Do not propose a paraphrase.
+- Valid "doc" values: {", ".join(d["path"] for d in targets)}.
+- An idea that fits no document's topic is off-topic: drop it.
 
 Return a JSON object:
 {{
   "candidates": [
     {{
+      "doc": "the one target path from the list above",
       "practice": "Imperative practice title, MAX 12 WORDS. See title rules below.",
       "detail": "2-3 sentences a maintainer can paste into the doc body.",
       "source_title": "exact article title",
@@ -187,7 +217,7 @@ Return a JSON object:
       "source_url": "exact URL from the article block",
       "source_date": "YYYY-MM-DD from the article block",
       "confidence": "high|medium|low",
-      "not_already_covered_because": "1 sentence on why this is new vs the headings above"
+      "not_already_covered_because": "1 sentence naming the closest existing practice in ANY document and why this differs"
     }}
   ]
 }}
@@ -209,20 +239,31 @@ like AI output):
 
 Rules:
 - Only include high or medium confidence items. Drop low-confidence ones.
-- Each candidate MUST map to a specific article in the block above (real URL).
+- Each candidate MUST map to a specific article in the block above (real URL), and
+  the practice must be something that article actually says. Never attribute a
+  practice to an article whose content does not support it.
 - If nothing genuinely new and on-topic exists, return {{"candidates": []}}.
 """
-    resp = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
+    resp = client.models.generate_content(
+        model=GEMINI_MODEL, contents=prompt,
+        config={"response_mime_type": "application/json"})
     try:
-        data = json.loads(_strip_json_fence(resp.text).strip())
-    except json.JSONDecodeError as e:
+        data = json.loads(_strip_json_fence(resp.text or "").strip())
+        cands = data.get("candidates", [])
+    except (json.JSONDecodeError, AttributeError) as e:
         log.error("extract_json_parse_failed", error=str(e), head=(resp.text or "")[:200])
-        return []
-    cands = data.get("candidates", [])
-    # keep only candidates that reference a URL actually present in this batch
-    valid_urls = {p.get("link", "") for p in posts}
-    return [c for c in cands if c.get("source_url") in valid_urls
-            and c.get("confidence") in ("high", "medium")]
+        return None
+    eligible = {d["path"]: d["eligible_urls"] for d in targets}
+    kept = []
+    for c in cands:
+        if c.get("confidence") not in ("high", "medium"):
+            continue
+        if c.get("source_url") not in eligible.get(c.get("doc"), ()):
+            log.warning("extract_candidate_dropped", doc=c.get("doc"),
+                        practice=c.get("practice"), reason="unknown doc or source")
+            continue
+        kept.append(c)
+    return kept
 
 
 def _integrate(client, doc_text: str, topic: str, candidates: list[dict],
@@ -424,41 +465,52 @@ def _validate(old: str, new: str, required_anchors: list[str]) -> tuple[bool, st
 RETRYABLE_REJECTIONS = ("new duplicate practice heading", "new practice title over")
 
 
-def _process_doc(doc: dict, required_anchors: list[str], posts: list[dict],
-                 ledger: dict, dry_run: bool, get_client) -> dict:
-    """Returns a result dict; mutates ledger only on success / confirmed no-op."""
+def _prepare_doc(doc: dict, posts: list[dict], ledger: dict) -> dict:
+    """Read one doc and find the week's articles it has not seen. No LLM calls.
+
+    Returns a plan: {doc, result, text, new_posts, target}. `target` is False when
+    the doc cannot take an edit this week; `result` then already carries why."""
     rel_path = doc["path"]
     abs_path = REPO_ROOT / rel_path
-    result = {"doc": rel_path, "status": "skipped", "candidates": 0}
+    plan = {"doc": doc, "result": {"doc": rel_path, "status": "skipped", "candidates": 0},
+            "text": None, "new_posts": [], "target": False}
 
     if not abs_path.exists():
         log.warning("practice_doc_missing", path=rel_path)
-        result["status"] = "missing"
-        return result
+        plan["result"]["status"] = "missing"
+        return plan
+    plan["text"] = abs_path.read_text(encoding="utf-8")
 
     seen = set(ledger.get(rel_path, []))
     candidate_posts = _keyword_prefilter(posts, doc.get("keywords", []))
-    new_posts = [p for p in candidate_posts if p.get("link", "") not in seen]
+    plan["new_posts"] = [p for p in candidate_posts if p.get("link", "") not in seen]
     log.info("practice_prefilter", doc=rel_path, prefiltered=len(candidate_posts),
-             new_after_ledger=len(new_posts))
-    if not new_posts:
-        result["status"] = "no_new_articles"
-        return result
+             new_after_ledger=len(plan["new_posts"]))
+    if not plan["new_posts"]:
+        plan["result"]["status"] = "no_new_articles"
+        return plan
 
-    doc_text = abs_path.read_text(encoding="utf-8")
-    if len(doc_text) >= MAX_DOC_BYTES:
+    if len(plan["text"]) >= MAX_DOC_BYTES:
         # Don't spend LLM calls integrating into a doc that validation would reject
         # anyway. Articles are NOT marked seen — they get another shot after a human
         # consolidation pass brings the doc back under the cap.
         log.warning("practice_doc_at_capacity", doc=rel_path,
-                    bytes=len(doc_text), cap=MAX_DOC_BYTES)
-        result["status"] = "at_capacity:consolidate"
-        return result
-    client = get_client()
-    candidates = _extract_candidates(
-        client, doc["topic"], doc.get("scope", ""), _existing_headings(doc_text), new_posts
-    )
-    result["candidates"] = len(candidates)
+                    bytes=len(plan["text"]), cap=MAX_DOC_BYTES)
+        plan["result"]["status"] = "at_capacity:consolidate"
+        return plan
+    plan["target"] = True
+    return plan
+
+
+def _process_doc(doc: dict, required_anchors: list[str], doc_text: str,
+                 new_posts: list[dict], candidates: list[dict], ledger: dict,
+                 dry_run: bool, client) -> dict:
+    """Integrate this doc's routed candidates. Returns a result dict; mutates the
+    ledger only on success / confirmed no-op."""
+    rel_path = doc["path"]
+    abs_path = REPO_ROOT / rel_path
+    result = {"doc": rel_path, "status": "skipped", "candidates": len(candidates)}
+    seen = set(ledger.get(rel_path, []))
     considered_urls = [p.get("link", "") for p in new_posts if p.get("link")]
 
     if not candidates:
@@ -508,6 +560,44 @@ def _process_doc(doc: dict, required_anchors: list[str], posts: list[dict],
     return result
 
 
+def _run_docs(docs: list[dict], required_anchors: list[str], posts: list[dict],
+              ledger: dict, dry_run: bool, get_client) -> list[dict]:
+    """Prepare every doc, extract once across all of them, integrate per doc."""
+    plans = [_prepare_doc(doc, posts, ledger) for doc in docs]
+    targets = [p for p in plans if p["target"]]
+    if not targets:
+        return [p["result"] for p in plans]
+
+    union: dict[str, dict] = {}
+    for p in targets:
+        for post in p["new_posts"]:
+            union.setdefault(post.get("link", ""), post)
+    client = get_client()
+    candidates = _extract_candidates(client, [
+        {"path": p["doc"]["path"], "topic": p["doc"]["topic"],
+         "scope": p["doc"].get("scope", ""), "titles": _practice_titles(p["text"]),
+         "target": p["target"],
+         "eligible_urls": {x.get("link", "") for x in p["new_posts"]}}
+        for p in plans if p["text"] is not None
+    ], list(union.values()))
+
+    for p in targets:
+        if candidates is None:
+            # A broken extraction is not a quiet week: marking these articles seen
+            # would lose them for good. Block, and retry them next week.
+            p["result"]["status"] = "error:candidate extraction returned unusable JSON"
+            continue
+        mine = [c for c in candidates if c.get("doc") == p["doc"]["path"]]
+        try:
+            p["result"] = _process_doc(p["doc"], required_anchors, p["text"],
+                                       p["new_posts"], mine, ledger, dry_run, client)
+        except Exception as e:  # one doc failing must not abort the others
+            log.error("practice_doc_failed", doc=p["doc"].get("path"), error=str(e))
+            p["result"] = {"doc": p["doc"].get("path"), "status": f"error:{e}",
+                           "candidates": len(mine)}
+    return [p["result"] for p in plans]
+
+
 @click.command()
 @click.option("--days", default=7, help="Look back N days for new posts")
 @click.option("--dry-run", is_flag=True, help="Show diffs, write nothing, touch no ledger")
@@ -534,14 +624,7 @@ def main(days: int, dry_run: bool, docs_path: Optional[str], feeds_path: Optiona
             _client_cache["c"] = _get_gemini_client()
         return _client_cache["c"]
 
-    results = []
-    for doc in docs:
-        try:
-            results.append(_process_doc(doc, required_anchors, posts, ledger,
-                                        dry_run, get_client))
-        except Exception as e:  # one doc failing must not abort the others
-            log.error("practice_doc_failed", doc=doc.get("path"), error=str(e))
-            results.append({"doc": doc.get("path"), "status": f"error:{e}", "candidates": 0})
+    results = _run_docs(docs, required_anchors, posts, ledger, dry_run, get_client)
 
     if not dry_run and json.dumps(ledger, sort_keys=True) != ledger_before:
         _save_ledger(ledger)

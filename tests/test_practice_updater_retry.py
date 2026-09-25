@@ -47,10 +47,10 @@ def _run(tmp_path, monkeypatch, *outputs):
     monkeypatch.setattr(pu, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(pu, "_keyword_prefilter", lambda posts, kw: posts)
     monkeypatch.setattr(pu, "_extract_candidates",
-                        lambda *a, **k: [{"practice": "p", "source_url": "u"}])
+                        lambda *a, **k: [{"doc": "doc.md", "practice": "p", "source_url": "u"}])
     monkeypatch.setattr(pu, "_integrate", fake_integrate)
     doc = {"path": "doc.md", "topic": "Topic", "keywords": []}
-    result = pu._process_doc(doc, [], POSTS, {}, dry_run=True, get_client=lambda: None)
+    [result] = pu._run_docs([doc], [], POSTS, {}, dry_run=True, get_client=lambda: None)
     return result, calls
 
 
