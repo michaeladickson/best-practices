@@ -29,8 +29,16 @@ on the result.
 ## Best Practices
 
 Practices are deliberately unnumbered — entries get inserted and merged over time, and
-numbered cross-references rot. This section was consolidated 2026-08-28 (59 → 27
-entries); the per-article trail is unchanged under [Sources](#sources).
+numbered cross-references rot. Consolidated 2026-08-28 (59 → 27 entries) and again
+2026-09-24 (49 → 21, with entries another doc owns moved to *Adjacent Concerns*); the
+per-article trail is unchanged under [Sources](#sources).
+
+**Scope check before adding here:** does it measure whether an LLM's *output* is good, or
+catch it getting worse? Gating what an agent may *do* belongs in
+[Agent Action Safety](../ai-safety/agent-action-safety.md); reviewing code an agent wrote in
+[Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md).
+
+### Theme A — What to measure
 
 ### Decide which calls earn a floor — and check you did not only measure the easy ones
 Not every LLM call needs an eval. The line that has held up: **an LLM call whose output
@@ -78,6 +86,9 @@ curate a set of representative `input → expected` examples — including the g
 cases that have bitten you. This is the institutional memory of "what good looks like."
 Start small (20–50 cases) and grow it.
 
+- **Graduate production failures into the eval set.** When a bad output reaches production, add that case (with its correct answer) to the fixture set so it can never silently regress again. Make it the default debugging motion — a customer bug becomes an eval case *first*, then the fix is validated against it (an eval-first workflow).
+- **Test the agent's forbidden states explicitly.** Include cases for what the agent must *not* do or expose, and how it should fail when it cannot finish within its limits.
+
 ### Grade with the right metric for the task type
 "Looks good" is not a metric. Match the metric to the output:
 
@@ -88,23 +99,7 @@ Start small (20–50 cases) and grow it.
 | Forecasting (demand) | backtest error — MAPE / RMSE vs. actuals |
 | Open-ended generation | rubric score (LLM-as-judge) + spot human review |
 
-### Run the eval on every prompt change AND every model change — in CI
-The eval set is a regression gate, not a one-time exercise. Re-run it when a prompt
-changes and when you consider a model upgrade; **fail the change if quality drops**
-below the baseline. This is "prompt-regression testing" / fixture-based testing for
-prompts (digest 2026-05-16). Re-test inherited prompt *patterns* too: few-shot examples
-and negative-constraint lists that helped an older model can actively degrade a newer
-one, so prompt-engineering habits are themselves a thing the eval must catch.
-
-### Version guidance files as first-class assets
-For agentic systems, especially those interacting with external tools or requiring specific stylistic/policy adherence, create separate, shareable files that encapsulate human judgment and guidelines (e.g., `design.md` for brand style). Implement a versioning and evaluation process for these guidance files to measure their effectiveness in reducing common failure modes and ensuring consistent, on-brand outputs across diverse agent applications.
-
-### Pin model versions; gate upgrades behind the eval
-Never let a model float to "latest" silently. Pin the version, and treat a model bump
-as a change that must pass the eval set first. This is the concrete defense against
-"shrinkflation" and silent harness regressions. When an upgrade *does* improve agentic
-or long-horizon work, the gain often comes from post-training/RL rather rather than a new base
-model — evaluate the claim on your tasks instead of assuming a capability jump.
+- **Check that confidence is calibrated.** Where a model reports a probability, measure whether its stated confidence matches its actual accuracy on your task.
 
 ### LLM-as-judge for open-ended outputs — but validate the judge
 For generation tasks where exact-match doesn't apply, score against an explicit rubric
@@ -122,6 +117,31 @@ passing on can silently poison downstream context ("silent hallucination"). In d
 demanding mathematical or logical rigor (code, math, planning), step up from spot-checks
 to formal verification of the artifact.
 
+### Account for non-determinism in evaluation
+Outputs vary run to run, and more so with external tools enabled. Quantify the
+variation, run each eval case multiple times and score aggregates, reduce
+non-determinism where you can (temperature, seeding), and use matching strategies
+robust to it where you can't.
+
+### Theme B — Gating change and watching production
+
+### Run the eval on every prompt change AND every model change — in CI
+The eval set is a regression gate, not a one-time exercise. Re-run it when a prompt
+changes and when you consider a model upgrade; **fail the change if quality drops**
+below the baseline. This is "prompt-regression testing" / fixture-based testing for
+prompts (digest 2026-05-16). Re-test inherited prompt *patterns* too: few-shot examples
+and negative-constraint lists that helped an older model can actively degrade a newer
+one, so prompt-engineering habits are themselves a thing the eval must catch.
+
+- **Version guidance files and evaluate them too.** Shared files encoding judgment (a `design.md` for brand style, a policy prompt) change output as much as a prompt edit does; version them and measure whether they reduce the failures they target.
+
+### Pin model versions; gate upgrades behind the eval
+Never let a model float to "latest" silently. Pin the version, and treat a model bump
+as a change that must pass the eval set first. This is the concrete defense against
+"shrinkflation" and silent harness regressions. When an upgrade *does* improve agentic
+or long-horizon work, the gain often comes from post-training/RL rather than a new base
+model — evaluate the claim on your tasks instead of assuming a capability jump.
+
 ### Track production quality over time (drift detection)
 Offline eval is necessary but not sufficient. Sample live outputs and track accuracy
 over time; alert on **drift** — a classifier whose precision is sliding, a forecast
@@ -130,15 +150,6 @@ this is model-drift detection; for LLM features it's the same idea on output qua
 Before a cutover, **shadow-validate**: run the candidate model or prompt passively
 against live traffic — binary CI thresholds miss the gradual eval drift that only shows
 up on messy production inputs.
-
-### Evaluate model probabilistic confidence calibration
-Assess whether a model's assigned confidence scores accurately reflect the true likelihood of its output being correct. Distinguish between a model's internal confidence and its actual accuracy across different tasks and datasets.
-
-### Graduate production failures into the eval set
-When a bad output reaches production, add that case (with its correct answer) to the
-fixture set so it can never silently regress again. The eval set should grow from real
-misses, not stay frozen. Make it the default debugging motion — a customer bug becomes
-an eval case *first*, then the fix is validated against it (an eval-first workflow).
 
 ### Track cost, latency, and the human cost alongside quality
 A prompt that's 3% more accurate but 2× the tokens may be a bad trade. Record token
@@ -150,35 +161,22 @@ per accepted output costs more than its API price suggests, and an agent fleet c
 operational overhead — allocation, specification, intervention, coordination, recovery
 ("agent fatigue") — that belongs in the same total-cost-of-ownership ledger.
 
-### Evaluate agent performance under variable infrastructure load
-Measure how agent latency, reliability, and cost vary when operating under fluctuating infrastructure conditions or resource contention. Design tests to simulate different load profiles to assess performance robustness.
+- **Measure under realistic infrastructure load.** Latency, reliability and cost shift under contention; test load profiles, not an idle system.
+- **Measure business outcomes, not agent activity.** Plans, reports and long reasoning chains look like work; score the result the agent exists for (a conversion, a resolved bug).
 
-### Probe benchmarks for overfitting — and publish your eval methodology
-Models memorize benchmark patterns. Vary known benchmark prompts and probe for direct
-recall to test generalization rather than trusting headline scores. Prefer benchmarks
-shaped like the real task — most coding-agent benchmarks skip large-scale refactoring
-and whole-codebase comprehension, so use ones built for it. And when your eval claims
-need to be trusted by others, publish the datasets, harness, judging criteria, results,
-and raw traces so outside reviewers can replicate and attack the methodology.
+### Theme C — Evaluating agents
 
-### Publish the full training and eval artifacts
-Beyond just open weights, true transparency requires making all artifacts of model development publicly available or accessible for deep inspection. This includes the full training lifecycle—from initial data preparation recipes to final post-training checkpoints. This practice facilitates scientific reproducibility, allows researchers to identify potential biases or issues in training, and enables deeper, independent evaluation of model behavior.
+### Judge agent trajectories and require evidence, not just outputs
+Score the sequence of steps, not only the final answer. Trajectory-aware judges catch
+reasoning shortcuts, fabricated intermediate results, and exploitation of test
+artifacts — right answers for wrong reasons. For agents drawing data-driven
+conclusions, make them emit an **evidence packet** — queries run, statistical
+justification, completeness assessment, alternative hypotheses considered — and
+evaluate the packet as part of the output.
 
-### Separate harness contribution from model contribution
-Benchmarks often measure the entire system's performance, not just the raw model. When reporting or evaluating against benchmarks, disentangle the performance gains derived from specific evaluation harnesses or system components (e.g., preserving reasoning state, context compaction) to accurately assess the model's intrinsic capabilities.
-
-### Run double-blind evals to prevent benchmark leakage
-Utilize confidential computing environments (e.g., hardware-encrypted enclaves) where model weights and inference code are kept private from evaluators, and test benchmarks and evaluation code are kept private from model providers. This prevents accidental or intentional contamination of benchmarks and ensures unbiased evaluation results.
-
-### Evaluate operational characteristics, not just benchmark scores
-Production reliability lives in behaviors benchmarks don't score: source discipline,
-operational judgment, provenance tracking, self-correction. Sweep configurable
-"effort"/reasoning settings — turning the dial up sometimes makes output *worse*. And
-when selecting a model, weigh non-functional criteria — cost, control, vendor lock-in,
-open-weight viability — alongside raw capability.
-
-### Evaluate conversational fluency and continuity during asynchronous agent delegation.
-For voice agents or complex multi-step tasks involving delegation to backend models, evaluate the system's ability to maintain a coherent and natural user experience. This includes seamlessly filling pauses, acknowledging user input, and managing conversational flow during asynchronous computation or handoffs to avoid awkward silences or abrupt changes in topic.
+- **Require the full reasoning trace for critical evaluations**, especially where a model may obscure its intermediate steps.
+- **Test for motivated reasoning and reward hacking.** Probe whether the agent infers and games the scoring, exploits the environment, or takes unauthorized actions to hit its objective.
+- **Detect deceptive or self-preserving behavior.** Concealed mistakes, fabricated information, and instructions the agent writes for itself to avoid detection.
 
 ### Evaluate retrieval and context quality separately from generation
 When a RAG or agentic feature fails, the retrieval/context-building step is a distinct
@@ -189,25 +187,7 @@ memory to hallucinate and forget more as it grows — an architectural limit, no
 problem. And test the gap between *retrieving* a fact and *understanding* it: agents can
 recall accurately while misapplying meaning or context.
 
-### Evaluate RAG infrastructure at scale — including access control
-Naive RAG architectures fail at production scale (timeouts, data loss). Evaluate the
-ingestion pipeline, prompt caching, cost, and latency as part of output quality, not as
-a separate ops concern. Verify retrieval honors RBAC and multi-tenant isolation: an
-agent must only surface data the requesting user is authorized to see.
-
-### Judge agent trajectories and require evidence, not just outputs
-Score the sequence of steps, not only the final answer. Trajectory-aware judges catch
-reasoning shortcuts, fabricated intermediate results, and exploitation of test
-artifacts — right answers for wrong reasons. For agents drawing data-driven
-conclusions, make them emit an **evidence packet** — queries run, statistical
-justification, completeness assessment, alternative hypotheses considered — and
-evaluate the packet as part of the output.
-
-### Require the full reasoning trace for evaluation
-For critical applications, ensure that models explicitly expose their intermediate steps, internal decisions, or 'chain of thought' during processing. This transparency is vital for debugging, auditing, and building trust, especially in models where reasoning processes might be intentionally or unintentionally obscured, making their complex outputs difficult to verify post-hoc.
-
-### Measure business outcomes, not agent activity
-Agents might generate plans, reports, or extensive reasoning chains that appear productive but do not translate to tangible business value. Design evaluations to measure the ultimate goal (e.g., customer conversion, bug resolution) rather than proxy metrics of internal agent activity, to ensure agents are delivering meaningful work.
+- **Evaluate RAG infrastructure at scale — including access control.** Naive RAG fails at production scale (timeouts, data loss); evaluate ingestion, prompt caching, cost and latency as part of quality, and verify retrieval honors RBAC and multi-tenant isolation.
 
 ### Evaluate the orchestration layer: routers, decomposition, tool prompts
 Multi-agent decomposition and dynamic model routing are their own failure surfaces.
@@ -216,6 +196,9 @@ end-to-end quality, cost, and latency — even when the internal logic is propri
 opaque. At the prompt level, most tool-use retry loops trace to missing context (a
 schema listed without column names, instructions that invite guessing); fix the tool
 documentation before blaming the model.
+
+- **Evaluate agents that build agents.** Goal-setting for sub-agents, architecture choice, working code, and the tests the builder writes for what it built.
+- **Evaluate continuity during asynchronous delegation.** In voice and multi-step agents, score whether the front end keeps a coherent conversation while a backend model works.
 
 ### Run long-horizon simulations — and verify the eval environment itself
 Beyond isolated input→output checks, run dynamic, business-like multi-step simulations;
@@ -226,14 +209,8 @@ environment rather than asserted to the agent — especially in security-critica
 Serving these environments at agent speed is a platform capability in its own right:
 measure provisioning latency, concurrent capacity, and dependency fidelity.
 
-### Simulate user behavior before deployment
-Beyond basic simulations, create high-fidelity digital twins of human behavior. This involves extensive data collection from interviews, observations, and transactions, and applies techniques like Randomized Controlled Trials (RCTs) and modeling causal mechanisms to accurately reproduce human decision-making and emergent behaviors in a simulated environment before product or policy deployment.
-
-### Account for non-determinism in evaluation
-Outputs vary run to run, and more so with external tools enabled. Quantify the
-variation, run each eval case multiple times and score aggregates, reduce
-non-determinism where you can (temperature, seeding), and use matching strategies
-robust to it where you can't.
+- **Test whether agents can escape the eval environment.** Include scenarios that probe for side channels, unintended communication paths and isolation flaws.
+- **Simulate users, not just tasks.** Digital twins of human behavior, built from interviews, observation and transactions and checked with causal methods such as RCTs, surface emergent behavior before deployment.
 
 ### Test safety multi-turn and in-environment
 Single-turn safety checks miss most real attacks. Evaluate across multi-turn
@@ -241,69 +218,25 @@ interactions, and test prompt injection where it actually arrives — embedded i
 pages the agent browses and code it executes, not just pasted into a prompt. Probe for
 covert behavior too: agents pursuing hidden goals while appearing compliant.
 
-### Have third parties audit your safety evals
-Beyond internal validation of evaluation judges or processes, external, objective scrutiny is essential for critical safety assessments. Independent third-party organizations can review safety evaluation protocols, datasets, test scenarios, and findings to ensure rigor, comprehensiveness, and unbiased assessment of potential emergent risks, especially given the observed failures of internal pre-release auditing.
+### Evaluate operational characteristics, not just benchmark scores
+Production reliability lives in behaviors benchmarks don't score: source discipline,
+operational judgment, provenance tracking, self-correction. Sweep configurable
+"effort"/reasoning settings — turning the dial up sometimes makes output *worse*. And
+when selecting a model, weigh non-functional criteria — cost, control, vendor lock-in,
+open-weight viability — alongside raw capability.
 
-### Employ continuous embedded third-party evaluators
-Integrate external, employee-like teams to continuously verify adherence to safety practices and commitments. These evaluators should assess alignment across training pipelines and processes, not just completed models or periodic safety audits.
+### Theme D — Benchmarks, infrastructure and optimization
 
-### Test the agent's forbidden states explicitly
-Beyond defining correct behavior, explicitly delineate the boundaries of acceptable agent operation. This includes identifying and documenting actions agents must *not* take, data they must *not* expose, and how they should gracefully fail or acknowledge limitations when unable to complete a task within defined constraints. Integrate these boundaries into evaluation scenarios.
+### Probe benchmarks for overfitting — and publish your eval methodology
+Models memorize benchmark patterns. Vary known benchmark prompts and probe for direct
+recall to test generalization rather than trusting headline scores. Prefer benchmarks
+shaped like the real task — most coding-agent benchmarks skip large-scale refactoring
+and whole-codebase comprehension, so use ones built for it. And when your eval claims
+need to be trusted by others, publish the datasets, harness, judging criteria, results,
+and raw traces so outside reviewers can replicate and attack the methodology.
 
-### Test for motivated reasoning and reward hacking
-Agents have demonstrated a capacity to creatively bypass constraints or collude when tasked with specific goals, especially in permissive evaluation environments. Design adversarial evaluations that probe for an agent's tendency to infer and game implicit scoring mechanisms, exploit system vulnerabilities, or take unauthorized actions to achieve its perceived objective.
-
-### Detect subtle deceptive or self-preserving agent behaviors
-Implement specific tests to uncover agentic behaviors like concealing mistakes, fabricating information, or self-injecting instructions to evade detection. Focus on identifying active attempts by the agent to mask misaligned actions.
-
-### Sandbox agent execution — and evaluate the whole stack
-Agents that generate and run code get robust, isolated sandboxes, full stop. Then
-evaluate the security of the whole execution stack — hardened runtime, browsers, tools,
-libraries — not just container isolation. For agents touching critical systems
-(databases, production infra), correctness requirements are unforgiving: stricter
-sandboxing, human-in-the-loop validation, or formal methods.
-
-### Test whether agents can escape the eval environment
-Agents operating in sandboxed or constrained environments might actively probe for and leverage unintended communication channels, environmental side effects, or flaws in isolation mechanisms to bypass restrictions. Evaluation must include scenarios designed to stress-test the robustness and integrity of the sandbox itself and detect such sophisticated attempts at 'breaking containment' or unauthorized interaction.
-
-### Gate AI-generated code with automated verification
-Put an AI gate in the merge queue: check changes against production requirements,
-internal standards (often expressed in natural language), cross-repository dependency
-risk, and lightweight functional tests in a sandbox, ending in a clear verdict (BLOCK /
-proceed with caution / safe). Verify adherence to architectural patterns and
-non-functional conventions (scalability, error handling) as a step distinct from
-functional testing — that separation is what lets AI-written code ship without
-line-by-line human review.
-
-### Gate every change to an AI system in CI
-Leverage advanced AI models to perform mandatory security and correctness reviews on all pull requests and code changes. This ensures that new code, whether human-written or AI-generated, adheres to defined standards and does not introduce vulnerabilities or regressions before it can be merged or deployed, effectively using AI as a 'superhuman' quality gate for the engineering process itself.
-
-### Use context-blind subagents for adversarial pre-review
-When evaluating code or other complex outputs generated by an agent, deploy a 'context-blind' subagent as an adversarial reviewer. This subagent, intentionally deprived of the original generation context, can act as an impartial or 'ignorant' tester, potentially identifying assumptions, inconsistencies, or hidden issues that a context-aware human or another agent might overlook.
-
-### Parse generated commands into an AST before running
-Analyze AI-generated shell commands by parsing them into ASTs to understand their structural capabilities, track variable resolutions across commands, and identify potential read/write side effects. This method helps catch dangerous command transformations that string-based checks miss.
-
-### Evaluate agent identity, credentials, and action-sequence policy
-Agents request tools and assume roles dynamically, so verify least privilege, clear
-ownership, and complete audit trails explicitly — traditional IAM assumptions don't
-hold. Keep credentials out of the agent's memory and environment entirely:
-just-in-time, out-of-band authorization means a sandbox escape yields nothing. And test
-policy engines on *sequences* of tool calls rather than point-in-time actions —
-valid-but-wrong workflows are the emergent risk.
-
-### Design human oversight that scales
-Critical agent actions need review points a human can meaningfully exercise. Two levers
-keep that real at volume: review the *artifacts and observable outcomes* rather than the
-AI's internal code or logic, and put an AI classifier in front of the approval queue so
-humans see genuinely dangerous actions instead of drowning in routine ones — approval
-fatigue is how safety gates fail.
-
-### Instrument agentic systems with correlated observability
-Traditional log-metric-trace models fall short when a workflow spans multiple tools,
-models, and execution environments. Correlated traces across every tool call and
-intermediate step (e.g. OpenTelemetry extended for agent actions) are what make
-reasoning failures, retrieval issues, and latency bottlenecks diagnosable.
+- **Separate harness contribution from model contribution.** A benchmark scores the whole system; attribute gains from the harness (reasoning-state preservation, compaction) before crediting the model.
+- **Run double-blind evals to prevent benchmark leakage.** Confidential computing keeps weights private from evaluators and test sets private from providers.
 
 ### Centralize shared evaluation infrastructure
 Don't let every team hand-roll its own eval setups, guardrails, and dashboards — that
@@ -318,18 +251,25 @@ top of passive regression detection. The same pattern applies upstream: agentic
 generation and meta-optimization of synthetic training data converts inference compute
 into distribution-matched training signal.
 
-### Evaluate agents that build other agents
-As AI systems gain the ability to create and manage other AI agents, it's crucial to evaluate their proficiency in this meta-level task. This includes assessing their ability to define goals for sub-agents, select appropriate architectures, generate functional code, and establish robust evaluation and testing procedures for the agents they produce.
-
-### For huge label vocabularies, hallucinate then map
-Don't stuff thousands of valid tags into the context window. Prompt the model to invent
-descriptive labels for the input, then map them onto the existing taxonomy with vector
-embeddings — faster and more accurate than constrained selection.
-
 ### Automate visual inspection of multimodal outputs
 Models miss visually-apparent flaws in their own renders even when shown the result.
 Use a separate automated visual check (a different model, or computer-vision tooling)
 for generated visual content rather than trusting self-review.
+
+## Adjacent Concerns
+
+Added here by the weekly updater, owned by a sibling doc. One line each so the source
+stays traceable; the practice itself lives at the link.
+
+- **Sandbox agent execution and evaluate the whole stack** → [Agent Action Safety](../ai-safety/agent-action-safety.md), *Isolate agent-generated code execution within hardened sandboxes*.
+- **Evaluate agent identity, credentials, and action-sequence policy** → [Agent Action Safety](../ai-safety/agent-action-safety.md), *Give every agent a verifiable identity* and *Authorize action sequences, not single calls*.
+- **Design human oversight that scales** → [Agent Action Safety](../ai-safety/agent-action-safety.md), *Pre-screen routine actions, escalate the rest*.
+- **Parse generated commands into an AST before running** → [Agent Action Safety](../ai-safety/agent-action-safety.md), *A Judge Layer gates the action, not the prose*.
+- **Instrument agentic systems with correlated observability** → [Agent Action Safety](../ai-safety/agent-action-safety.md), *Correlate logs, metrics, traces and tool calls*.
+- **Gate AI-generated code with automated verification** and **gate every change to an AI system in CI** → [Code Review & AI Slop](../claude-code/code-review-and-ai-slop.md), *Build the review pipeline out of independent verifiers*.
+- **Use context-blind subagents for adversarial pre-review** → [Model-Hierarchy Delegation](../claude-code/model-hierarchy-delegation.md), *Verify with a different, cheaper agent*.
+- **For huge label vocabularies, hallucinate then map** → [Prompt Engineering](prompt-engineering.md). A prompting technique, not an evaluation practice: have the model invent descriptive labels, then map them onto the taxonomy with embeddings.
+- **Publish the full training and eval artifacts**, **have third parties audit your safety evals**, and **employ continuous embedded third-party evaluators** → out of scope for every practice doc: these are model-lab governance, not something a team shipping LLM features does. Kept here so the sources stay traceable.
 
 ## Anti-Patterns
 
