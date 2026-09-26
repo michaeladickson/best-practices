@@ -8,8 +8,9 @@ before anyone looked, and the Actions free-tier cliff had silently moved from
 Pulls the enhanced-billing usage API for the current + previous month via
 local gh auth (WSL gh needs the "user" scope: `gh auth refresh -s user`),
 writes data/gh_usage_report.md (GITIGNORED — spend data never lands in this
-public repo; the script is the shareable mechanism), and files a deduplicated
-alert issue in command-center (private) when a tripwire fires:
+public repo; the script is the shareable mechanism), and when a tripwire fires
+files an alert issue in command-center (private), or comments the week's
+report on the one already open:
 
   1. Copilot credits projected past the monthly quota
   2. Actions minutes week-over-week growth > 30% (on a non-trivial base)
@@ -692,27 +693,47 @@ def render(cur, prev, alerts, ctx, today: date) -> str:
     return "\n".join(lines) + "\n"
 
 
-def file_issue(alerts, report_md):
+def file_issue(alerts, report_md, today: date):
+    """Open the alert issue, or comment this week's report on the open one.
+
+    It used to stay silent while an issue was open, and one stays open for
+    weeks while the cause is worked on, so every later week's per-workflow
+    table reached only the gitignored local report. The date marker keeps a
+    same-day re-run from posting twice.
+    """
+    marker = f"<!-- check_gh_usage {today.isoformat()} -->"
     check = subprocess.run(
         ["gh", "issue", "list", "--repo", ALERT_REPO, "--state", "open",
-         "--search", f'"{ISSUE_TITLE}" in:title', "--json", "number"],
+         "--search", f'"{ISSUE_TITLE}" in:title',
+         "--json", "number,title,body,comments"],
         capture_output=True, text=True, encoding="utf-8", errors="replace")
-    if check.returncode == 0 and json.loads(check.stdout or "[]"):
-        print("Open usage-tripwire issue already exists; not duplicating.")
-        return
-    body = ("Fired by best-practices scripts/check_gh_usage.py during the "
-            "weekly run.\n\n"
-            + "\n".join(f"- {a}" for a in alerts)
-            + f"\n\n{LEVERS}\n\n---\n\n{report_md}")
+    # The search matches words, not the title; only an exact title is ours.
+    found = [i for i in (json.loads(check.stdout or "[]") if check.returncode == 0 else [])
+             if i["title"] == ISSUE_TITLE]
+    if found:
+        issue = found[0]["number"]
+        posted = [found[0]["body"]] + [c["body"] for c in found[0]["comments"]]
+        if any(marker in text for text in posted):
+            print(f"{ALERT_REPO}#{issue} already has the {today} report.")
+            return
+        cmd = ["gh", "issue", "comment", str(issue), "--repo", ALERT_REPO]
+        body = f"{marker}\nStill firing in the {today} weekly run.\n\n{report_md}"
+        done = f"Commented this week's report on {ALERT_REPO}#{issue}."
+    else:
+        cmd = ["gh", "issue", "create", "--repo", ALERT_REPO, "--title", ISSUE_TITLE]
+        body = (f"{marker}\nFired by best-practices scripts/check_gh_usage.py "
+                "during the weekly run.\n\n"
+                + "\n".join(f"- {a}" for a in alerts)
+                + f"\n\n{LEVERS}\n\n---\n\n{report_md}")
+        done = f"Filed usage-tripwire issue in {ALERT_REPO}."
     proc = subprocess.run(
-        ["gh", "issue", "create", "--repo", ALERT_REPO,
-         "--title", ISSUE_TITLE, "--body", body],
+        cmd + ["--body-file", "-"], input=body,
         capture_output=True, text=True, encoding="utf-8", errors="replace")
     if proc.returncode == 0:
-        print(f"Filed usage-tripwire issue in {ALERT_REPO}.")
+        print(done)
     else:
-        print(f"WARNING: could not file issue: {(proc.stderr or '').strip()}",
-              file=sys.stderr)
+        print(f"WARNING: could not write to {ALERT_REPO}: "
+              f"{(proc.stderr or '').strip()}", file=sys.stderr)
 
 
 def main():
@@ -724,7 +745,7 @@ def main():
     print(report)
     if alerts:
         if "--no-issue" not in sys.argv:
-            file_issue(alerts, report)
+            file_issue(alerts, report, today)
         sys.exit(1)
 
 

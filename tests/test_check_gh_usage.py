@@ -19,6 +19,7 @@ pull_requests list is usually empty even on pull_request events, which is why
 PRs are counted by head_branch. No network: gh_json is replaced by a fake that
 serves these payloads the way `gh api` does.
 """
+import json
 import re
 import subprocess
 import threading
@@ -385,3 +386,58 @@ def test_gh_json_retries_a_502_and_fails_fast_on_a_404(monkeypatch):
     with pytest.raises(ghu.GhError, match="HTTP 404"):
         ghu.gh_json("repos/x/y")
     assert len(replies) == 1
+
+
+# --- Alert issue: file once, then one comment per weekly run -----------------------
+
+class FakeGhCli:
+    """Stands in for subprocess.run on `gh issue list|comment|create`."""
+
+    def __init__(self, open_issues):
+        self.open_issues, self.writes = open_issues, []
+
+    def __call__(self, cmd, input=None, **kwargs):
+        if cmd[:3] == ["gh", "issue", "list"]:
+            return subprocess.CompletedProcess(cmd, 0, json.dumps(self.open_issues), "")
+        self.writes.append((cmd[2], cmd, input))
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+
+def issue(number, *comment_bodies, title=ghu.ISSUE_TITLE):
+    """One element of `gh issue list --json number,title,body,comments`."""
+    return {"number": number, "title": title, "body": "first report",
+            "comments": [{"author": {"login": "someone"}, "body": b}
+                         for b in comment_bodies]}
+
+
+def test_first_alert_opens_the_issue(monkeypatch):
+    gh = FakeGhCli([])
+    monkeypatch.setattr(ghu.subprocess, "run", gh)
+    ghu.file_issue(["minutes up"], "REPORT", TODAY)
+    ((verb, cmd, body),) = gh.writes
+    assert verb == "create" and cmd[-2:] == ["--body-file", "-"]
+    assert f"<!-- check_gh_usage {TODAY} -->" in body
+    assert "- minutes up" in body and ghu.LEVERS in body and body.endswith("REPORT")
+
+
+def test_open_issue_gets_this_weeks_report_as_a_comment(monkeypatch):
+    gh = FakeGhCli([issue(7, "<!-- check_gh_usage 2026-03-09 -->\nlast week")])
+    monkeypatch.setattr(ghu.subprocess, "run", gh)
+    ghu.file_issue(["minutes up"], "REPORT", TODAY)
+    ((verb, cmd, body),) = gh.writes
+    assert verb == "comment" and cmd[3] == "7"
+    assert body.startswith(f"<!-- check_gh_usage {TODAY} -->") and body.endswith("REPORT")
+
+
+def test_a_same_day_rerun_posts_nothing(monkeypatch):
+    gh = FakeGhCli([issue(7, f"<!-- check_gh_usage {TODAY} -->\nearlier today")])
+    monkeypatch.setattr(ghu.subprocess, "run", gh)
+    ghu.file_issue(["minutes up"], "REPORT", TODAY)
+    assert gh.writes == []
+
+
+def test_a_search_hit_with_another_title_is_not_the_alert_issue(monkeypatch):
+    gh = FakeGhCli([issue(8, title=f"Re: {ghu.ISSUE_TITLE}")])
+    monkeypatch.setattr(ghu.subprocess, "run", gh)
+    ghu.file_issue(["minutes up"], "REPORT", TODAY)
+    assert [w[0] for w in gh.writes] == ["create"]
