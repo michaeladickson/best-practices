@@ -60,10 +60,12 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 RULES = "F,E9"
 TIMEOUT = 20
+STALE_CLAIM_SECONDS = 180
 EDIT_TOOLS = frozenset({"Edit", "Write", "MultiEdit"})
 SETTLE_EVENTS = frozenset({"Stop", "SubagentStop"})
 _LINE_REF = re.compile(r"\bline \d+\b")
@@ -132,6 +134,15 @@ def _state_file(session: str, suffix: str) -> Path:
     return Path(tempfile.gettempdir()) / f"lint_on_write_{name}.{suffix}"
 
 
+def _batch_id(data: dict) -> str:
+    """Whose batch this is. A subagent's hooks carry the parent's session_id plus
+    its own agent_id, and a subagent edits concurrently with its parent, so each
+    keeps its own list: the parent's Bash must not settle a subagent mid-batch."""
+    session = data.get("session_id", "")
+    agent = data.get("agent_id") or ""
+    return f"{session}-{agent}" if agent else session
+
+
 def _notice_once(session: str, msg: str) -> int:
     marker = _state_file(session, "notice")
     if marker.exists():
@@ -168,7 +179,7 @@ def _record(data: dict) -> int:
     fp = (data.get("tool_input") or {}).get("file_path") or ""
     if not fp.endswith(".py"):
         return 0
-    session = data.get("session_id", "")
+    session = data.get("session_id", "")   # notices are once per session, not per agent
     if not Path(fp).is_file():
         # The tool just wrote this file, so "not found" means this interpreter
         # sees paths differently (an MSYS /tmp path under a Windows Python, a WSL
@@ -183,42 +194,79 @@ def _record(data: dict) -> int:
                             f"lint_on_write: ruff is not importable by {sys.executable}; "
                             "write-time pyflakes checks are OFF this session "
                             "(install with `python3 -m pip install ruff`).")
-    # One line per edit, appended: parallel tool calls each add their own line
-    # rather than racing a read-modify-write of a shared list.
-    with open(_state_file(session, "pending"), "a", encoding="utf-8") as fh:
-        fh.write(json.dumps(fp) + "\n")
+    _append(_state_file(_batch_id(data), "pending"), [fp])
     return 0
 
 
+def _append(pending: Path, files: list[str]) -> None:
+    # One line per file, appended: parallel tool calls each add their own line
+    # rather than racing a read-modify-write of a shared list.
+    if files:
+        with open(pending, "a", encoding="utf-8") as fh:
+            fh.write("".join(json.dumps(fp) + "\n" for fp in files))
+
+
+def _read(path: Path) -> list[str]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    return [json.loads(line) for line in text.splitlines() if line.strip()]
+
+
 def _settle(data: dict) -> int:
-    pending = _state_file(data.get("session_id", ""), "pending")
+    pending = _state_file(_batch_id(data), "pending")
+    claimed = pending.with_name(f"{pending.name}.{os.getpid()}")
+    # A settle the harness killed at its timeout leaves its claimed list behind.
+    # Adopt any older than STALE_CLAIM_SECONDS, so those files are checked, not lost.
+    now = time.time()
+    for orphan in pending.parent.glob(f"{pending.name}.*"):
+        try:
+            if now - orphan.stat().st_mtime > STALE_CLAIM_SECONDS:
+                _append(pending, _read(orphan))
+                orphan.unlink()
+        except OSError:
+            pass
     if not pending.exists():
         return 0
     # Claim the list before reading it, so an edit recorded while this runs goes
-    # to a fresh list and is settled next time instead of being lost.
-    claimed = pending.with_name(f"{pending.name}.{os.getpid()}")
+    # to a fresh list and is settled next time.
     try:
         os.replace(pending, claimed)
     except OSError:
         return 0
-    try:
-        lines = claimed.read_text(encoding="utf-8").splitlines()
-    finally:
-        claimed.unlink(missing_ok=True)
-    files = list(dict.fromkeys(json.loads(line) for line in lines if line.strip()))
+    lines = _read(claimed)
+    files = list(dict.fromkeys(lines))
     if not _ruff_available():
+        claimed.unlink(missing_ok=True)
         return 0
 
     report: list[str] = []
     count = 0
-    for fp in files:
-        path = Path(fp)
-        if not path.is_file():      # deleted or renamed since the edit
-            continue
-        new = _new_violations(path)
-        count += len(new)
-        report += [f"  {fp}:{v['location']['row']}:{v['location']['column']}  "
-                   f"{v.get('code') or 'syntax'}  {v.get('message', '')}" for v in new]
+    done = 0
+    try:
+        for fp in files:
+            path = Path(fp)
+            if path.is_file():      # else deleted or renamed since the edit
+                new = _new_violations(path)
+                count += len(new)
+                report += [f"  {fp}:{v['location']['row']}:{v['location']['column']}  "
+                           f"{v.get('code') or 'syntax'}  {v.get('message', '')}"
+                           for v in new]
+            done += 1
+    except Exception:
+        # A ruff timeout or a bad entry mid-loop: the files after it go back on
+        # the list for the next settle. The one that raised is dropped (the
+        # internal-error notice names it), so it cannot fail every settle.
+        _append(pending, files[done + 1:])
+        raise
+    finally:
+        # A line appended to the claimed file after it was read (an edit whose
+        # append opened just before the rename) goes back on the list too. Only
+        # then is the claim dropped; what remains is the instant between this
+        # re-read and the unlink.
+        _append(pending, _read(claimed)[len(lines):])
+        claimed.unlink(missing_ok=True)
     if not report:
         return 0
     print(f"lint_on_write: your edits left {count} pyflakes error(s) that are not "

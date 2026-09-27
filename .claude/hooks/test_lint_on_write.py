@@ -245,6 +245,47 @@ def test_nothing_pending_is_silent():
     assert bash() == (0, "") and stop() == (0, "")
 
 
+def test_a_subagent_keeps_its_own_batch(repo):
+    """Subagent hooks carry the parent's session_id plus their own agent_id."""
+    fp = repo.write("m.py", "def f():\n    return nope\n")
+    hook({"hook_event_name": "PostToolUse", "tool_name": "Edit", "agent_id": "a1",
+          "tool_input": {"file_path": fp}})
+    assert bash() == (0, "") and stop() == (0, "")          # the parent's settles
+    rc, err = hook({"hook_event_name": "SubagentStop", "agent_id": "a1",
+                    "stop_hook_active": False})
+    assert rc == 2 and fp in err
+
+
+def _pending(name="lint_on_write_s.pending") -> Path:
+    return Path(_STATE["dir"]) / name
+
+
+def test_an_entry_that_raises_is_dropped_and_the_rest_requeued(repo):
+    fp = repo.write("m.py", "def f():\n    return nope\n")
+    _pending().write_text("123\n" + json.dumps(fp) + "\n", encoding="utf-8")
+    rc, err = stop()
+    assert rc == 1 and "internal error" in err
+    rc, err = stop()
+    assert rc == 2 and fp in err
+    assert stop() == (0, "")
+
+
+def test_a_stale_claim_from_a_killed_settle_is_adopted(repo):
+    fp = repo.write("m.py", "def f():\n    return nope\n")
+    orphan = _pending("lint_on_write_s.pending.99999")
+    orphan.write_text(json.dumps(fp) + "\n", encoding="utf-8")
+    os.utime(orphan, (1, 1))
+    rc, err = stop()
+    assert rc == 2 and fp in err and not orphan.exists()
+
+
+def test_a_fresh_claim_belongs_to_a_live_settle_and_is_left_alone(repo):
+    fp = repo.write("m.py", "def f():\n    return nope\n")
+    live = _pending("lint_on_write_s.pending.99999")
+    live.write_text(json.dumps(fp) + "\n", encoding="utf-8")
+    assert stop() == (0, "") and live.exists()
+
+
 def test_settings_wire_both_halves():
     """Recording without a settle wired would silence the gate entirely."""
     settings = HOOK.parent.parent / "settings.json"

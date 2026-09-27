@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/lint_on_write.py\"",
-            "timeout": 30
+            "timeout": 60
           }
         ]
       }
