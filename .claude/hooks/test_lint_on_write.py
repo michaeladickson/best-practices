@@ -77,12 +77,16 @@ def repo(tmp_path):
     return R()
 
 
-def hook(payload: dict, *, no_ruff=False, session="s"):
+def hook(payload: dict, *, no_ruff=False, session="s", no_git=False):
     # `-S` drops site-packages, which is where ruff lives: a faithful stand-in
     # for "the interpreter the harness called has no ruff".
     cmd = [sys.executable, *(["-S"] if no_ruff else []), str(HOOK)]
     d = _STATE["dir"]
     env = {**os.environ, "TMPDIR": d, "TEMP": d, "TMP": d}
+    if no_git:
+        # An empty PATH: the HEAD lookup's `git` call raises inside the settle
+        # loop (ruff is found by absolute path, so linting itself still runs).
+        env["PATH"] = d
     p = subprocess.run(cmd, input=json.dumps({"session_id": session, **payload}),
                        capture_output=True, text=True, env=env)
     return p.returncode, p.stderr
@@ -261,13 +265,33 @@ def _pending(name="lint_on_write_s.pending") -> Path:
 
 
 def test_an_entry_that_raises_is_dropped_and_the_rest_requeued(repo):
-    fp = repo.write("m.py", "def f():\n    return nope\n")
-    _pending().write_text("123\n" + json.dumps(fp) + "\n", encoding="utf-8")
-    rc, err = stop()
+    first = repo.write("a.py", "def f():\n    return nope\n")
+    second = repo.write("b.py", "def f():\n    return nope\n")
+    _pending().write_text(json.dumps(first) + "\n" + json.dumps(second) + "\n", encoding="utf-8")
+    rc, err = hook({"hook_event_name": "Stop", "stop_hook_active": False}, no_git=True)
     assert rc == 1 and "internal error" in err
     rc, err = stop()
-    assert rc == 2 and fp in err
+    assert rc == 2 and second in err and first not in err
     assert stop() == (0, "")
+
+
+def test_a_torn_line_is_skipped_and_the_rest_reported(repo):
+    fp = repo.write("m.py", "def f():\n    return nope\n")
+    torn = '"/half/writ\n123\n'
+    _pending().write_text(torn + json.dumps(fp) + "\n", encoding="utf-8")
+    rc, err = stop()
+    assert rc == 2 and fp in err and "internal error" not in err
+    assert stop() == (0, "")
+
+
+def test_a_stale_claim_with_a_torn_line_does_not_wedge_the_gate(repo):
+    fp = repo.write("m.py", "def f():\n    return nope\n")
+    orphan = _pending("lint_on_write_s.pending.99999")
+    orphan.write_text('"/half/writ\n', encoding="utf-8")
+    os.utime(orphan, (1, 1))
+    edit(fp)
+    rc, err = stop()
+    assert rc == 2 and fp in err and not orphan.exists()
 
 
 def test_a_stale_claim_from_a_killed_settle_is_adopted(repo):

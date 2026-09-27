@@ -207,11 +207,22 @@ def _append(pending: Path, files: list[str]) -> None:
 
 
 def _read(path: Path) -> list[str]:
+    """The file paths in a pending list. A line that is not a JSON string (an
+    append torn by a killed process) is skipped: raising here would leave the
+    claim on disk, and every later settle would fail on adopting it."""
     try:
         text = path.read_text(encoding="utf-8")
     except OSError:
         return []
-    return [json.loads(line) for line in text.splitlines() if line.strip()]
+    out = []
+    for line in text.splitlines():
+        try:
+            value = json.loads(line) if line.strip() else None
+        except ValueError:
+            continue
+        if isinstance(value, str):
+            out.append(value)
+    return out
 
 
 def _settle(data: dict) -> int:
