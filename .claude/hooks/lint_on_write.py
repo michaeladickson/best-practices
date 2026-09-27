@@ -1,17 +1,32 @@
 #!/usr/bin/env python3
-"""PostToolUse hook: report pyflakes errors that an edit INTRODUCED, at write time.
+"""Hook: report pyflakes errors that a batch of edits INTRODUCED and left in place.
 
 Canonical copy lives in best-practices/.claude/hooks/lint_on_write.py; repos carry
 an identical copy. Change it there first.
 
 What it does
 ------------
-After Edit/Write on a ``.py`` file, run ``ruff check --select F,E9`` on the file as
-it is now AND on the file as it is at ``HEAD``, and report only the violations
-that are new. Exit 2 puts the report in front of Claude immediately, so an
-invented name (F821), a leftover import (F401), a dead variable (F841) or a
-shadowed redefinition (F811) is fixed in the same turn instead of surfacing in CI,
-in review, or never (most repos do not lint scripts/ at all).
+Two halves, one script, dispatched on the hook payload:
+
+- **Record** (PostToolUse on Edit / Write / MultiEdit): note the ``.py`` file in a
+  per-session pending list and say nothing.
+- **Settle** (PostToolUse on Bash, and Stop / SubagentStop): for every pending
+  file, run ``ruff check --select F,E9`` on the file as it is now AND as it is at
+  ``HEAD``, and report only the violations that are new. Exit 2 puts the report
+  in front of Claude, so an invented name (F821), a leftover import (F401), a dead
+  variable (F841) or a shadowed redefinition (F811) is fixed in the same turn
+  instead of surfacing in CI, in review, or never. The pending list is cleared,
+  so each finding is reported once.
+
+Why settle later instead of after every edit
+--------------------------------------------
+A change often spans several edits, and the file is wrong in between: the use of
+a name lands one edit before its import. Checked after every edit, that
+intermediate state read as a blocking error dozens of times a day across five
+sessions (2026-09-26, crumbl-ops#2913), and sessions learned to skim the
+message. Bash (tests, a commit) and the end of a turn are the points where the
+file's state starts to matter, and reads between edits are not. So the check
+waits for those, and an error a later edit already fixed is never shown.
 
 Why new-only, and why not "lines I changed"
 -------------------------------------------
@@ -28,11 +43,12 @@ lines do not read as new and a genuinely new instance of an old kind still does.
 
 Failure modes are deliberately loud-but-harmless
 ------------------------------------------------
-- ruff not importable: one non-blocking notice per session (exit 1), then
-  silence. A gate that quietly does not exist is the failure this hook family
-  was written to end; a gate that nags on every edit gets deleted.
-- any internal error: exit 1 (non-blocking, visible in the transcript). The
-  edit is never blocked because the linter broke.
+- ruff not importable, or a path this interpreter cannot see: one non-blocking
+  notice per session (exit 1) at record time, then silence. A gate that quietly
+  does not exist is the failure this hook family was written to end; a gate that
+  nags on every edit gets deleted.
+- any internal error: exit 1 (non-blocking, visible in the transcript). An edit
+  or a command is never blocked because the linter broke.
 """
 from __future__ import annotations
 
@@ -44,11 +60,16 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 RULES = "F,E9"
 TIMEOUT = 20
+STALE_CLAIM_SECONDS = 180
+EDIT_TOOLS = frozenset({"Edit", "Write", "MultiEdit"})
+SETTLE_EVENTS = frozenset({"Stop", "SubagentStop"})
 _LINE_REF = re.compile(r"\bline \d+\b")
+_UNSAFE = re.compile(r"[^A-Za-z0-9_.-]")
 
 
 def _ruff_bin() -> list[str]:
@@ -108,8 +129,22 @@ def _head_content(path: Path) -> str | None:
     return show.stdout if show.returncode == 0 else None
 
 
+def _state_file(session: str, suffix: str) -> Path:
+    name = _UNSAFE.sub("_", session or "nosession")
+    return Path(tempfile.gettempdir()) / f"lint_on_write_{name}.{suffix}"
+
+
+def _batch_id(data: dict) -> str:
+    """Whose batch this is. A subagent's hooks carry the parent's session_id plus
+    its own agent_id, and a subagent edits concurrently with its parent, so each
+    keeps its own list: the parent's Bash must not settle a subagent mid-batch."""
+    session = data.get("session_id", "")
+    agent = data.get("agent_id") or ""
+    return f"{session}-{agent}" if agent else session
+
+
 def _notice_once(session: str, msg: str) -> int:
-    marker = Path(tempfile.gettempdir()) / f"lint_on_write_{session or 'nosession'}.notice"
+    marker = _state_file(session, "notice")
     if marker.exists():
         return 0
     try:
@@ -120,36 +155,16 @@ def _notice_once(session: str, msg: str) -> int:
     return 1
 
 
-def main() -> int:
-    data = json.load(sys.stdin)
-    fp = (data.get("tool_input") or {}).get("file_path") or ""
-    if not fp.endswith(".py"):
-        return 0
-    path = Path(fp)
-    if not path.is_file():
-        # The tool just wrote this file, so "not found" means this interpreter
-        # sees paths differently (an MSYS /tmp path under a Windows Python, a WSL
-        # path under a Windows harness). Returning 0 here made the gate vanish
-        # silently -- found by exactly that mismatch in testing. Say so, once.
-        return _notice_once(data.get("session_id", ""),
-                            f"lint_on_write: {sys.executable} cannot see {fp} "
-                            "(path translation?); write-time pyflakes checks are OFF "
-                            "for paths like this one this session.")
-    if not _ruff_available():
-        return _notice_once(data.get("session_id", ""),
-                            f"lint_on_write: ruff is not importable by {sys.executable}; "
-                            "write-time pyflakes checks are OFF this session "
-                            "(install with `python3 -m pip install ruff`).")
-
+def _new_violations(path: Path) -> list[dict]:
+    """Violations in `path` now that are not in its HEAD version."""
     cwd = str(path.parent)
     now = _check(str(path), cwd)
     if not now:
-        return 0
+        return []
     head = _head_content(path)
     before: collections.Counter = collections.Counter()
     if head:
         before.update(_key(v) for v in _check(str(path), cwd, head))
-
     new: list[dict] = []
     for v in sorted(now, key=lambda v: (v["location"]["row"], v["location"]["column"])):
         k = _key(v)
@@ -157,15 +172,126 @@ def main() -> int:
             before[k] -= 1          # a pre-existing instance; consume one
         else:
             new.append(v)
-    if not new:
+    return new
+
+
+def _record(data: dict) -> int:
+    fp = (data.get("tool_input") or {}).get("file_path") or ""
+    if not fp.endswith(".py"):
+        return 0
+    session = data.get("session_id", "")   # notices are once per session, not per agent
+    if not Path(fp).is_file():
+        # The tool just wrote this file, so "not found" means this interpreter
+        # sees paths differently (an MSYS /tmp path under a Windows Python, a WSL
+        # path under a Windows harness). Returning 0 here made the gate vanish
+        # silently -- found by exactly that mismatch in testing. Say so, once.
+        return _notice_once(session,
+                            f"lint_on_write: {sys.executable} cannot see {fp} "
+                            "(path translation?); write-time pyflakes checks are OFF "
+                            "for paths like this one this session.")
+    if not _ruff_available():
+        return _notice_once(session,
+                            f"lint_on_write: ruff is not importable by {sys.executable}; "
+                            "write-time pyflakes checks are OFF this session "
+                            "(install with `python3 -m pip install ruff`).")
+    _append(_state_file(_batch_id(data), "pending"), [fp])
+    return 0
+
+
+def _append(pending: Path, files: list[str]) -> None:
+    # One line per file, appended: parallel tool calls each add their own line
+    # rather than racing a read-modify-write of a shared list.
+    if files:
+        with open(pending, "a", encoding="utf-8") as fh:
+            fh.write("".join(json.dumps(fp) + "\n" for fp in files))
+
+
+def _read(path: Path) -> list[str]:
+    """The file paths in a pending list. A line that is not a JSON string (an
+    append torn by a killed process) is skipped: raising here would leave the
+    claim on disk, and every later settle would fail on adopting it."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    out = []
+    for line in text.splitlines():
+        try:
+            value = json.loads(line) if line.strip() else None
+        except ValueError:
+            continue
+        if isinstance(value, str):
+            out.append(value)
+    return out
+
+
+def _settle(data: dict) -> int:
+    pending = _state_file(_batch_id(data), "pending")
+    claimed = pending.with_name(f"{pending.name}.{os.getpid()}")
+    # A settle the harness killed at its timeout leaves its claimed list behind.
+    # Adopt any older than STALE_CLAIM_SECONDS, so those files are checked, not lost.
+    now = time.time()
+    for orphan in pending.parent.glob(f"{pending.name}.*"):
+        try:
+            if now - orphan.stat().st_mtime > STALE_CLAIM_SECONDS:
+                _append(pending, _read(orphan))
+                orphan.unlink()
+        except OSError:
+            pass
+    if not pending.exists():
+        return 0
+    # Claim the list before reading it, so an edit recorded while this runs goes
+    # to a fresh list and is settled next time.
+    try:
+        os.replace(pending, claimed)
+    except OSError:
+        return 0
+    lines = _read(claimed)
+    files = list(dict.fromkeys(lines))
+    if not _ruff_available():
+        claimed.unlink(missing_ok=True)
         return 0
 
-    lines = [f"  {path.name}:{v['location']['row']}:{v['location']['column']}  "
-             f"{v.get('code') or 'syntax'}  {v.get('message', '')}" for v in new]
-    print(f"lint_on_write: your edit introduced {len(new)} pyflakes error(s) in {fp} "
-          f"(not present at HEAD). Fix them before moving on:\n" + "\n".join(lines),
+    report: list[str] = []
+    count = 0
+    done = 0
+    try:
+        for fp in files:
+            path = Path(fp)
+            if path.is_file():      # else deleted or renamed since the edit
+                new = _new_violations(path)
+                count += len(new)
+                report += [f"  {fp}:{v['location']['row']}:{v['location']['column']}  "
+                           f"{v.get('code') or 'syntax'}  {v.get('message', '')}"
+                           for v in new]
+            done += 1
+    except Exception:
+        # A ruff timeout or a bad entry mid-loop: the files after it go back on
+        # the list for the next settle. The one that raised is dropped (the
+        # internal-error notice names it), so it cannot fail every settle.
+        _append(pending, files[done + 1:])
+        raise
+    finally:
+        # A line appended to the claimed file after it was read (an edit whose
+        # append opened just before the rename) goes back on the list too. Only
+        # then is the claim dropped; what remains is the instant between this
+        # re-read and the unlink.
+        _append(pending, _read(claimed)[len(lines):])
+        claimed.unlink(missing_ok=True)
+    if not report:
+        return 0
+    print(f"lint_on_write: your edits left {count} pyflakes error(s) that are not "
+          f"present at HEAD. Fix them before moving on:\n" + "\n".join(report),
           file=sys.stderr)
     return 2
+
+
+def main() -> int:
+    data = json.load(sys.stdin)
+    if (data.get("hook_event_name") not in SETTLE_EVENTS
+            and data.get("tool_name") in EDIT_TOOLS):
+        return _record(data)
+    return _settle(data)
 
 
 if __name__ == "__main__":
