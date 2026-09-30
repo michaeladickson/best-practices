@@ -252,6 +252,40 @@ a human before you ship, and write it in the docstring.
   line that ages out after ~30 hours silently stops alerting while the bad state persists.
 - **A check must be self-sufficient** — never depend on another sync step having run first.
 
+## Suppression legs are default-deny
+
+A check that fires on magnitude usually needs a way to say "this part is explained" (a
+recurring payroll, a transfer between accounts we own), or it cries wolf. Every such leg is
+a way to silence the alarm, and an adversarial review of one drain tripwire found eight
+holes in three weeks (wealth-mgmt `check_balance_drop`). What closed them:
+
+- **Consume evidence one-to-one, across the whole store.** One credit may explain one
+  debit, solved globally. Matching per account let a single credit explain a same-amount
+  debit in every account that asked.
+- **When evidence ties, explain neither.** Picking one claimant is a coin toss between a
+  real transfer and a drain; firing on both is the safe direction.
+- **Bound the aggregate per key per window, not each item.** A per-payment size test
+  passes eight pulls at the familiar amount; fraud repeats the familiar amount for exactly
+  that reason, and a duplicated batch is the same shape by accident.
+- **Identity must be genuine.** A truncated or prefix key must never vouch for a
+  relationship: a 40-character cut merged every wire through one bank into one payee.
+- **Measure what is unexplained, not only what is left.** `drop - explained` lets an
+  explained item outside the measured interval offset an unexplained one inside it; also
+  compute the unexplained outflow directly, so a drain keeps its own debit.
+- **Replay the real store before and after.** Tests prove the holes are closed; only a
+  replay over real history proves the legitimate cases are still quiet.
+
+## Omission is not zero
+
+A value the source did not send stays `None` end to end. Sum with `is not None`, and every
+aggregate over optional values carries a count of what it left out (`omitted_*`,
+`failed_items`), because an omission read as 0 shrinks the denominator and inflates every
+other share with nothing to show for it. The class tends to be found one surface at a time:
+wealth-mgmt fixed it at the store boundary, net worth, observability, the holdings API and
+the digest in one month. Fix the principle, then add an AST tripwire over `src/` that fails
+on `<money field> or 0` in any syntactic form (wealth-mgmt
+`tests/test_omission_is_not_zero.py`), so the next surface fails in CI.
+
 ## Anti-patterns
 
 - **A failure path that only logs.** It counts as deferred, not done.
