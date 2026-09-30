@@ -3,7 +3,8 @@ On-demand audit prompt — not in the scheduled rotation since 2026-07-26; paste
 FIRST: If review-context.md exists, read it for project context, threat model, and
 intentional design decisions. Follow it strictly — do NOT flag intentional decisions.
 ALSO: Read existing-issues.md — do NOT report findings already tracked there.
-ALSO: Read digest-intelligence.md for emerging threats and patterns to check against.
+ALSO: If digest-intelligence.md exists, read it for emerging threats and patterns
+to check against; skip it silently if it is absent.
 
 ---
 

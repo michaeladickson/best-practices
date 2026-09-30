@@ -26,7 +26,7 @@ Then evaluate:
 
 ## 1. Review-Type Scorecards
 
-One line per review type (changes, data-qa, context-memory, model-hierarchy). Grade:
+One line per review type (changes, data-qa, context-memory, model-hierarchy, ai-slop). Grade:
 - **Coverage** (A-F): Is it finding real issues in the right areas?
 - **Value** (A-F): Are findings actionable, not noise?
 - **Top gap**: The biggest thing it missed or should cover next.
@@ -93,6 +93,7 @@ whether each is earning its keep:
 - `https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/qa-review.md`
 - `https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/context-memory-review.md`
 - `https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/model-hierarchy-review.md`
+- `https://raw.githubusercontent.com/michaeladickson/best-practices/main/reviews/ai-slop-review.md`
 
 For each prompt that needs updating, provide specific edits in diff format.
 
