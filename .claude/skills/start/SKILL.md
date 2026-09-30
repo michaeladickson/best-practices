@@ -177,9 +177,13 @@ Report-only, and cheap:
 
 ```bash
 git fetch origin --prune -q
-gh pr list -R michaeladickson/best-practices --state all --limit 200 \
-  --json headRefName,number,state -q '.[] | "\(.headRefName)\t\(.number) \(.state)"' > /tmp/_prs 2>/dev/null
-
+# No PR records means no classification. An empty file briefs every branch,
+# landed ones included, as "NO PR", and the move that implies (push it) is the
+# one that is not free. --limit is well past the repo's PR count.
+if ! gh pr list -R michaeladickson/best-practices --state all --limit 1000 \
+  --json headRefName,number,state -q '.[] | "\(.headRefName)\t\(.number) \(.state)"' > /tmp/_prs; then
+  echo "  (PR records unavailable: gh failed, so branch classification is SKIPPED, not clean)"
+else
 { git for-each-ref --format='%(refname:short)' refs/heads/
   git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | sed 's|^origin/||'
 } | grep -vxE 'main|HEAD|origin' | sort -u | while read -r B; do
@@ -200,6 +204,7 @@ gh pr list -R michaeladickson/best-practices --state all --limit 200 \
     *)        echo "  $B  $N commit(s)  PR #${PR%% *} CLOSED UNMERGED" ;;
   esac
 done
+fi
 ```
 
 **Two findings here, not one.** `NO PR` on a branch older than a day is work never proposed.

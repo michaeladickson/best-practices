@@ -1,7 +1,8 @@
 FIRST: If review-context.md exists, read it for project context, threat model, and
 intentional design decisions. Follow it strictly — do NOT flag intentional decisions.
 ALSO: Read existing-issues.md — do NOT report findings already tracked there.
-ALSO: Read digest-intelligence.md for emerging threats and patterns to check against.
+ALSO: If digest-intelligence.md exists, read it for emerging threats and patterns
+to check against; skip it silently if it is absent.
 
 ---
 
@@ -9,8 +10,8 @@ Perform a comprehensive QA review of this codebase. Focus on:
 
 1. **Happy Path Coverage** — Verify all API routes have proper request/response handling and validation
 2. **Edge Cases** — Empty data, null values, boundary values, large datasets, unicode/special characters
-3. **Data Integrity** — Non-atomic operations, optimistic updates without rollback, SQL concerns, missing constraints. For time/labor data specifically: overlapping time entries for the same employee on the same day, entries under 5 minutes (accidental punches), NULL end_times older than 12 hours (dropped webhooks), and duplicate entries from webhook re-delivery. This data feeds payroll — accuracy is critical.
-4. **Multi-Tenant Scenarios** — Does this diff add a query, cache, file path, scheduled job or outbound message (email, Slack, SMS) that is not scoped to the tenant it serves, or that falls back to a default tenant, channel or address? Does it hard-code one tenant's IDs, rates or config in shared code? (The whole tenant boundary is `tenant-isolation-review.md`, run on demand.)
+3. **Data Integrity** — Non-atomic operations, optimistic updates without rollback, SQL concerns, missing constraints. The repo's review-context.md names its highest-stakes record types and their known corruption shapes; check those specifically. This data feeds money decisions, so accuracy is critical.
+4. **Isolation Boundaries** (whatever partitions the data: tenants, stores, owners) — Does this diff add a query, cache, file path, scheduled job or outbound message (email, Slack, SMS) that is not scoped to the tenant it serves, or that falls back to a default tenant, channel or address? Does it hard-code one tenant's IDs, rates or config in shared code? (The whole tenant boundary is `tenant-isolation-review.md`, run on demand.)
 5. **Error Handling** — Backend error responses, silent frontend failures, timeout handling, network retry
 6. **Date & Timezone** — Client vs server time, day-of-week mismatches, month/year boundaries, DST transitions
 7. **Concurrency** — Backend race conditions (double writes, stale reads), frontend race conditions (stale closures, unmounted updates)
@@ -30,7 +31,7 @@ Format your findings as a markdown document with:
 
 After identifying findings, generate actual runnable test scripts for the top 5 highest-priority gaps. Write them in the appropriate test framework:
 - Python: pytest (place in `tests/` directory)
-- TypeScript: vitest (place in `frontend/src/test/` directory)
+- TypeScript, if the repo has a frontend: vitest (place in `frontend/src/test/` directory)
 
 For each test:
 - File path where the test should live
@@ -39,9 +40,9 @@ For each test:
 - Mark as `## Generated Test: <name>`
 
 Focus test generation on:
-1. Financial calculations (forecast accuracy, labor targets, P&L math)
+1. Financial calculations (the repo's core money math)
 2. Data pipeline integrity (sync idempotency, dedup correctness)
-3. Time entry integrity (overlapping entries, accidental punches, NULL end_times, duplicate webhook deliveries — this data feeds payroll)
+3. Integrity of the repo's highest-stakes record type (per review-context.md)
 4. API contract validation (response shapes, error handling)
 5. Edge cases from findings above
 

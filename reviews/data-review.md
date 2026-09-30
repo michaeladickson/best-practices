@@ -1,7 +1,8 @@
 FIRST: If review-context.md exists, read it for project context, threat model, and
 intentional design decisions. Follow it strictly — do NOT flag intentional decisions.
 ALSO: Read existing-issues.md — do NOT report findings already tracked there.
-ALSO: Read digest-intelligence.md for emerging threats and patterns to check against.
+ALSO: If digest-intelligence.md exists, read it for emerging threats and patterns
+to check against; skip it silently if it is absent.
 
 ---
 
@@ -14,8 +15,8 @@ Check for:
 1. **Pipeline Reliability**
    - Are nightly sync jobs idempotent? Can they be safely re-run?
    - Are there silent failure modes where data stops flowing but no alert fires?
-   - Are error handling and retry patterns adequate for external API calls (Crumbl, QBO, WIW)?
-   - Is there monitoring for data freshness? (e.g., alert if daily_sales hasn't updated by noon)
+   - Are error handling and retry patterns adequate for calls to the project's external data APIs?
+   - Is there monitoring for data freshness? (Does anything fail loud when the primary feed stops writing?)
 
 2. **Forecast Accuracy**
    - Are model outputs validated against actuals anywhere in the code?
@@ -24,21 +25,17 @@ Check for:
    - Could stale cached data silently produce wrong forecasts?
 
 3. **Data Consistency**
-   - Do different consumers (Labor, Financials, Dashboard) read the same source of truth?
+   - Do different consumers of the same fact read the same source of truth?
    - Are there duplicate computation paths that could diverge?
    - Are date ranges, timezone handling, and DOW conventions consistent across modules?
    - Are materialized views / caches refreshed appropriately?
 
 4. **Financial Accuracy & Reconciliation**
-   - Do P&L calculations match QBO actuals?
-   - Does SUM(orders.collected_amount) match daily_sales for the past week? Any drift indicates API formula or timezone issues.
-   - Are there orders with collected_amount = 0 that should have revenue (missed Financial API update)?
-   - Are refund amounts in order_refunds matching actual Stripe refunds?
-   - Are there unbalanced JEs (debits != credits) posted this week?
-   - Are Stripe clearing JEs posted within 3 days of the sales JE?
-   - Are marketplace orders (DoorDash, UberEats, GrubHub) reconciled against platform reports?
-   - Are revenue/cost projections using the correct trailing windows?
-   - Are payroll tax multipliers, upcharge values, and other constants current?
+   - Do ledger postings tie to their system of record and to any verified baselines or filed figures? The repo's review-context.md names the specific tie-outs.
+   - Do independent paths that should agree actually reconcile (an aggregate against its row sums, snapshots against flows, one side of a transfer against the other)?
+   - Are there records with a zero or NULL amount that should carry value (a missed upstream update)?
+   - Are there unbalanced journal entries (debits != credits)?
+   - Are projections using the correct trailing windows, and are domain constants current?
    - Could rounding or type conversion introduce systematic bias?
 
 5. **Data Quality**
@@ -51,8 +48,8 @@ Check for:
 6. **Webhook & External Sync Integrity**
    - Are there half-open records (e.g. start without end) older than the expected completion window? That usually means a dropped webhook/event.
    - Does a gap-fill or reconciliation path exist for missed external events, and does it have a sane fallback?
-   - Are there time entries where length_hours = 0 but end_time is set (corrupt data)?
-   - Are there days where total labor hours are significantly below historical DOW average for a store (suggests missing punches even if entries exist)?
+   - Are there records whose duration or amount is zero while their completion is set (corrupt data)?
+   - Are there periods where an entity's volume falls well below its own historical norm for that weekday (missing events, even though records exist)?
 
 7. **Schema Changes in This Diff** (whole-schema health is `database-review.md`, run on demand)
    - Does a new or altered table have a primary key, a UNIQUE constraint on its natural or external key, and foreign keys for its `*_id` columns?
@@ -64,10 +61,10 @@ Check for:
 8. **Data Feed Efficiency**
    - Are there API calls fetching data that's already available from another call?
    - Are there row-by-row INSERT loops that could use batch executemany for better throughput?
-   - Are there nightly syncs re-fetching unchanged data (e.g., recipe details for cookies already in the DB)?
+   - Are there nightly syncs re-fetching reference data that has not changed?
    - Are there API calls that could use a date range instead of one-call-per-day?
    - Is the trailing window for order/data syncs wider than necessary?
-   - Are API calls parallelized across stores where possible?
+   - Are API calls parallelized or batched across entities where the API allows?
 
 9. **Migrations in This Diff** (migration discipline as a whole is `database-review.md`)
    - Is each new migration idempotent and safe to re-run?
@@ -81,10 +78,10 @@ Check for:
     - Are there new fields in API responses we're not capturing (check raw_json for unused fields)?
     - Are date/timezone formats consistent across all API integrations?
 
-11. **Dashboard Accuracy**
-    - Do frontend charts/metrics match backend queries?
-    - Are there client-side calculations that could diverge from server-side?
-    - Are empty states handled (no data ≠ zero)?
+11. **Report Accuracy** (dashboards, digests, CLI rollups: whatever the repo presents)
+    - Do presented figures match the queries they summarize?
+    - Are there client-side or duplicate calculations that could diverge from the source of truth?
+    - Are empty states handled (no data ≠ zero), and is a value the source omitted kept as missing rather than read as 0?
 
 Format your findings as a markdown document with:
 - Executive summary (2-3 sentences on overall data health)
