@@ -13,6 +13,13 @@ Three design rules it encodes:
   run, silently dropping the rest; every schedule entry gets its own minute.
 - **Quiet week → no issue** — no commits in the window (or no findings) files
   nothing, instead of an empty issue nobody reads.
+- **A skipped gate must not read as success.** A skipped step's outputs are `''`,
+  and Actions coerces `''` to 0 in a `!=` comparison, so `commits != '0'` was false
+  for every full-scope type and skipped them all while each run reported `success`
+  (wealth-mgmt, eight weeks). Gate on one explicit derived flag (`scoped`), give the
+  token `actions: read` so a review can audit its own run history, and pin the gate
+  with a test that parses the YAML (wealth-mgmt `tests/test_workflow_invariants.py`).
+  A consumer that files nothing on success needs some other liveness signal.
 
 ## Cloud Build Triggers
 

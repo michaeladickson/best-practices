@@ -51,6 +51,10 @@ permissions:
   contents: read
   issues: write
   id-token: write  # claude-code-action OAuth exchange requires OIDC
+  # So a review can read this workflow's own run history. Without it `gh run
+  # list` 403s, and a run that skipped while reporting success stays unseen
+  # (wealth-mgmt: five monthly runs, eight weeks).
+  actions: read
 
 jobs:
   review:
@@ -189,6 +193,11 @@ jobs:
               surfaces (cross-session memory, Task Scheduler, usage.db) are
               not inspectable from CI; grade repo-visible evidence and mark
               those "not inspectable from CI" rather than Missing.
+              Also run `gh run list --workflow=weekly-reviews.yml --limit 100
+              --json createdAt,event,conclusion,displayTitle` and flag any run
+              since this type's last review that failed, was cancelled, or
+              filed nothing when it should have: a run that skips reports
+              success, so this is the only place an outage shows.
 
             OUTPUT:
             - If there are no findings worth a human's time, print
