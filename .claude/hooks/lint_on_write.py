@@ -47,8 +47,22 @@ Failure modes are deliberately loud-but-harmless
   notice per session (exit 1) at record time, then silence. A gate that quietly
   does not exist is the failure this hook family was written to end; a gate that
   nags on every edit gets deleted.
-- any internal error: exit 1 (non-blocking, visible in the transcript). An edit
-  or a command is never blocked because the linter broke.
+- ruff that ran but failed (a malformed ``[tool.ruff]`` config, an unknown
+  flag): exit 1 on every settle until it is fixed. With ``--exit-zero`` a clean
+  run exits 0, so any other code means the file was never linted, and empty
+  output there is "not checked", not "no violations". Reading it as clean turned
+  the gate off with no signal (wealth-mgmt review, 2026-09-24).
+- any internal error: exit 1 (non-blocking, visible in the transcript), naming
+  the file it was checking. An edit or a command is never blocked because the
+  linter broke.
+
+The baseline is HEAD as of the EDIT, not the settle
+---------------------------------------------------
+PostToolUse fires after the Bash command has run. When that command is the
+``git commit`` that ends a batch, HEAD already holds the new errors by the time
+the settle diffs against it, so nothing was reported and the errors became
+"legacy" for good. Each record therefore pins the commit it saw, and the settle
+diffs against the first one recorded for the file.
 """
 from __future__ import annotations
 
@@ -105,6 +119,9 @@ def _check(path: str, cwd: str, content: str | None = None) -> list[dict]:
         p = _ruff(base + [path], cwd=cwd)
     else:
         p = _ruff(base + ["--stdin-filename", path, "-"], stdin=content, cwd=cwd)
+    if p.returncode != 0:
+        tail = "; ".join((p.stderr or "").strip().splitlines()[:3])
+        raise RuntimeError(f"ruff failed to run (exit {p.returncode}): {tail}")
     out = (p.stdout or "").strip()
     return json.loads(out) if out else []
 
@@ -118,15 +135,25 @@ def _git(args: list[str], cwd: str) -> subprocess.CompletedProcess:
                           encoding="utf-8", errors="replace", timeout=TIMEOUT)
 
 
-def _head_content(path: Path) -> str | None:
-    """The file at HEAD, or None if it is new, untracked, or not in a repo."""
+def _head_content(path: Path, rev: str | None = None) -> str | None:
+    """The file at `rev` (HEAD when none was recorded), or None if it is new,
+    untracked, or not in a repo."""
     d = str(path.parent)
     top = _git(["rev-parse", "--show-toplevel"], d)
     if top.returncode != 0:
         return None
     rel = os.path.relpath(path, top.stdout.strip()).replace(os.sep, "/")
-    show = _git(["show", f"HEAD:{rel}"], top.stdout.strip())
+    show = _git(["show", f"{rev or 'HEAD'}:{rel}"], top.stdout.strip())
     return show.stdout if show.returncode == 0 else None
+
+
+def _head_rev(path: Path) -> str | None:
+    """The commit HEAD points at for this file's repo, pinned at record time."""
+    try:
+        p = _git(["rev-parse", "HEAD"], str(path.parent))
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return p.stdout.strip() if p.returncode == 0 else None
 
 
 def _state_file(session: str, suffix: str) -> Path:
@@ -155,13 +182,13 @@ def _notice_once(session: str, msg: str) -> int:
     return 1
 
 
-def _new_violations(path: Path) -> list[dict]:
-    """Violations in `path` now that are not in its HEAD version."""
+def _new_violations(path: Path, base: str | None = None) -> list[dict]:
+    """Violations in `path` now that are not in its version at `base`."""
     cwd = str(path.parent)
     now = _check(str(path), cwd)
     if not now:
         return []
-    head = _head_content(path)
+    head = _head_content(path, base)
     before: collections.Counter = collections.Counter()
     if head:
         before.update(_key(v) for v in _check(str(path), cwd, head))
@@ -194,22 +221,25 @@ def _record(data: dict) -> int:
                             f"lint_on_write: ruff is not importable by {sys.executable}; "
                             "write-time pyflakes checks are OFF this session "
                             "(install with `python3 -m pip install ruff`).")
-    _append(_state_file(_batch_id(data), "pending"), [fp])
+    _append(_state_file(_batch_id(data), "pending"),
+            [{"path": fp, "base": _head_rev(Path(fp))}])
     return 0
 
 
-def _append(pending: Path, files: list[str]) -> None:
-    # One line per file, appended: parallel tool calls each add their own line
+def _append(pending: Path, entries: list[dict]) -> None:
+    # One line per entry, appended: parallel tool calls each add their own line
     # rather than racing a read-modify-write of a shared list.
-    if files:
+    if entries:
         with open(pending, "a", encoding="utf-8") as fh:
-            fh.write("".join(json.dumps(fp) + "\n" for fp in files))
+            fh.write("".join(json.dumps(e) + "\n" for e in entries))
 
 
-def _read(path: Path) -> list[str]:
-    """The file paths in a pending list. A line that is not a JSON string (an
-    append torn by a killed process) is skipped: raising here would leave the
-    claim on disk, and every later settle would fail on adopting it."""
+def _read(path: Path) -> list[dict]:
+    """The entries in a pending list, as {"path", "base"}. A bare string is the
+    format from before baselines were pinned and reads as base None (HEAD). A
+    line that is neither (an append torn by a killed process) is skipped:
+    raising here would leave the claim on disk, and every later settle would
+    fail on adopting it."""
     try:
         text = path.read_text(encoding="utf-8")
     except OSError:
@@ -221,7 +251,11 @@ def _read(path: Path) -> list[str]:
         except ValueError:
             continue
         if isinstance(value, str):
-            out.append(value)
+            out.append({"path": value, "base": None})
+        elif isinstance(value, dict) and isinstance(value.get("path"), str):
+            base = value.get("base")
+            out.append({"path": value["path"],
+                        "base": base if isinstance(base, str) else None})
     return out
 
 
@@ -244,10 +278,18 @@ def _settle(data: dict) -> int:
     # to a fresh list and is settled next time.
     try:
         os.replace(pending, claimed)
+        # A rename keeps the mtime of the last recorded edit, so a claim made
+        # minutes after that edit looked stale at once and a parallel settle
+        # adopted it, printing the same report twice. Age it from the claim.
+        os.utime(claimed)
     except OSError:
         return 0
     lines = _read(claimed)
-    files = list(dict.fromkeys(lines))
+    # The FIRST base recorded for a file wins: it is the state before the batch.
+    bases: dict[str, str | None] = {}
+    for e in lines:
+        bases.setdefault(e["path"], e["base"])
+    files = list(bases)
     if not _ruff_available():
         claimed.unlink(missing_ok=True)
         return 0
@@ -259,17 +301,23 @@ def _settle(data: dict) -> int:
         for fp in files:
             path = Path(fp)
             if path.is_file():      # else deleted or renamed since the edit
-                new = _new_violations(path)
+                try:
+                    new = _new_violations(path, bases[fp])
+                except Exception as e:
+                    raise RuntimeError(f"{fp}: {type(e).__name__}: {e}") from e
                 count += len(new)
                 report += [f"  {fp}:{v['location']['row']}:{v['location']['column']}  "
                            f"{v.get('code') or 'syntax'}  {v.get('message', '')}"
                            for v in new]
             done += 1
     except Exception:
-        # A ruff timeout or a bad entry mid-loop: the files after it go back on
-        # the list for the next settle. The one that raised is dropped (the
-        # internal-error notice names it), so it cannot fail every settle.
-        _append(pending, files[done + 1:])
+        # A ruff timeout or a bad entry mid-loop. Nothing has been printed, so
+        # every file except the one that raised goes back on the list, the ones
+        # already checked included: requeueing only those after it discarded
+        # the findings collected before it. The one that raised is dropped (the
+        # error names it), so it cannot fail every settle.
+        _append(pending, [{"path": f, "base": bases[f]}
+                          for f in files[:done] + files[done + 1:]])
         raise
     finally:
         # A line appended to the claimed file after it was read (an edit whose

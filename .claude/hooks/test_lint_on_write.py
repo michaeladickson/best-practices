@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -308,6 +310,91 @@ def test_a_fresh_claim_belongs_to_a_live_settle_and_is_left_alone(repo):
     live = _pending("lint_on_write_s.pending.99999")
     live.write_text(json.dumps(fp) + "\n", encoding="utf-8")
     assert stop() == (0, "") and live.exists()
+
+
+# ── Review findings, 2026-09-24 and 09-28 (wealth-mgmt #248, #251) ───────────
+def test_a_ruff_that_fails_to_run_is_loud_not_a_silent_pass(repo):
+    """A broken [tool.ruff] makes ruff exit 2 with no JSON on stdout. Read as
+    'no violations', that green-lit an edit that was never linted."""
+    repo.write("pyproject.toml", '[tool.ruff]\nline-length = "not a number"\n')
+    rc, err = run(repo.write("new.py", "def f():\n    return undefined_thing\n"))
+    assert rc == 1 and "ruff failed to run" in err and "new.py" in err
+
+
+def test_a_batch_committed_before_any_settle_is_still_reported(repo):
+    """PostToolUse fires AFTER the Bash command, so when the first Bash after the
+    edits is the commit, HEAD already holds the new errors by settle time."""
+    repo.write("m.py", "def f():\n    return 1\n")
+    repo.commit()
+    fp = repo.write("m.py", "def f():\n    return undefined_thing\n")
+    assert edit(fp)[0] == 0
+    repo.commit()                      # the Bash call's own command: git commit
+    rc, err = bash()
+    assert rc == 2 and "F821" in err and "undefined_thing" in err
+
+
+def test_the_first_recorded_base_wins_across_a_mid_batch_commit(repo):
+    """Two edits to one file with a commit between them: the batch is judged
+    against the state before it began, not against the intermediate commit."""
+    repo.write("m.py", "def f():\n    return 1\n")
+    repo.commit()
+    fp = repo.write("m.py", "def f():\n    return one_name\n")
+    edit(fp)
+    repo.commit()
+    fp = repo.write("m.py", "def f():\n    return one_name + other_name\n")
+    edit(fp)
+    rc, err = stop()
+    assert rc == 2 and "one_name" in err and "other_name" in err
+
+
+def test_a_pending_list_in_the_old_format_still_settles(repo):
+    """Lists written before baselines were pinned are bare strings; they must
+    keep working across the upgrade, since a claim can outlive a session."""
+    fp = repo.write("m.py", "def f():\n    return nope\n")
+    _pending().write_text(json.dumps(fp) + "\n", encoding="utf-8")
+    rc, err = stop()
+    assert rc == 2 and fp in err
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the slow-git shim is a POSIX script")
+def test_a_live_claim_is_not_adopted_by_a_parallel_settle(repo, tmp_path):
+    """A rename keeps the last edit's mtime, so a claim made minutes after that
+    edit looked stale at once and a parallel settle printed the same report."""
+    fp = repo.write("m.py", "def f():\n    return nope\n")
+    edit(fp)
+    os.utime(_pending(), (time.time() - 600, time.time() - 600))
+    # Settle A holds its claim while a slow `git` runs; B starts meanwhile.
+    shim = tmp_path / "shim"
+    shim.mkdir()
+    (shim / "git").write_text(f'#!/bin/sh\nsleep 3\nexec "{shutil.which("git")}" "$@"\n',
+                              encoding="utf-8")
+    (shim / "git").chmod(0o755)
+    d = _STATE["dir"]
+    env = {**os.environ, "TMPDIR": d, "TEMP": d, "TMP": d,
+           "PATH": f"{shim}{os.pathsep}{os.environ['PATH']}"}
+    a = subprocess.Popen([sys.executable, str(HOOK)], stdin=subprocess.PIPE,
+                         stderr=subprocess.PIPE, text=True, env=env)
+    a.stdin.write(json.dumps({"session_id": "s", "hook_event_name": "Stop",
+                              "stop_hook_active": False}))
+    a.stdin.close()
+    time.sleep(1)
+    assert stop() == (0, ""), "a parallel settle adopted a live claim"
+    assert a.wait(timeout=60) == 2 and fp in a.stderr.read()
+
+
+def test_a_mid_loop_failure_keeps_the_findings_already_collected(repo):
+    """The handler requeued only the files AFTER the one that raised, so the
+    findings for the files before it were collected and then thrown away."""
+    good = repo.write("a.py", "def f():\n    return nope\n")
+    (Path(good).parent / "bad").mkdir()
+    repo.write("bad/pyproject.toml", '[tool.ruff]\nline-length = "not a number"\n')
+    bad = repo.write("bad/b.py", "x = 1\n")
+    _pending().write_text(json.dumps(good) + "\n" + json.dumps(bad) + "\n",
+                          encoding="utf-8")
+    rc, err = stop()
+    assert rc == 1 and "b.py" in err, "the error must name the file it was checking"
+    rc, err = stop()
+    assert rc == 2 and good in err, "a.py's finding was lost with the failure"
 
 
 def test_settings_wire_both_halves():
