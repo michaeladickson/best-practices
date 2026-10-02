@@ -193,6 +193,22 @@
           "reason": "Not now, as cost is not the constraint, and adding a second model vendor to the egress allowlist, secret roster, and model-string pin test is the primary blocker."
         }
       ]
+    },
+    "2872": {
+      "title": "Weekly digest 2026-09-25: ideas to evaluate",
+      "closed_at": "2026-09-25",
+      "verdicts": [
+        {
+          "idea": "Upgrade Claude to Opus 5.5, adapt agent call patterns",
+          "verdict": "accepted",
+          "reason": "#2855, #2860, and #2862 moved pr-review and weekly-review jobs to `claude-opus-5-5`; no refactoring was needed as the Anthropic SDK is not used, and critical narratives remain pinned to `claude-opus-4-7` due to `llm_eval` golden sets covering Gemini only."
+        },
+        {
+          "idea": "Develop Claude Skills for on-demand financial reporting",
+          "verdict": "already-built",
+          "reason": "`/financials` and `/month-end` already provide P&L, balance sheet, cash flow analysis, and narratives, with the existing rule preventing a second `METRICS CORE` definition for spreadsheets."
+        }
+      ]
     }
   }
 }
