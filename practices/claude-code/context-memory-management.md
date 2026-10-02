@@ -87,6 +87,7 @@ Format: pre-assembled markdown brief, newest-first, each fact tagged with its so
 -   **Return named objects, not positional arrays.** Keyed JSON objects keep weaker models from losing track of which value is which.
 -   **Route agent tool access through one control plane.** Siloed agents on fragmented CRM/ERP data reason from partial context; one plane assembles it from trusted sources.
 -   **Provide business context for prioritization.** Triage by technical severity alone misranks; give the agent impact, urgency and resource cost.
+-   **Curate task-adaptive memory at read time.** Store raw agent trajectories and generate a task-specific briefing from them at the time of retrieval for each new task. This avoids discarding information and ensures relevance, unlike fixed, pre-curated summaries.
 
 ### Context Lake Architecture
 
@@ -96,6 +97,9 @@ Format: pre-assembled markdown brief, newest-first, each fact tagged with its so
 -   **Scale to zero.** Agent retrieval load is bursty; serverless components avoid paying for idle.
 -   **Add a semantic cache to stop token bleed.** Cache results for identical or semantically similar queries in front of expensive retrievals and model calls.
 -   **Build one retrieval layer for agent context.** As agents multiply, their queries overload and stale fragmented sources; one layer manages volume and freshness.
+-   **Build reliable data architecture for production agents.** Recognize that demo success doesn't guarantee production readiness. Ensure the underlying data architecture can reliably support agents in production, handling disparate, dynamic data sources and managing complex system permissions.
+-   **Centralize business context in a data platform.** Use an integrated data platform as the central repository for enterprise-wide business context, including ontologies and operational data. Agents should query this platform to persistently 'learn how the business works' and maintain contextual awareness.
+-   **Use different models for embedding index and query.** Leverage a more robust embedding model for indexing data and a faster, cheaper model for queries within the same embedding space. This optimizes for latency and cost in RAG and agent workloads without re-embedding the entire corpus.
 
 ## Context Budget
 
@@ -128,6 +132,7 @@ The asymmetry drives the rule: a paragraph in root `CLAUDE.md` is paid in every 
 -   **Enforce token budgets per developer or team.** Implement and enforce token consumption budgets at the individual developer or team level. This drives accountability for AI efficiency and cost management, encouraging developers to optimize prompt engineering and agent designs.
 -   **Preserve reasoning state between requests.** A harness that carries the model's opaque reasoning state across turns spares it reconstructing its own thinking on long tasks.
 -   **Manage the quadratic history tax.** Stateless APIs re-bill the whole history as input on every call; compact or summarize it, and keep the pre-compaction history in a log for audit and debugging.
+-   **Implement automatic background context compaction.** Summarize older messages in the background to maintain token limits without pausing the agent's active work. This ensures continuous operation and efficient context management.
 
 ## Training the Always-Loaded File (the Backward Pass)
 
@@ -296,113 +301,118 @@ Use [`reviews/context-memory-review.md`](../../reviews/context-memory-review.md)
 
 Synthesized from saved digest articles (`data/digest_knowledge/`) plus production use:
 
+-   **[AINews] Pi 1.0, Pi Durable, and AIE NYC** (Latent Space [ai_engineering]) — Implement automatic background context compaction. Digest: 2026-10-02.
+-   **Just-in-Time Memory** (Pascal Biese (LLM Watch) [ai_engineering]) — Curate task-adaptive memory at read time. Digest: 2026-10-01.
+-   **Cohere’s faster query model barely dents retrieval quality in its tests** (The New Stack [devops]) — Use different models for embedding index and query. Digest: 2026-09-30.
+-   **Your AI agent aced the demo. Your data may still derail it.** (The New Stack [devops]) — Build reliable data architecture for production agents. Digest: 2026-09-30.
+-   **Microsoft Fabric is where AI agents learn how the business works** (The New Stack [devops]) — Centralize business context in a data platform. Digest: 2026-09-30.
 -   **Microsoft’s new Copilot agents get their own email, calendar — and a place in the org chart** (The New Stack [devops]) — Provide agents persistent organizational context. Digest: 2026-09-25.
 -   **Tutorial: Replace Your $3K/month Data Analyst With a Claude Skill** (The AI Break [ai_engineering]) — Validate input schema for data analysis skills. Digest: 2026-09-25.
 -   **Query decomposition doesn’t fix context starvation — it just moves it** (The New Stack [devops]) — Prevent context packers discarding relevant information. Digest: 2026-09-24.
 -   **AI spending can run negative. Qodo’s CEO built an ROI equation to fix it.** (The New Stack [devops]) — Enforce token budgets per developer or team. Digest: 2026-09-23.
 -   **OpenAI cut GPT-6 token prices in half. The bigger lever may be the cache.** (The New Stack [devops]) — Preserve cached context despite reasoning changes. Digest: 2026-09-23.
 -   **Tutorial: Replace Your $3K/month Copywriter With a Claude Skill** (The AI Break [ai_engineering]) — Structure agent skills as self-contained files. Digest: 2026-09-22.
--   **Self-generated prompt injections in compaction summaries** (Simon Willison) — implement validation and integrity checks for AI-generated compaction summaries. Digest: 2026-09-18.
--   **Code review is burning out your best engineers** (The New Stack) — mandate agents generating code to include their underlying reasoning and design choices in the output. Digest: 2026-09-18.
--   **The critical vulnerability was a test database. That’s the whole triage problem.** (The New Stack) — Provide business context for prioritization. Digest: 2026-09-17.
 -   **One engineer shipped 2,000 PRs a month to production. Verification is the key.** (The New Stack) — Agents verify code using a runtime. Digest: 2026-09-19.
--   **Your AI agent failed. The model might not be the problem.** (The New Stack) — Record agent internal monologue for debugging. Digest: 2026-09-20.
--   **Trying the Software factory pattern.** (Will Larson (Irrational Exuberance)) — Agents manage project goals via task system. Digest: 2026-09-20.
--   **This week in Claude Code, 2026-08-28** (Claude Code team newsletter, via digest inbox) — per-agent persistent memory: `memory:` frontmatter → `.claude/agent-memory/`. Added 2026-08-28.
--   **Your AI agent is rediscovering 85% of its context every run** (Nate Jones) — assembly vs. rediscovery, the knowledge layer. Digests: 2026-05-16, 2026-05-18.
--   **Why agent harnesses fail inside cloud-native systems** (The New Stack) — harness footprint, feedback loops. Digest: 2026-05-18.
--   **How to build a skills library** (The New Stack) / **Red Hat's skill packs give AI agents institutional memory** — skills as durable memory. Digests: 2026-05-16/18.
--   **Spec-driven development at Notion** (Lenny's Newsletter) — context assembly via specs, subagents. Digest: 2026-05-18.
--   **Why production RAG systems give confident, wrong answers at scale** (The New Stack) — runtime validation of retrieved context quality. Digest: 2026-05-19.
--   **Kore counts down to Artemis, its moonshot for governable AI agents** (The New Stack) — declarative blueprint languages and orchestration patterns. Digest: 2026-05-21.
--   **Seven questions decide whether your AI agent ships. Most teams can answer two.** (Nate Jones) — comprehensive control layer with multi-layered kill switches. Digest: 2026-05-20.
--   **Anthropic debuts MCP tunnels and self-hosted sandboxes to lock down AI agent infrastructure** (The New Stack) — self-hosted sandboxes for agent runtime isolation. Digest: 2026-05-19.
--   **HTML is the new Markdown: How Anthropic engineers are building with Claude Code | Thariq Shihipar** (Lenny's Newsletter) — interactive HTML artifacts for human-agent collaboration. Digest: 2026-05-18.
--   **Why enterprise AI keeps stalling — and how data streaming could unlock it** (The New Stack) — real-time data streaming for live business context. Digest: 2026-05-22.
--   **JFrog report recaps a tumultuous year in supply chain security** (The New Stack) — securing the agentic toolchain against weaponization. Digest: 2026-05-22.
--   **How MCP and synthetic data are reshaping compliance in the agentic era** (The New Stack) — synthetic data in non-production environments. Digest: 2026-05-23.
--   **OpenClaw passed 300,000 GitHub stars. Then Google launched Spark.** (The New Stack) — agent deployment substrate for security. Digest: 2026-05-23.
--   **When $8 Becomes $240** (AI Engineering) — trust boundary for context elements. Digest: 2026-05-24.
--   **Why AWS scrapped OpenSearch’s architecture to chase agent workloads** (The New Stack [devops]) — Architect retrieval systems to scale to zero for cost efficiency and bursty agent workloads. Digest: 2026-05-28.
--   **Claude Opus 4.8 is here: effort controls, dynamic workflows, cheaper fast mode, better honesty, less deception** (The New Stack [devops]) — Utilize agent 'effort controls' to balance response quality, speed, and token cost. Digest: 2026-05-28.
--   **Claude Opus 4.8 is here: effort controls, dynamic workflows, cheaper fast mode, better honesty, less deception** (The New Stack [devops]) — Implement dynamic workflows with parallel subagents for tackling large-scale, complex coding tasks. Digest: 2026-05-28.
--   **The agentic identity crisis: Why your security isn’t ready for the AI revolution** (The New Stack [devops]) — Implement an Agent Identity and Access Management (IAM) framework to secure agent actions and mitigate RAG attack surfaces. Digest: 2026-05-28.
--   **Debugging the undebuggable: building observability into probabilistic AI systems** (The New Stack [devops]) — Implement comprehensive observability (tracing, logging, token estimation) for AI agent systems to debug non-deterministic behaviors and context-related failures. Digest: 2026-05-28.
--   **[AINews] New AI Infra decacorns: Fireworks, Baseten (with OpenRouter on the way)** (Latent Space [ai_engineering]) — Integrate continuous evaluation loops and runtime feedback with agent harnesses to refine context and memory management strategies. Digest: 2026-05-27.
--   **Building OpenCode with Dax Raad** (The Pragmatic Engineer [engineering]) — Optimize context retrieval performance using smart caching strategies on high-speed storage. Digest: 2026-05-27.
--   **Researcher “gave Claude Code ‘ADHD’… and it thinks 2x better now.” Outside experts want more proof.** (The New Stack [devops]) — Employ advanced reasoning and planning layers like 'tree-of-thought with cognitive-frame branching' for divergent ideation and pruning. Digest: 2026-05-27.
--   **“There is no accountability”: AI coding agents are installing packages no one owns** (The New Stack [devops]) — Implement pre-installation inspection and policy enforcement for all packages, plugins, and dependencies introduced by autonomous AI agents. Digest: 2026-05-27.
--   **“Tokenmaxxing is real, expensive & it’s spreading”: AI budgets are exploding** (The New Stack [devops]) — Shift focus from maximizing token usage ('tokenmaxxing') to optimizing token consumption for desired outcomes. Digest: 2026-05-27.
--   **With Google’s debut, the most important AI agent feature is now the most boring one** (The New Stack [devops]) — Adopt managed agent runtimes and configuration-first harnesses to streamline agent orchestration and infrastructure. Digest: 2026-05-27.
--   **Why AI agents need a Context Lake** (The New Stack [devops]) — Establish a 'Context Lake' as a centralized, governed, and optimized database for all agent-retrievable context. Digest: 2026-05-27.
--   **AI Agents of the Week: Papers You Should Know About** (Pascal Biese (LLM Watch)) — structured intermediate representations ('blueprints') as explicit context artifacts. Digest: 2026-06-01.
--   **Your AI agent is going to hallucinate at scale** (Ruben Dominguez (The AI Corner)) — mitigate inherent scaling limitations of embedding-proximity-based retrieval systems. Digest: 2026-06-04.
--   **Google Gemma 4 12B nearly matches 26B benchmarks — and runs on your laptop** (The New Stack) — local/on-device memory tiers for agents. Digest: 2026-06-05.
--   **Inference engineering is the 80% cost cut most teams miss** (Ruben Dominguez (The AI Corner)) — optimize agent token usage and latency through inference engineering techniques including prefix caching. Digest: 2026-06-16.
--   **Your AI pipeline is broken, and your dashboards don’t know it** (The New Stack [devops]) — debugging probabilistic AI systems and 'gradients of wrong'. Digest: 2026-06-18.
--   **Grab the Open Engine guide: the copy-paste task record that makes one AI's work the next AI's job, with receipts** (Nate Jones) — Define and implement structured 'agent handoff records'. Digest: 2026-06-26.
--   **Agent Toolkit for AWS includes 20+ agent skills, but your agent might not load them without this one file** (The New Stack) — Utilize explicit 'rules files' or policies within agent harnesses. Digest: 2026-06-25.
--   **Executive Briefing: Cheap Intelligence Won’t Matter If Your Context Is Trapped** (Nate Jones [ai_strategy]) — Architect agent systems to avoid vendor lock-in by ensuring core context and permissions are portable. Digest: 2026-06-28.
--   **AI Agents of the Week: Papers You Should Know About** (Pascal Biese (LLM Watch) [ai_engineering]) — Implement dynamic context grounding and adaptation frameworks that integrate planning, search, reasoning, and memory. Digest: 2026-06-29.
--   **AI Agents of the Week: Papers You Should Know About** (Pascal Biese (LLM Watch) [ai_engineering]) — Enable agents to meta-optimize synthetic data creation and extract hierarchical skills from their own trajectories. Digest: 2026-06-29.
--   **AI Agents of the Week: Papers You Should Know About** (Pascal Biese (LLM Watch) [ai_engineering]) — Prioritize localized memory maintenance over global reorganization in agent-native memory systems. Digest: 2026-06-29.
--   **“The harness is where the hard work is”: Harness bets on agents that enterprises can trust in production** (The New Stack [devops]) — Replace fixed scripts in CI/CD pipelines with autonomous worker agents that reason through tasks. Digest: 2026-06-30.
--   **AWS launches a desktop for agents** (The New Stack [devops]) — Provision dedicated virtual desktop environments (e.g., AWS WorkSpaces for Agents) for agents to interact with legacy applications. Digest: 2026-06-30.
--   **How Kent Beck shapes the software engineering industry** (The Pragmatic Engineer [engineering]) — Integrate specialized testing and verification tools (e.g., hostile environment testing) for agent-generated code. Digest: 2026-07-01.
--   **You can build 80% of your own AI memory by talking to the agent already on your computer** (Nate Jones [ai_strategy]) — Implement explicit human approval workflows and clear 'send boundaries' for agents. Digest: 2026-07-01.
--   **OpenClaw’s new app doesn’t run AI on your phone. That’s the whole point.** (The New Stack [devops]) — Design agents to run on persistent, independent runtimes (e.g., cloud, desktop). Digest: 2026-07-02.
--   **Why traditional CI/CD fails for LLMs (and the release gates we built to fix it)** (The New Stack [devops]) — Implement probabilistic release gates for LLM pipelines using baseline evaluations, drift detection, shadow validation, and cost/latency guardrails. Digest: 2026-07-02.
--   **Skill engineering and the case against one-shot AI design** (Latent Space [ai_engineering]) — Engineer granular, composable 'design skills' with a specialized vocabulary. Digest: 2026-07-02.
--   **Apple just turned Safari into something AI agents can control** (The New Stack [devops]) — Utilize native Model Context Protocol (MCP) servers provided by platform vendors for secure, direct agent interaction. Digest: 2026-07-03.
--   **Fable's judgement** (Simon Willison [ai_engineering]) — Empower orchestrating agents to dynamically select appropriate lower-power models for subagents. Digest: 2026-07-03.
--   **Better Models: Worse Tools** (Simon Willison [ai_engineering]) — design agent tools and schemas for robustness against model-specific tool-use biases. Digest: 2026-07-05.
--   **Stop prompting. Start writing loops** (Ruben Dominguez (The AI Corner) [ai_strategy]) — structure agent workflows using defined loop types. Digest: 2026-07-07.
--   **JetBrains’ next move isn’t a better IDE — it’s a governance layer over Claude Code, Codex, and Gemini CLI** (The New Stack [devops]) — implement a cross-vendor AI governance layer for shared context and reusable agentic processes. Digest: 2026-07-08.
--   **Watch AWS engineers troubleshoot agentic AI with OpenTelemetry and OpenSearch** (The New Stack [devops]) — leverage observability systems as a primary retrieval interface for agent context. Digest: 2026-07-08.
--   **What a harness is and how to build one with Claude Agent SDK** (Lenny's Newsletter [product]) — explicitly encode specific permissions and access controls within agent harnesses. Digest: 2026-07-08.
--   **The “silent hallucination” loop: how our autonomous data pipeline poisoned its own vector store** (The New Stack [devops]) — implement validation and uncertainty handling for agent-generated data ingested into memory systems. Digest: 2026-07-09.
--   **Develop like you deploy: closing the Kubernetes local-to-cluster gap** (The New Stack [devops]) — integrate agent harnesses as a foundational layer within platform engineering. Digest: 2026-07-09.
--   **Enterprise AI benchmarks are broken** (The New Stack [devops]) — design context management for holistic, large context windows critical for enterprise workflows. Digest: 2026-07-09.
--   **Rewriting Bun in Rust** (Simon Willison [ai_engineering]) — establish a comprehensive, language-agnostic conformance test suite for large-scale agentic code changes. Digest: 2026-07-09.
--   **OpenAI, Microsoft & Anthropic agree on who runs the agent. They disagree on what you can take back.** (The New Stack [devops]) — define clear data portability and ownership policies for agent-generated memory across different deployment archetypes. Digest: 2026-07-10.
--   **Anthropic wants you to use AI to decide whether or not you should use AI.** (The New Stack [devops]) — evaluate AI agent contributions based on production outcomes, not just usage metrics. Digest: 2026-07-10.
--   **Why retrieval quality is becoming the defining challenge in AI agent architecture** (The New Stack [devops]) — prioritize contextual nuance in retrieval, distinguishing rationale from implementation details. Digest: 2026-07-10.
--   **Grab the One-Minute Test That Tells You If Your Task Needs a Chat, One Agent, a Team, or Nothing at All** (Nate Jones [ai_strategy]) — task-scoping framework for agent deployment decisions. Digest: 2026-07-10.
--   **Why every AI agent decision needs a receipt** (The New Stack) — comprehensive 'evidence packets' for decisions. Digest: 2026-07-17.
--   **The bottleneck for AI agents isn’t the model anymore. It’s the context layer.** (The New Stack) — knowledge compilation for structured artifacts. Digest: 2026-07-18.
--   **Your Agent Doesn’t Have a Memory Problem** (Pascal Biese (LLM Watch)) — explicit reasoning and verification layer for retrieved context. Digest: 2026-07-20.
--   **How the founder of Morning Brew built a Claude content machine that never runs out of ideas and never sounds like slop | Alex Lieberman** (Lenny's Newsletter) — codify agent voice and style guidelines in context files. Digest: 2026-07-20.
--   **I Built The Token Saver Skill To Cut My Token Use By 90%. Here Is What It Can And Cannot Do For You.** (Nate Jones) — actively prune context to reduce token usage. Digest: 2026-07-29.
--   **Modus’s operandi: To give AI agents just the right amount of context** (The New Stack) — implement a dynamic 'context warehouse' architecture with continuous learning and real-time assembly. Digest: 2026-07-29.
--   **Introducing Muse Code and Muse Spark 1.2** (Simon Willison) — Architect agents for durable session context using event logs and persistent cloud environments. Digest: 2026-08-06.
--   **The 800 mistakes that could reshape Meta’s AI coding strategy** (The New Stack) — Implement systematic feedback loops for human correction of agent mistakes. Digest: 2026-08-05.
+-   **Code review is burning out your best engineers** (The New Stack) — mandate agents generating code to include their underlying reasoning and design choices in the output. Digest: 2026-09-18.
+-   **Self-generated prompt injections in compaction summaries** (Simon Willison) — implement validation and integrity checks for AI-generated compaction summaries. Digest: 2026-09-18.
+-   **The critical vulnerability was a test database. That’s the whole triage problem.** (The New Stack) — Provide business context for prioritization. Digest: 2026-09-17.
+-   **Omarchy lets an AI agent rewrite the whole desktop. Here are 8 changes you can make on your Mac instead.** (Nate Jones) — provision dedicated, persistent computational environments for long-running agents. Digest: 2026-09-11.
+-   **"Six tools, one harness": Salesforce loops together a six-pack of favorites** (The New Stack) — implement a unified AI control plane to integrate diverse enterprise systems and tools for agents. Digest: 2026-09-11.
+-   **Researchers found that 1 in 5 MCP access policies came back broken or missing** (The New Stack) — implement rigorous context sanitization and validation to prevent instruction injection vulnerabilities. Digest: 2026-09-10.
+-   **You pay for two frontier models and route almost everything to one. Both Mac apps are yours for an email, and the guide walks the verbatim prompt, the 65-check list, the job-by-job casting call, and where my own test was unequal.** (Nate Jones) — actively leverage iterative feedback loops to refine agent behavior and accumulate task-specific context. Digest: 2026-09-10.
+-   **I distilled myself, and you should too** (Kun Chen (Kun's Field Notes)) — establish automated processes for continuously distilling and updating human judgment and expertise into agent skills. Digest: 2026-09-09.
+-   **What is happening with code reviews?** (The Pragmatic Engineer) — develop specific strategies for reviewing and integrating high volume of agent-generated code. Digest: 2026-09-08.
+-   **How I AI: GPT-6 Astra is a banger + Stripe’s AI playbook + Grok Bot vs. OpenClaw: why I replaced my entire agent stack** (Lenny's Newsletter) — implement robust migration processes to ensure fidelity of an agent's accumulated 'personality,' context, and routines. Digest: 2026-09-07.
+-   **What 3,500+ prompts taught me about using AI for Investing** (Compound With AI) — clearly delineate between tasks delegated for agent analysis and decisions requiring human judgment. Digest: 2026-09-06.
+-   **Microsoft built a prompt injection detector. Then it caught a phishing campaign instead.** (The New Stack) — implement robust input sanitization and tokenization awareness. Digest: 2026-09-05.
+-   **Seven sheets and 13 slides from the cheapest setting: the two-step guide and the exact prompts I use for Excel, PowerPoint, and Word.** (Nate Jones) — adopt a tiered reasoning effort strategy for agents. Digest: 2026-09-04.
+-   **OpenAI will sell you Astra, but not the system that scored 98.6% on ARC-AGI-3** (The New Stack) — design harnesses to preserve and compact the agent's opaque reasoning state. Digest: 2026-09-04.
+-   **“1% of my engineers are responsible for 40% of token spend”: Why Coder and SpaceXAI want to give developers nice things** (The New Stack) — implement a hybrid execution model for sensitive information. Digest: 2026-09-04.
+-   **AI agent evaluations are part of the product** (The New Stack) — integrate repeatable evaluation systems for context assembly, tool calls, and access control. Digest: 2026-09-04.
+-   **Want to scale AI agents without breaking anything? Retrieval engineering is the answer.** (The New Stack) — design and implement a unified retrieval layer for agent context. Digest: 2026-09-03.
+-   **The systems guide to production token optimization** (The New Stack) — actively manage conversational history to mitigate the 'quadratic history tax.' Digest: 2026-09-03.
+-   **Nvidia PAIR lets you put your idle Macs and PCs to work for AI agents** (The New Stack) — employ a Personal AI Router (e.g., Nvidia PAIR) for subagent inference. Digest: 2026-09-03.
+-   **AI Agents built a 3D city for $33 in two hours —and exposed a major flaw** (The New Stack) — implement visual regression testing with tools like Playwright. Digest: 2026-09-03.
+-   **Your Mac is now part of Perplexity’s AI infrastructure** (The New Stack) — implement a hybrid compute architecture with a 'Privacy Gate'. Digest: 2026-09-02.
+-   **Vercel built a feedback loop that treats agent instructions like software** (The New Stack) — externalize domain-specific guidance into loadable prompt files. Digest: 2026-09-02.
+-   **Google ships its third Gemini Flash model in six weeks** (The New Stack) — implement governed access programs for specialized or high-risk agent capabilities. Digest: 2026-09-02.
+-   **datasette-mcp 0.2** (Simon Willison) — structure complex data outputs as named objects. Digest: 2026-09-01.
+-   **How I AI: How this PM uses Claude to handle 70% to 80% of his workday** (Lenny's Newsletter) — implement continuous self-improvement loops for agents from user edits. Digest: 2026-08-31.
+-   **Why basic RAG fails at multi-hop reasoning (and how GraphRAG fixes it)** (The New Stack) — combining knowledge graphs with vector search for multi-hop reasoning. Digest: 2026-08-27.
+-   **Your AGENTS.md is a Neural Net** (Kun Chen (Kun's Field Notes)) — data-driven methodology for maintaining project-level context files via session transcripts and budgeting. Digest: 2026-08-23.
 -   **Spline rebuilt its entire 3D editor. Then it handed the keys to Claude Code.** (The New Stack) — integrate agent environments with live application states for direct, editable interaction. Digest: 2026-08-22.
 -   **Researchers hid an attack inside AES encryption. The AI model cracked it open willingly.** (The New Stack) — implement robust security measures to prevent cryptographic context injection. Digest: 2026-08-20.
 -   **Stop the token bleed: building token-efficient multi-agent systems** (The New Stack) — incorporate a semantic cache to prevent redundant model invocations and token bleed. Digest: 2026-08-20.
--   **Your AGENTS.md is a Neural Net** (Kun Chen (Kun's Field Notes)) — data-driven methodology for maintaining project-level context files via session transcripts and budgeting. Digest: 2026-08-23.
--   **Why basic RAG fails at multi-hop reasoning (and how GraphRAG fixes it)** (The New Stack) — combining knowledge graphs with vector search for multi-hop reasoning. Digest: 2026-08-27.
--   **How I AI: How this PM uses Claude to handle 70% to 80% of his workday** (Lenny's Newsletter) — implement continuous self-improvement loops for agents from user edits. Digest: 2026-08-31.
--   **datasette-mcp 0.2** (Simon Willison) — structure complex data outputs as named objects. Digest: 2026-09-01.
--   **Google ships its third Gemini Flash model in six weeks** (The New Stack) — implement governed access programs for specialized or high-risk agent capabilities. Digest: 2026-09-02.
--   **Vercel built a feedback loop that treats agent instructions like software** (The New Stack) — externalize domain-specific guidance into loadable prompt files. Digest: 2026-09-02.
--   **Your Mac is now part of Perplexity’s AI infrastructure** (The New Stack) — implement a hybrid compute architecture with a 'Privacy Gate'. Digest: 2026-09-02.
--   **AI Agents built a 3D city for $33 in two hours —and exposed a major flaw** (The New Stack) — implement visual regression testing with tools like Playwright. Digest: 2026-09-03.
--   **Nvidia PAIR lets you put your idle Macs and PCs to work for AI agents** (The New Stack) — employ a Personal AI Router (e.g., Nvidia PAIR) for subagent inference. Digest: 2026-09-03.
--   **The systems guide to production token optimization** (The New Stack) — actively manage conversational history to mitigate the 'quadratic history tax.' Digest: 2026-09-03.
--   **Want to scale AI agents without breaking anything? Retrieval engineering is the answer.** (The New Stack) — design and implement a unified retrieval layer for agent context. Digest: 2026-09-03.
--   **AI agent evaluations are part of the product** (The New Stack) — integrate repeatable evaluation systems for context assembly, tool calls, and access control. Digest: 2026-09-04.
--   **“1% of my engineers are responsible for 40% of token spend”: Why Coder and SpaceXAI want to give developers nice things** (The New Stack) — implement a hybrid execution model for sensitive information. Digest: 2026-09-04.
--   **OpenAI will sell you Astra, but not the system that scored 98.6% on ARC-AGI-3** (The New Stack) — design harnesses to preserve and compact the agent's opaque reasoning state. Digest: 2026-09-04.
--   **Seven sheets and 13 slides from the cheapest setting: the two-step guide and the exact prompts I use for Excel, PowerPoint, and Word.** (Nate Jones) — adopt a tiered reasoning effort strategy for agents. Digest: 2026-09-04.
--   **Microsoft built a prompt injection detector. Then it caught a phishing campaign instead.** (The New Stack) — implement robust input sanitization and tokenization awareness. Digest: 2026-09-05.
--   **What 3,500+ prompts taught me about using AI for Investing** (Compound With AI) — clearly delineate between tasks delegated for agent analysis and decisions requiring human judgment. Digest: 2026-09-06.
--   **How I AI: GPT-6 Astra is a banger + Stripe’s AI playbook + Grok Bot vs. OpenClaw: why I replaced my entire agent stack** (Lenny's Newsletter) — implement robust migration processes to ensure fidelity of an agent's accumulated 'personality,' context, and routines. Digest: 2026-09-07.
--   **What is happening with code reviews?** (The Pragmatic Engineer) — develop specific strategies for reviewing and integrating high volume of agent-generated code. Digest: 2026-09-08.
--   **I distilled myself, and you should too** (Kun Chen (Kun's Field Notes)) — establish automated processes for continuously distilling and updating human judgment and expertise into agent skills. Digest: 2026-09-09.
--   **Researchers found that 1 in 5 MCP access policies came back broken or missing** (The New Stack) — implement rigorous context sanitization and validation to prevent instruction injection vulnerabilities. Digest: 2026-09-10.
--   **You pay for two frontier models and route almost everything to one. Both Mac apps are yours for an email, and the guide walks the verbatim prompt, the 65-check list, the job-by-job casting call, and where my own test was unequal.** (Nate Jones) — actively leverage iterative feedback loops to refine agent behavior and accumulate task-specific context. Digest: 2026-09-10.
--   **"Six tools, one harness": Salesforce loops together a six-pack of favorites** (The New Stack) — implement a unified AI control plane to integrate diverse enterprise systems and tools for agents. Digest: 2026-09-11.
--   **Omarchy lets an AI agent rewrite the whole desktop. Here are 8 changes you can make on your Mac instead.** (Nate Jones) — provision dedicated, persistent computational environments for long-running agents. Digest: 2026-09-11.
+-   **Introducing Muse Code and Muse Spark 1.2** (Simon Willison) — Architect agents for durable session context using event logs and persistent cloud environments. Digest: 2026-08-06.
+-   **The 800 mistakes that could reshape Meta’s AI coding strategy** (The New Stack) — Implement systematic feedback loops for human correction of agent mistakes. Digest: 2026-08-05.
+-   **Modus’s operandi: To give AI agents just the right amount of context** (The New Stack) — implement a dynamic 'context warehouse' architecture with continuous learning and real-time assembly. Digest: 2026-07-29.
+-   **I Built The Token Saver Skill To Cut My Token Use By 90%. Here Is What It Can And Cannot Do For You.** (Nate Jones) — actively prune context to reduce token usage. Digest: 2026-07-29.
+-   **Your Agent Doesn’t Have a Memory Problem** (Pascal Biese (LLM Watch)) — explicit reasoning and verification layer for retrieved context. Digest: 2026-07-20.
+-   **How the founder of Morning Brew built a Claude content machine that never runs out of ideas and never sounds like slop | Alex Lieberman** (Lenny's Newsletter) — codify agent voice and style guidelines in context files. Digest: 2026-07-20.
+-   **The bottleneck for AI agents isn’t the model anymore. It’s the context layer.** (The New Stack) — knowledge compilation for structured artifacts. Digest: 2026-07-18.
+-   **Why every AI agent decision needs a receipt** (The New Stack) — comprehensive 'evidence packets' for decisions. Digest: 2026-07-17.
+-   **Grab the One-Minute Test That Tells You If Your Task Needs a Chat, One Agent, a Team, or Nothing at All** (Nate Jones [ai_strategy]) — task-scoping framework for agent deployment decisions. Digest: 2026-07-10.
+-   **Why retrieval quality is becoming the defining challenge in AI agent architecture** (The New Stack [devops]) — prioritize contextual nuance in retrieval, distinguishing rationale from implementation details. Digest: 2026-07-10.
+-   **Anthropic wants you to use AI to decide whether or not you should use AI.** (The New Stack [devops]) — evaluate AI agent contributions based on production outcomes, not just usage metrics. Digest: 2026-07-10.
+-   **OpenAI, Microsoft & Anthropic agree on who runs the agent. They disagree on what you can take back.** (The New Stack [devops]) — define clear data portability and ownership policies for agent-generated memory across different deployment archetypes. Digest: 2026-07-10.
+-   **Rewriting Bun in Rust** (Simon Willison [ai_engineering]) — establish a comprehensive, language-agnostic conformance test suite for large-scale agentic code changes. Digest: 2026-07-09.
+-   **Enterprise AI benchmarks are broken** (The New Stack [devops]) — design context management for holistic, large context windows critical for enterprise workflows. Digest: 2026-07-09.
+-   **Develop like you deploy: closing the Kubernetes local-to-cluster gap** (The New Stack [devops]) — integrate agent harnesses as a foundational layer within platform engineering. Digest: 2026-07-09.
+-   **The “silent hallucination” loop: how our autonomous data pipeline poisoned its own vector store** (The New Stack [devops]) — implement validation and uncertainty handling for agent-generated data ingested into memory systems. Digest: 2026-07-09.
+-   **What a harness is and how to build one with Claude Agent SDK** (Lenny's Newsletter [product]) — explicitly encode specific permissions and access controls within agent harnesses. Digest: 2026-07-08.
+-   **Watch AWS engineers troubleshoot agentic AI with OpenTelemetry and OpenSearch** (The New Stack [devops]) — leverage observability systems as a primary retrieval interface for agent context. Digest: 2026-07-08.
+-   **JetBrains’ next move isn’t a better IDE — it’s a governance layer over Claude Code, Codex, and Gemini CLI** (The New Stack [devops]) — implement a cross-vendor AI governance layer for shared context and reusable agentic processes. Digest: 2026-07-08.
+-   **Stop prompting. Start writing loops** (Ruben Dominguez (The AI Corner) [ai_strategy]) — structure agent workflows using defined loop types. Digest: 2026-07-07.
+-   **Better Models: Worse Tools** (Simon Willison [ai_engineering]) — design agent tools and schemas for robustness against model-specific tool-use biases. Digest: 2026-07-05.
+-   **Fable's judgement** (Simon Willison [ai_engineering]) — Empower orchestrating agents to dynamically select appropriate lower-power models for subagents. Digest: 2026-07-03.
+-   **Apple just turned Safari into something AI agents can control** (The New Stack [devops]) — Utilize native Model Context Protocol (MCP) servers provided by platform vendors for secure, direct agent interaction. Digest: 2026-07-03.
+-   **Skill engineering and the case against one-shot AI design** (Latent Space [ai_engineering]) — Engineer granular, composable 'design skills' with a specialized vocabulary. Digest: 2026-07-02.
+-   **Why traditional CI/CD fails for LLMs (and the release gates we built to fix it)** (The New Stack [devops]) — Implement probabilistic release gates for LLM pipelines using baseline evaluations, drift detection, shadow validation, and cost/latency guardrails. Digest: 2026-07-02.
+-   **OpenClaw’s new app doesn’t run AI on your phone. That’s the whole point.** (The New Stack [devops]) — Design agents to run on persistent, independent runtimes (e.g., cloud, desktop). Digest: 2026-07-02.
+-   **You can build 80% of your own AI memory by talking to the agent already on your computer** (Nate Jones [ai_strategy]) — Implement explicit human approval workflows and clear 'send boundaries' for agents. Digest: 2026-07-01.
+-   **How Kent Beck shapes the software engineering industry** (The Pragmatic Engineer [engineering]) — Integrate specialized testing and verification tools (e.g., hostile environment testing) for agent-generated code. Digest: 2026-07-01.
+-   **“The harness is where the hard work is”: Harness bets on agents that enterprises can trust in production** (The New Stack [devops]) — Replace fixed scripts in CI/CD pipelines with autonomous worker agents that reason through tasks. Digest: 2026-06-30.
+-   **AWS launches a desktop for agents** (The New Stack [devops]) — Provision dedicated virtual desktop environments (e.g., AWS WorkSpaces for Agents) for agents to interact with legacy applications. Digest: 2026-06-30.
+-   **AI Agents of the Week: Papers You Should Know About** (Pascal Biese (LLM Watch) [ai_engineering]) — Prioritize localized memory maintenance over global reorganization in agent-native memory systems. Digest: 2026-06-29.
+-   **AI Agents of the Week: Papers You Should Know About** (Pascal Biese (LLM Watch) [ai_engineering]) — Enable agents to meta-optimize synthetic data creation and extract hierarchical skills from their own trajectories. Digest: 2026-06-29.
+-   **AI Agents of the Week: Papers You Should Know About** (Pascal Biese (LLM Watch) [ai_engineering]) — Implement dynamic context grounding and adaptation frameworks that integrate planning, search, reasoning, and memory. Digest: 2026-06-29.
+-   **Executive Briefing: Cheap Intelligence Won’t Matter If Your Context Is Trapped** (Nate Jones [ai_strategy]) — Architect agent systems to avoid vendor lock-in by ensuring core context and permissions are portable. Digest: 2026-06-28.
+-   **Grab the Open Engine guide: the copy-paste task record that makes one AI's work the next AI's job, with receipts** (Nate Jones) — Define and implement structured 'agent handoff records'. Digest: 2026-06-26.
+-   **Agent Toolkit for AWS includes 20+ agent skills, but your agent might not load them without this one file** (The New Stack) — Utilize explicit 'rules files' or policies within agent harnesses. Digest: 2026-06-25.
+-   **Your AI pipeline is broken, and your dashboards don’t know it** (The New Stack [devops]) — debugging probabilistic AI systems and 'gradients of wrong'. Digest: 2026-06-18.
+-   **Inference engineering is the 80% cost cut most teams miss** (Ruben Dominguez (The AI Corner)) — optimize agent token usage and latency through inference engineering techniques including prefix caching. Digest: 2026-06-16.
+-   **Google Gemma 4 12B nearly matches 26B benchmarks — and runs on your laptop** (The New Stack) — local/on-device memory tiers for agents. Digest: 2026-06-05.
+-   **Your AI agent is going to hallucinate at scale** (Ruben Dominguez (The AI Corner)) — mitigate inherent scaling limitations of embedding-proximity-based retrieval systems. Digest: 2026-06-04.
+-   **AI Agents of the Week: Papers You Should Know About** (Pascal Biese (LLM Watch)) — structured intermediate representations ('blueprints') as explicit context artifacts. Digest: 2026-06-01.
+-   **Why AI agents need a Context Lake** (The New Stack [devops]) — Establish a 'Context Lake' as a centralized, governed, and optimized database for all agent-retrievable context. Digest: 2026-05-27.
+-   **With Google’s debut, the most important AI agent feature is now the most boring one** (The New Stack [devops]) — Adopt managed agent runtimes and configuration-first harnesses to streamline agent orchestration and infrastructure. Digest: 2026-05-27.
+-   **“Tokenmaxxing is real, expensive & it’s spreading”: AI budgets are exploding** (The New Stack [devops]) — Shift focus from maximizing token usage ('tokenmaxxing') to optimizing token consumption for desired outcomes. Digest: 2026-05-27.
+-   **“There is no accountability”: AI coding agents are installing packages no one owns** (The New Stack [devops]) — Implement pre-installation inspection and policy enforcement for all packages, plugins, and dependencies introduced by autonomous AI agents. Digest: 2026-05-27.
+-   **Researcher “gave Claude Code ‘ADHD’… and it thinks 2x better now.” Outside experts want more proof.** (The New Stack [devops]) — Employ advanced reasoning and planning layers like 'tree-of-thought with cognitive-frame branching' for divergent ideation and pruning. Digest: 2026-05-27.
+-   **Building OpenCode with Dax Raad** (The Pragmatic Engineer [engineering]) — Optimize context retrieval performance using smart caching strategies on high-speed storage. Digest: 2026-05-27.
+-   **[AINews] New AI Infra decacorns: Fireworks, Baseten (with OpenRouter on the way)** (Latent Space [ai_engineering]) — Integrate continuous evaluation loops and runtime feedback with agent harnesses to refine context and memory management strategies. Digest: 2026-05-27.
+-   **Debugging the undebuggable: building observability into probabilistic AI systems** (The New Stack [devops]) — Implement comprehensive observability (tracing, logging, token estimation) for AI agent systems to debug non-deterministic behaviors and context-related failures. Digest: 2026-05-28.
+-   **The agentic identity crisis: Why your security isn’t ready for the AI revolution** (The New Stack [devops]) — Implement an Agent Identity and Access Management (IAM) framework to secure agent actions and mitigate RAG attack surfaces. Digest: 2026-05-28.
+-   **Claude Opus 4.8 is here: effort controls, dynamic workflows, cheaper fast mode, better honesty, less deception** (The New Stack [devops]) — Implement dynamic workflows with parallel subagents for tackling large-scale, complex coding tasks. Digest: 2026-05-28.
+-   **Claude Opus 4.8 is here: effort controls, dynamic workflows, cheaper fast mode, better honesty, less deception** (The New Stack [devops]) — Utilize agent 'effort controls' to balance response quality, speed, and token cost. Digest: 2026-05-28.
+-   **Why AWS scrapped OpenSearch’s architecture to chase agent workloads** (The New Stack [devops]) — Architect retrieval systems to scale to zero for cost efficiency and bursty agent workloads. Digest: 2026-05-28.
+-   **When $8 Becomes $240** (AI Engineering) — trust boundary for context elements. Digest: 2026-05-24.
+-   **OpenClaw passed 300,000 GitHub stars. Then Google launched Spark.** (The New Stack) — agent deployment substrate for security. Digest: 2026-05-23.
+-   **How MCP and synthetic data are reshaping compliance in the agentic era** (The New Stack) — synthetic data in non-production environments. Digest: 2026-05-23.
+-   **JFrog report recaps a tumultuous year in supply chain security** (The New Stack) — securing the agentic toolchain against weaponization. Digest: 2026-05-22.
+-   **Why enterprise AI keeps stalling — and how data streaming could unlock it** (The New Stack) — real-time data streaming for live business context. Digest: 2026-05-22.
+-   **Kore counts down to Artemis, its moonshot for governable AI agents** (The New Stack) — declarative blueprint languages and orchestration patterns. Digest: 2026-05-21.
+-   **Seven questions decide whether your AI agent ships. Most teams can answer two.** (Nate Jones) — comprehensive control layer with multi-layered kill switches. Digest: 2026-05-20.
+-   **Anthropic debuts MCP tunnels and self-hosted sandboxes to lock down AI agent infrastructure** (The New Stack) — self-hosted sandboxes for agent runtime isolation. Digest: 2026-05-19.
+-   **Why production RAG systems give confident, wrong answers at scale** (The New Stack) — runtime validation of retrieved context quality. Digest: 2026-05-19.
+-   **HTML is the new Markdown: How Anthropic engineers are building with Claude Code | Thariq Shihipar** (Lenny's Newsletter) — interactive HTML artifacts for human-agent collaboration. Digest: 2026-05-18.
+-   **Spec-driven development at Notion** (Lenny's Newsletter) — context assembly via specs, subagents. Digest: 2026-05-18.
+-   **Why agent harnesses fail inside cloud-native systems** (The New Stack) — harness footprint, feedback loops. Digest: 2026-05-18.
+-   **How to build a skills library** (The New Stack) / **Red Hat's skill packs give AI agents institutional memory** — skills as durable memory. Digests: 2026-05-16/18.
+-   **Your AI agent is rediscovering 85% of its context every run** (Nate Jones) — assembly vs. rediscovery, the knowledge layer. Digests: 2026-05-16, 2026-05-18.
+-   **This week in Claude Code, 2026-08-28** (Claude Code team newsletter, via digest inbox) — per-agent persistent memory: `memory:` frontmatter → `.claude/agent-memory/`. Added 2026-08-28.
+-   **Your AI agent failed. The model might not be the problem.** (The New Stack) — Record agent internal monologue for debugging. Digest: 2026-09-20.
+-   **Trying the Software factory pattern.** (Will Larson (Irrational Exuberance)) — Agents manage project goals via task system. Digest: 2026-09-20.
 
 ## Where Used
 

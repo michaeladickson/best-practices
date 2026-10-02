@@ -94,7 +94,10 @@ rather than fixing one model per task at design time.
 ### 3. Swap on purpose, for cost
 Anthropic's safety mechanism swaps a Fable session to a lower tier when it detects unsafe content. Paweł Huryn's inversion (digest 2026-06-11): *"we can swap on purpose, for cost."* Explicitly drop the session tier when the remaining work is mechanical; explicitly raise it before the next judgment-heavy stretch.
 
-### 4. The model-picker prompt — classify before executing
+### 4. Allocate spend across diverse models
+Design systems to allow flexible allocation of budget across different AI models and partners within a platform. This enables optimization for cost and capability by switching between various providers for specific tasks.
+
+### 5. The model-picker prompt — classify before executing
 Nate Jones' habit-forming prompt makes classification automatic. Paste it into any chat window for a routing call *before* you start the real work:
 
     I need to choose the right AI tool for this task.
@@ -122,14 +125,14 @@ Nate Jones' habit-forming prompt makes classification automatic. Paste it into a
 
 Quoted with attribution from Nate Jones, *"Stop paying frontier prices…"* (paid), [natesnewsletter.substack.com/p/which-ai-model-to-use](https://natesnewsletter.substack.com/p/which-ai-model-to-use). **Why it works:** it forces classification *before* execution — the habit that closes the money leak.
 
-### 5. Test the cheap route on your own work
+### 6. Test the cheap route on your own work
 Benchmarks tell you a model deserves attention; only *your* work tells you whether it should run your proposal workflow, codebase, or research process. Jones' protocol:
 
 -   **30-minute version.** Pick one recurring artifact. Run it through your daily driver *and* one cheaper route. Time the review. Mark the output usable / repairable / rejected. Write down the failure mode (missed facts, flattened voice, lost structure, hallucination, or basically-right-but-slow-to-clean).
 -   **One-week version.** Choose five recurring artifacts. Test each twice. Track model, source material, review minutes, accepted output, sensitive-data constraint, and failure mode. Promote the cheap route only where **review stays cheap** — *"a cheap model that saves money and doubles review time is expensive."*
 -   **Benchmark under your real budget and latency.** Vendor scores are measured unconstrained; a model's standing can change once your token budget and latency limit apply.
 
-### 6. Keep context portable; separate personal memory from job context
+### 7. Keep context portable; separate personal memory from job context
 Every model has its own private history with you (Claude remembers one thing, ChatGPT another, your coding agent knows the repo for a while, your image tool knows the prompt but not the project). If all of that stays separated by product, you become the router by hand — which is exhausting. Jones' split:
 
 -   **Personal memory** — preferences, taste, standards, recurring projects.
@@ -141,24 +144,24 @@ The more job context lives in files, folders, search, embeddings, project notes,
 
 ### Theme B — Delegation: what goes to a subagent
 
-### 7. Delegate mechanical and scoped work; keep judgment in the parent
+### 8. Delegate mechanical and scoped work; keep judgment in the parent
 The parent decides *which* skills to author, *whether* a finding is real, *how* a change fits the architecture. A subagent does *"read these four files and return the DocNumber assertion location"* or *"verify each of these 12 commands runs without error and return `{command, ok, error}`."* If a subtask can be defined by a fixed input and a **structured** output, it can probably be delegated.
 
 -   **Define what good looks like before delegating.** The outcome and quality bar go in the handoff; a subagent that knows the target needs less review and less rescue.
 
-### 8. Never delegate the judgment layer
+### 9. Never delegate the judgment layer
 The parent keeps: authoring decisions, drop / merge / route decisions, the final synthesis, and anything touching money movement, prod writes, deletes, or outbound comms. Subagents produce inputs to the parent's judgment; they never *perform* it.
 
-### 9. Give the parent a rule, not a script
+### 10. Give the parent a rule, not a script
 Tell the parent the tier table above and let it route. Vincent's version: *"use your judgement to decide an appropriate lower power model."* Prescribing which model to spawn where kills the judgment that makes delegation win.
 
 -   **Prompt frontier models briefly.** State the objective and trust the model to orchestrate subagents; step-by-step detail written for weaker models hobbles it.
 -   **Drop negative constraints and example padding.** Long "don't do X" lists and piles of examples can lower output quality on current frontier models. Say what you want.
 
-### 10. Watch for spawn-overhead-dominates
+### 11. Watch for spawn-overhead-dominates
 Every subagent spawn has fixed cost (context load, prompt, roundtrip). For very small tasks — *does this file exist* — inline is cheaper than delegating. Rule of thumb: if the task's own tokens are less than about 10× the spawn overhead, do it inline in the parent.
 
-### 11. Verify with a different, cheaper agent
+### 12. Verify with a different, cheaper agent
 After a working subagent finishes, send its output and the completion condition to a smaller, faster model (e.g., Haiku) as an independent verifier, so the worker never grades its own homework.
 
 -   **Keep the reviewer context-blind.** A verifier that has not seen the generating agent's reasoning judges the artifact on its merits, not on the story that produced it.
@@ -166,10 +169,10 @@ After a working subagent finishes, send its output and the completion condition 
 
 ### Theme C — Running the tree
 
-### 12. Depth cap: 2. Team cap: small.
+### 13. Depth cap: 2. Team cap: small.
 One subagent tier under the parent — no nesting further. Depth-3+ orchestrations compound spawn overhead and lose reviewability. Small teams (≤ ~5 concurrent) match Anthropic's Claude Code cost docs: *"keep teams small, shut down teammates when they are done."*
 
-### 13. Orchestrate parallel subagents for large tasks
+### 14. Orchestrate parallel subagents for large tasks
 For demanding work, the frontier model coordinates several subagents on distinct workstreams at once ('ultra' effort levels), trading tokens for a stronger result sooner.
 
 -   **Track multi-stage work with a state machine.** Sequential stages (reproduce, diagnose, verify, fix) each go to a specialist subagent, with progress in an explicit state machine (GitHub labels work) so every handoff is visible.
@@ -179,15 +182,21 @@ For demanding work, the frontier model coordinates several subagents on distinct
 -   **Keep talking while background subagents work.** When a subagent takes the slow reasoning or search, the parent keeps the user informed instead of going silent.
 -   **Run long unsupervised subagents in a persistent cloud environment**, so the work continues when the local machine is off.
 
-### 14. Shutdown discipline
+### 15. Design for agent swarms under simple interfaces
+Implement complex tasks using an 'invisible swarm of agents' orchestrated beneath a simple, user-facing interface. This abstracts complexity and provides a more coherent user experience.
+
+### 16. Prevent overthinking from exceeding token limits
+When using effort controls or high reasoning settings, monitor for cases where models 'overthink' and exceed token limits before producing a valid output. Implement safeguards to prevent this costly and unproductive behavior.
+
+### 17. Shutdown discipline
 Every subagent shuts down as soon as its structured return lands in the parent. Long-lived teammates burn tokens and drift; short-lived ones are what make the economics work.
 
-### 15. Structured returns, never free-form prose
+### 18. Structured returns, never free-form prose
 Subagents return JSON or terse markdown against a small schema the parent can review at a glance. Free-form returns force the parent to re-read the raw material the subagent already consumed — that defeats the whole point of delegating.
 
 -   **Standardize the cross-session recap.** For work spread across parallel sessions, a recap skill that always reports the goal, status with evidence, blocked-on-person vs. blocked-on-technical, and next steps with an owner.
 
-### 16. Log the delegation trail
+### 19. Log the delegation trail
 Record each spawn: subagent model, task summary, structured return. That's what makes the tree auditable, and what lets you retro whether the delegation ratio is actually cost-effective for this repo instead of a comforting story.
 
 ## Adjacent Concerns
@@ -229,6 +238,9 @@ Use [`reviews/model-hierarchy-review.md`](../../reviews/model-hierarchy-review.m
 
 Saved articles synthesized here (full summaries in `data/digest_knowledge/`), and the Claude Code team's own guidance:
 
+-   **Academia is for Ambition — Alex Zhang, MIT** (Latent Space [ai_engineering]) — Implement complex tasks using an 'invisible swarm of agents' under a simple interface. Digest: 2026-10-02.
+-   **The Pulse: Firebase’s global outage & poor response** (The Pragmatic Engineer [engineering]) — Design systems for flexible budget allocation across diverse AI models and partners. Digest: 2026-10-01.
+-   **Claude Sonnet 5.5** (Simon Willison [ai_engineering]) — Prevent models 'overthinking' and exceeding token limits, especially with effort controls. Digest: 2026-09-29.
 -   **Jev: System One models for Prod, not God — with Diogo Almeida, CEO, TypeSafe AI** (Latent Space [ai_engineering]) — Incorporate specialized 'decision models' for fast, cheap, typed probabilistic classifications or scores with confidence scores. Digest: 2026-09-22.
 -   **TypeSafe Shipped a Model That Never Writes a Word. Here’s the Decision-Layer Playbook** (Ruben Dominguez (The AI Corner) [ai_strategy]) — For initial task classification, routing decisions, and context compaction, utilize highly specialized 'System One' models that return probabilities or structured data directly, without generating explanatory text. These models are typically faster and cheaper for binary or multi-class decisions. Digest: 2026-09-20.
 -   **Trying the Software factory pattern.** (Will Larson (Irrational Exuberance) [eng_management]) — Design agent systems to operate in continuous loops, autonomously identifying, planning, and executing work towards a broad, defined goal. The agent system should audit project definitions, track metrics, add new tasks, update existing tasks, and work on non-blocked items, iterating until the goal is met or revised. Digest: 2026-09-20.

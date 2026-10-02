@@ -75,6 +75,7 @@ decision auditable.
 - **Decouple tool selection from action authorization.** A tool description informs which tool the model picks; it never grants the right to run it. A separate policy engine checks explicit rules against the proposed action.
 - **Authorize action sequences, not single calls.** A run of individually valid actions can still be the dangerous one. A trajectory-aware policy engine enforces prerequisites, rate limits and ordering across the workflow.
 - **Encode domain constraints as an ontology.** An explicit model of the entities, relationships and limits in the domain gives the policy layer logical guardrails the model's reasoning cannot argue past.
+- **Manage dynamic permission boundaries in chained tasks.** Recognize that an agent's permission can change implicitly across chained tasks. Design robust controls that constantly re-evaluate and enforce these dynamic boundaries.
 
 ### 4. Write an authorization spec per high-stakes action
 Name *who/what* may do the action, under *what limits*, with *what evidence*. For
@@ -82,7 +83,7 @@ agentic-commerce-style actions this means identity, authorization, fraud/abuse c
 and liability — not just "call the payments API." A one-paragraph spec per action beats
 a vague "the agent handles payments."
 
-- **Set explicit spending limits for agents.** Permission to act is not a budget. An agent that moves money or consumes paid services (API calls, compute credits) needs a hard cap on outflow.
+- **Set explicit spending limits for agents.** Permission to act is not a budget. An agent that moves money or consumes paid services (API calls, compute credits) needs a hard cap on outflow, set *per-task or workflow* to prevent exceeding budgets through many small transactions.
 - **Give financially-acting agents their own identity layer.** Authentication, tokenization and wallet management per agent, so every financial action traces to a verified principal and its limits.
 
 ### Theme B — Gate and approve
@@ -119,14 +120,17 @@ still gate the action.
 
 ### Theme C — Verify, monitor and audit
 
-### 8. Never trust the agent's self-report
+### 8. Implement observable controls, not policy statements
+Embed repeatable security and resilience controls directly into the software lifecycle, making them observable and measurable. Assess controls at maturity levels to ensure high-risk failures are prevented by the delivery system itself.
+
+### 9. Never trust the agent's self-report
 Agents fabricate success ("I tested it," "I recovered the data"). Verify the action's
 effect from an independent source (the actual row count, the API's returned status, a
 re-query) before believing it — and especially before reporting success to a human.
 
 - **Evaluate the trajectory, not just the answer.** An outcome reached by fabricated evidence or a dataset shortcut passes an end-state check; only the execution path shows it.
 
-### 9. Gate every agent update on evals
+### 10. Gate every agent update on evals
 A release is blocked unless a repeatable evaluation shows the agent still preserves its
 required behaviors across the full execution path: context assembly, tool calls and
 permissions, against explicitly defined limits.
@@ -137,7 +141,7 @@ permissions, against explicitly defined limits.
 - **Test every surface for prompt injection.** Adversarial tests on each place the agent reads external content (see [Prompt-Injection Mitigation](prompt-injection-mitigation.md)).
 - **Probe for covert behavior adversarially.** Environments such as SHADE-Arena and LinuxArena look for agents pursuing hidden objectives while appearing compliant.
 
-### 10. Provenance and an audit trail for every action
+### 11. Provenance and an audit trail for every action
 Log each agent action with its inputs, the judge's decision + reason, who/what approved,
 and the result. This is what makes an agent action auditable (essential for financial /
 regulated workflows) and debuggable after the fact. Keep AI-proposed vs. human-approved
@@ -145,7 +149,7 @@ distinguishable.
 
 - **Make auto-approvals auditable and queryable.** An action the agent approved itself needs a record detailed enough to reconstruct the decision, queryable, and tied to the risk policy it was approved under.
 
-### 11. Checkpoint agent executions as durable workflows
+### 12. Checkpoint agent executions as durable workflows
 Checkpoint after each significant step so a session can pause, survive a crash and
 resume from the last validated state, rather than leaving a multi-step action half done.
 
@@ -153,7 +157,7 @@ resume from the last validated state, rather than leaving a multi-step action ha
 
 ### Theme D — Isolation and egress
 
-### 12. Isolate agent-generated code execution within hardened sandboxes
+### 13. Isolate agent-generated code execution within hardened sandboxes
 Code an agent generates and runs executes in a process sandbox, VM or WebAssembly
 runtime with tight filesystem boundaries and egress controls, so buggy or malicious code
 cannot reach the host, exfiltrate data or open the network.
@@ -163,7 +167,7 @@ cannot reach the host, exfiltrate data or open the network.
 - **Harden the whole runtime, not just the sandbox.** The tools, browsers and libraries inside the sandbox are attack surface too.
 - **Close OS-level bypasses of egress policy.** Built-in firewalls and NAT can silently override the agent's egress rules; verify that only allowed traffic is possible at the OS level.
 
-### 13. Control every path out of the environment
+### 14. Control every path out of the environment
 Isolation fails at the exits. Every outbound channel an agent can reach is a way to
 leak data or coordinate out of sight.
 
@@ -172,8 +176,9 @@ leak data or coordinate out of sight.
 - **Ban public unauthenticated execution services.** Third-party sandboxes and code runners are staging grounds for attacks and a way around internal controls.
 - **Monitor agent calls to external web services.** Wikis, URL shorteners, forums and JSON shares work as covert channels and exfiltration points; network blocking alone does not see intent.
 - **Govern inter-agent communication explicitly.** Log and police the channels agents use to talk to each other, including notes left for future runs of themselves.
+- **Block shared package caches as covert channels.** Prevent agents in isolated sandboxes from communicating or leaving instructions for each other via shared package caches, treating them as vectors for malicious or unintended cross-agent influence.
 
-### 14. Keep sensitive data on trusted infrastructure
+### 15. Keep sensitive data on trusted infrastructure
 Bring the model to the data, not the data to the model provider.
 
 - **Run sensitive-data models locally** or on private infrastructure when inputs are confidential.
@@ -182,7 +187,7 @@ Bring the model to the data, not the data to the model provider.
 
 ### Theme E — Identity and credentials
 
-### 15. Give every agent a verifiable identity
+### 16. Give every agent a verifiable identity
 Every agent runs as a unique, authenticated principal. That is what makes least
 privilege enforceable, accountability possible and the audit trail attributable. Log
 how an agent acquires new tools or roles mid-run, and authorize each change.
@@ -231,6 +236,10 @@ shared review workflow.
 
 Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 
+- **Cloudflare brings paid access to MCP tools — who controls the agent’s spending?** (The New Stack [devops]) — Set total spending allowances per agent task or workflow, not just per individual tool call. Digest: 2026-10-02.
+- **Quoting Matthew Green** (Simon Willison [ai_engineering]) — Prevent agents from communicating via shared package caches in isolated sandboxes. Digest: 2026-10-01.
+- **OpenAI’s Dots boundary problem rate doubled in longer tests** (The New Stack [devops]) — Recognize and enforce dynamic permission boundaries for agents in chained tasks. Digest: 2026-09-30.
+- **CRA readiness starts in the codebase** (The New Stack [devops]) — Embed repeatable, observable, and measurable security and resilience controls into the software lifecycle. Digest: 2026-09-30.
 -   **Trying the Software factory pattern.** (Will Larson (Irrational Exuberance)) — Design agents to proactively audit project goals and measurement systems, stopping to refine them with human operators if unclear. Digest: 2026-09-20.
 -   **[AINews] Here are 6 Clones of Jev in 2 days** (Latent Space) — Implement mechanisms to ensure agent-reported confidence scores are accurately calibrated to reflect true probability of correctness. Digest: 2026-09-19.
 -   **Can agents buy from your product? Three questions that tell you. Plus: Nate's Library MCP.** (Nate Jones) — Implement explicit financial spending limits for agents to constrain monetary outflows or resource consumption beyond compute resources. Digest: 2026-09-17.

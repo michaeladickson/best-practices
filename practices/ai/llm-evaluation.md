@@ -111,6 +111,9 @@ it, and watch for it rewarding fluent-but-wrong answers. Complement it with chea
 "vibe scoring": a lightweight local scoring page where a human rates a sample of outputs
 and exports structured scores keeps subjective quality in the loop without ceremony.
 
+### Design efficient human feedback for evaluation
+When validating judgments or labeling data for evals, provide human reviewers with sufficient context and an efficient interface. Avoid cumbersome processes like reading long conversations in editors and reporting corrections separately.
+
 ### Verify against ground truth; flag unsupported claims
 For extraction and research outputs, check against the source document and flag anything
 the source doesn't support (the hallucination guard). Keep raw data and AI synthesis
@@ -379,6 +382,7 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **Advanced evals: How to find (and fix) hidden AI failures in your product** (Lenny's Newsletter) — analyze potential failure modes before defining evaluation metrics. Digest: 2026-09-22.
 - **Cursor acquired Firetiger. A month later, it launched a bot that tracks code changes from PR to production.** (The New Stack) — establish a continuous pipeline to track and monitor code changes from PR to production for regressions. Digest: 2026-09-24.
 - **Papers You Should Know About** (Pascal Biese (LLM Watch)) — estimate full benchmark scores from a statistically significant subset of questions for efficient evaluation. Digest: 2026-09-25.
+- **Claude’s new auto eval tool** (Hamel Husain [ai_engineering]) — efficient human feedback for evaluation. Digest: 2026-09-30.
 
 ## Where Used
 
