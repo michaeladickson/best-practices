@@ -1,5 +1,5 @@
 {
-  "last_scan": "2026-09-25",
+  "last_scan": "2026-10-02",
   "domains": {
     "baynature.org": {
       "articles": 1,
@@ -38,32 +38,33 @@
       "proposed": null
     },
     "tools.simonwillison.net": {
-      "articles": 16,
+      "articles": 21,
       "sources": [
         "Simon Willison"
       ],
       "first_seen": "2026-08-14",
-      "last_seen": "2026-09-23",
+      "last_seen": "2026-09-29",
       "proposed": null
     },
     "static.simonwillison.net": {
-      "articles": 5,
+      "articles": 7,
       "sources": [
         "Simon Willison"
       ],
       "first_seen": "2026-08-14",
-      "last_seen": "2026-09-09",
+      "last_seen": "2026-09-29",
       "proposed": null
     },
     "blog.google": {
-      "articles": 6,
+      "articles": 7,
       "sources": [
         "Simon Willison",
         "The AI Break",
-        "The New Stack"
+        "The New Stack",
+        "Latent Space"
       ],
       "first_seen": "2026-08-14",
-      "last_seen": "2026-09-23",
+      "last_seen": "2026-10-01",
       "proposed": "2026-09-04"
     },
     "colossus.com": {
@@ -94,12 +95,12 @@
       "proposed": null
     },
     "reuters.com": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "The New Stack"
       ],
       "first_seen": "2026-08-15",
-      "last_seen": "2026-08-15",
+      "last_seen": "2026-09-30",
       "proposed": null
     },
     "huggingface.co": {
@@ -357,12 +358,12 @@
       "proposed": "2026-08-28"
     },
     "news.smol.ai": {
-      "articles": 12,
+      "articles": 16,
       "sources": [
         "Latent Space"
       ],
       "first_seen": "2026-08-18",
-      "last_seen": "2026-09-24",
+      "last_seen": "2026-10-01",
       "proposed": null
     },
     "flueframework.com": {
@@ -394,13 +395,13 @@
       "proposed": null
     },
     "support.substack.com": {
-      "articles": 13,
+      "articles": 17,
       "sources": [
         "Latent Space",
         "Nate Jones"
       ],
       "first_seen": "2026-08-14",
-      "last_seen": "2026-09-24",
+      "last_seen": "2026-10-01",
       "proposed": "2026-09-04"
     },
     "addyosmani.com": {
@@ -458,30 +459,30 @@
       "proposed": null
     },
     "maven.com": {
-      "articles": 5,
+      "articles": 6,
       "sources": [
         "Lenny's Newsletter"
       ],
       "first_seen": "2026-08-18",
-      "last_seen": "2026-09-22",
+      "last_seen": "2026-09-29",
       "proposed": null
     },
     "lennysjobs.com": {
-      "articles": 5,
+      "articles": 6,
       "sources": [
         "Lenny's Newsletter"
       ],
       "first_seen": "2026-08-18",
-      "last_seen": "2026-09-22",
+      "last_seen": "2026-09-29",
       "proposed": null
     },
     "lennybot.com": {
-      "articles": 5,
+      "articles": 6,
       "sources": [
         "Lenny's Newsletter"
       ],
       "first_seen": "2026-08-18",
-      "last_seen": "2026-09-22",
+      "last_seen": "2026-09-29",
       "proposed": null
     },
     "merge.dev": {
@@ -512,12 +513,12 @@
       "proposed": null
     },
     "passionfroot.me": {
-      "articles": 12,
+      "articles": 14,
       "sources": [
         "The AI Break"
       ],
       "first_seen": "2026-08-20",
-      "last_seen": "2026-09-24",
+      "last_seen": "2026-10-01",
       "proposed": null
     },
     "voices.com": {
@@ -557,12 +558,12 @@
       "proposed": null
     },
     "links.outskill.com": {
-      "articles": 2,
+      "articles": 3,
       "sources": [
         "Ruben Dominguez (The AI Corner)"
       ],
       "first_seen": "2026-08-17",
-      "last_seen": "2026-08-24",
+      "last_seen": "2026-09-28",
       "proposed": null
     },
     "thebeatles.com": {
@@ -731,21 +732,21 @@
       "proposed": null
     },
     "suse.com": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "The New Stack"
       ],
       "first_seen": "2026-08-21",
-      "last_seen": "2026-08-21",
+      "last_seen": "2026-10-02",
       "proposed": null
     },
     "github.blog": {
-      "articles": 3,
+      "articles": 4,
       "sources": [
         "The New Stack"
       ],
       "first_seen": "2026-08-21",
-      "last_seen": "2026-09-17",
+      "last_seen": "2026-10-02",
       "proposed": null
     },
     "wiki.debian.org": {
@@ -896,12 +897,12 @@
       "proposed": null
     },
     "cncf.io": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "The New Stack"
       ],
       "first_seen": "2026-08-20",
-      "last_seen": "2026-08-20",
+      "last_seen": "2026-10-02",
       "proposed": null
     },
     "discourse.ubuntu.com": {
@@ -1084,7 +1085,7 @@
       ],
       "first_seen": "2026-08-22",
       "last_seen": "2026-09-24",
-      "proposed": null
+      "proposed": "2026-10-02"
     },
     "simile.com": {
       "articles": 1,
@@ -1096,12 +1097,12 @@
       "proposed": null
     },
     "turbopuffer.com": {
-      "articles": 4,
+      "articles": 5,
       "sources": [
         "The Pragmatic Engineer"
       ],
       "first_seen": "2026-08-26",
-      "last_seen": "2026-09-23",
+      "last_seen": "2026-09-30",
       "proposed": null
     },
     "stripe.dev": {
@@ -1124,14 +1125,14 @@
       "proposed": null
     },
     "shopify.engineering": {
-      "articles": 5,
+      "articles": 6,
       "sources": [
         "The Pragmatic Engineer",
         "Simon Willison",
         "The New Stack"
       ],
       "first_seen": "2026-08-25",
-      "last_seen": "2026-09-11",
+      "last_seen": "2026-09-29",
       "proposed": "2026-09-18"
     },
     "inspect.ramp.engineering": {
@@ -1153,13 +1154,13 @@
       "proposed": null
     },
     "workos.com": {
-      "articles": 5,
+      "articles": 6,
       "sources": [
         "Lenny's Newsletter",
         "The Pragmatic Engineer"
       ],
       "first_seen": "2026-08-24",
-      "last_seen": "2026-09-17",
+      "last_seen": "2026-09-30",
       "proposed": "2026-09-18"
     },
     "msukhareva.substack.com": {
@@ -1244,14 +1245,14 @@
       "proposed": null
     },
     "deepmind.google": {
-      "articles": 4,
+      "articles": 5,
       "sources": [
         "The New Stack",
         "Latent Space"
       ],
       "first_seen": "2026-08-28",
       "last_seen": "2026-09-25",
-      "proposed": null
+      "proposed": "2026-10-02"
     },
     "composio.dev": {
       "articles": 1,
@@ -1308,14 +1309,14 @@
       "proposed": null
     },
     "cursor.com": {
-      "articles": 4,
+      "articles": 5,
       "sources": [
         "The New Stack",
         "Latent Space"
       ],
       "first_seen": "2026-08-27",
       "last_seen": "2026-09-25",
-      "proposed": null
+      "proposed": "2026-10-02"
     },
     "sai.work": {
       "articles": 1,
@@ -1390,12 +1391,12 @@
       "proposed": null
     },
     "microsoft.com": {
-      "articles": 3,
+      "articles": 4,
       "sources": [
         "The New Stack"
       ],
       "first_seen": "2026-08-26",
-      "last_seen": "2026-09-05",
+      "last_seen": "2026-09-30",
       "proposed": null
     },
     "microsoft.github.io": {
@@ -1462,12 +1463,12 @@
       "proposed": null
     },
     "claude.ai": {
-      "articles": 3,
+      "articles": 5,
       "sources": [
         "Simon Willison"
       ],
       "first_seen": "2026-09-02",
-      "last_seen": "2026-09-07",
+      "last_seen": "2026-09-29",
       "proposed": null
     },
     "forums.paint.net": {
@@ -1508,12 +1509,13 @@
       "proposed": null
     },
     "help.openai.com": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
-        "Simon Willison"
+        "Simon Willison",
+        "The New Stack"
       ],
       "first_seen": "2026-09-02",
-      "last_seen": "2026-09-02",
+      "last_seen": "2026-10-02",
       "proposed": null
     },
     "omnigroup.com": {
@@ -1598,12 +1600,13 @@
       "proposed": null
     },
     "chatgpt.com": {
-      "articles": 3,
+      "articles": 4,
       "sources": [
-        "Simon Willison"
+        "Simon Willison",
+        "Latent Space"
       ],
       "first_seen": "2026-08-31",
-      "last_seen": "2026-09-10",
+      "last_seen": "2026-09-30",
       "proposed": null
     },
     "hy.tencent.ai": {
@@ -1625,12 +1628,13 @@
       "proposed": null
     },
     "deploymentsafety.openai.com": {
-      "articles": 2,
+      "articles": 3,
       "sources": [
-        "Latent Space"
+        "Latent Space",
+        "The New Stack"
       ],
       "first_seen": "2026-09-04",
-      "last_seen": "2026-09-04",
+      "last_seen": "2026-09-30",
       "proposed": null
     },
     "gpt-6 astra&": {
@@ -1905,7 +1909,7 @@
       "proposed": null
     },
     "runway.com": {
-      "articles": 2,
+      "articles": 3,
       "sources": [
         "The New Stack",
         "Latent Space"
@@ -1951,7 +1955,7 @@
       "proposed": null
     },
     "docs.datasette.io": {
-      "articles": 4,
+      "articles": 5,
       "sources": [
         "Simon Willison"
       ],
@@ -2032,13 +2036,14 @@
       "proposed": null
     },
     "developers.openai.com": {
-      "articles": 5,
+      "articles": 6,
       "sources": [
         "Simon Willison",
-        "The New Stack"
+        "The New Stack",
+        "Latent Space"
       ],
       "first_seen": "2026-09-09",
-      "last_seen": "2026-09-22",
+      "last_seen": "2026-09-30",
       "proposed": "2026-09-25"
     },
     "people.kernel.org": {
@@ -2159,21 +2164,21 @@
       "proposed": null
     },
     "hardskill.exchange": {
-      "articles": 2,
+      "articles": 3,
       "sources": [
         "Ruben Dominguez (The AI Corner)"
       ],
       "first_seen": "2026-09-10",
-      "last_seen": "2026-09-10",
+      "last_seen": "2026-10-01",
       "proposed": null
     },
     "surfingcomplexity.blog": {
-      "articles": 3,
+      "articles": 4,
       "sources": [
         "SRE Weekly"
       ],
       "first_seen": "2026-09-07",
-      "last_seen": "2026-09-21",
+      "last_seen": "2026-09-28",
       "proposed": null
     },
     "read.zerosevzero.com": {
@@ -2204,12 +2209,12 @@
       "proposed": null
     },
     "hpe.com": {
-      "articles": 6,
+      "articles": 9,
       "sources": [
         "The New Stack"
       ],
       "first_seen": "2026-09-11",
-      "last_seen": "2026-09-25",
+      "last_seen": "2026-10-02",
       "proposed": null
     },
     "developer.hpe.com": {
@@ -2512,13 +2517,15 @@
       "proposed": null
     },
     "typesafe.ai": {
-      "articles": 2,
+      "articles": 4,
       "sources": [
         "Latent Space",
-        "Simon Willison"
+        "Simon Willison",
+        "Sebastian Raschka (Ahead of AI)",
+        "The New Stack"
       ],
       "first_seen": "2026-09-16",
-      "last_seen": "2026-09-22",
+      "last_seen": "2026-09-30",
       "proposed": null
     },
     "webdirections.org": {
@@ -2531,12 +2538,12 @@
       "proposed": null
     },
     "ai.engineer": {
-      "articles": 6,
+      "articles": 10,
       "sources": [
         "Latent Space"
       ],
       "first_seen": "2026-09-16",
-      "last_seen": "2026-09-22",
+      "last_seen": "2026-10-02",
       "proposed": null
     },
     "evals.typesafe.ai": {
@@ -2624,12 +2631,12 @@
       "proposed": null
     },
     "linear.app": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "The Pragmatic Engineer"
       ],
       "first_seen": "2026-09-17",
-      "last_seen": "2026-09-17",
+      "last_seen": "2026-09-30",
       "proposed": null
     },
     "totaltypescript.com": {
@@ -2651,12 +2658,12 @@
       "proposed": null
     },
     "openart.ai": {
-      "articles": 3,
+      "articles": 5,
       "sources": [
         "Lenny's Newsletter"
       ],
       "first_seen": "2026-09-16",
-      "last_seen": "2026-09-21",
+      "last_seen": "2026-09-28",
       "proposed": null
     },
     "marketingideas.com": {
@@ -2669,12 +2676,12 @@
       "proposed": null
     },
     "vanta.com": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "Lenny's Newsletter"
       ],
       "first_seen": "2026-09-14",
-      "last_seen": "2026-09-14",
+      "last_seen": "2026-09-30",
       "proposed": null
     },
     "go.productcompass.pm": {
@@ -2741,12 +2748,12 @@
       "proposed": null
     },
     "events.linuxfoundation.org": {
-      "articles": 3,
+      "articles": 5,
       "sources": [
         "The New Stack"
       ],
       "first_seen": "2026-09-18",
-      "last_seen": "2026-09-25",
+      "last_seen": "2026-10-02",
       "proposed": null
     },
     "gartner.com": {
@@ -2858,7 +2865,7 @@
       "proposed": null
     },
     "infoworld.com": {
-      "articles": 2,
+      "articles": 3,
       "sources": [
         "The New Stack"
       ],
@@ -2912,7 +2919,7 @@
       "proposed": null
     },
     "daringfireball.net": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "Simon Willison"
       ],
@@ -2949,22 +2956,24 @@
       "proposed": null
     },
     "developers.cloudflare.com": {
-      "articles": 1,
-      "sources": [
-        "Simon Willison"
-      ],
-      "first_seen": "2026-09-22",
-      "last_seen": "2026-09-22",
-      "proposed": null
-    },
-    "blog.cloudflare.com": {
       "articles": 2,
       "sources": [
         "Simon Willison",
-        "SRE Weekly"
+        "The New Stack"
       ],
       "first_seen": "2026-09-22",
-      "last_seen": "2026-09-22",
+      "last_seen": "2026-10-02",
+      "proposed": null
+    },
+    "blog.cloudflare.com": {
+      "articles": 3,
+      "sources": [
+        "Simon Willison",
+        "SRE Weekly",
+        "The New Stack"
+      ],
+      "first_seen": "2026-09-22",
+      "last_seen": "2026-10-02",
       "proposed": null
     },
     "datasette.simonwillison.net": {
@@ -2995,7 +3004,7 @@
       "proposed": null
     },
     "pbs.twimg.com": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "Latent Space"
       ],
@@ -3004,7 +3013,7 @@
       "proposed": null
     },
     "news.crunchbase.com": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "Latent Space"
       ],
@@ -3013,16 +3022,16 @@
       "proposed": null
     },
     "worldlabs.ai": {
-      "articles": 1,
+      "articles": 3,
       "sources": [
         "Latent Space"
       ],
       "first_seen": "2026-09-25",
-      "last_seen": "2026-09-25",
+      "last_seen": "2026-09-29",
       "proposed": null
     },
     "odyssey.systems": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "Latent Space"
       ],
@@ -3077,12 +3086,13 @@
       "proposed": null
     },
     "research.google": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
-        "Latent Space"
+        "Latent Space",
+        "The New Stack"
       ],
       "first_seen": "2026-09-23",
-      "last_seen": "2026-09-23",
+      "last_seen": "2026-09-30",
       "proposed": null
     },
     "nature.com": {
@@ -3140,7 +3150,7 @@
       "proposed": null
     },
     "about.fb.com": {
-      "articles": 2,
+      "articles": 3,
       "sources": [
         "Net Interest (Marc Rubinstein)",
         "The New Stack"
@@ -3150,7 +3160,7 @@
       "proposed": null
     },
     "rev.com": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "Net Interest (Marc Rubinstein)"
       ],
@@ -3159,7 +3169,7 @@
       "proposed": null
     },
     "newsletter.fintechtakes.com": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "FinTech Takes (Alex Johnson)"
       ],
@@ -3168,7 +3178,7 @@
       "proposed": null
     },
     "parlay.finance": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "FinTech Takes (Alex Johnson)"
       ],
@@ -3213,7 +3223,7 @@
       "proposed": null
     },
     "transluce.org": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "The New Stack"
       ],
@@ -3222,7 +3232,7 @@
       "proposed": null
     },
     "abc.net.au": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "The New Stack"
       ],
@@ -3348,12 +3358,462 @@
       "proposed": null
     },
     "minitap.ai": {
-      "articles": 1,
+      "articles": 2,
       "sources": [
         "Software Testing Weekly"
       ],
       "first_seen": "2026-09-25",
       "last_seen": "2026-09-25",
+      "proposed": null
+    },
+    "blog.cryptographyengineering.com": {
+      "articles": 1,
+      "sources": [
+        "Simon Willison"
+      ],
+      "first_seen": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "proposed": null
+    },
+    "mcny.org": {
+      "articles": 1,
+      "sources": [
+        "Simon Willison"
+      ],
+      "first_seen": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "proposed": null
+    },
+    "npmjs.com": {
+      "articles": 1,
+      "sources": [
+        "Simon Willison"
+      ],
+      "first_seen": "2026-09-29",
+      "last_seen": "2026-09-29",
+      "proposed": null
+    },
+    "devday.openai.com": {
+      "articles": 1,
+      "sources": [
+        "Simon Willison"
+      ],
+      "first_seen": "2026-09-29",
+      "last_seen": "2026-09-29",
+      "proposed": null
+    },
+    "threads.com": {
+      "articles": 1,
+      "sources": [
+        "Simon Willison"
+      ],
+      "first_seen": "2026-09-28",
+      "last_seen": "2026-09-28",
+      "proposed": null
+    },
+    "wearedevelopers.com": {
+      "articles": 2,
+      "sources": [
+        "Simon Willison"
+      ],
+      "first_seen": "2026-09-28",
+      "last_seen": "2026-09-28",
+      "proposed": null
+    },
+    "doc.govt.nz": {
+      "articles": 1,
+      "sources": [
+        "Simon Willison"
+      ],
+      "first_seen": "2026-09-27",
+      "last_seen": "2026-09-27",
+      "proposed": null
+    },
+    "gisthost.github.io": {
+      "articles": 1,
+      "sources": [
+        "Simon Willison"
+      ],
+      "first_seen": "2026-09-27",
+      "last_seen": "2026-09-27",
+      "proposed": null
+    },
+    "app.ai.engineer": {
+      "articles": 2,
+      "sources": [
+        "Latent Space"
+      ],
+      "first_seen": "2026-10-02",
+      "last_seen": "2026-10-02",
+      "proposed": null
+    },
+    "earendil.com": {
+      "articles": 1,
+      "sources": [
+        "Latent Space"
+      ],
+      "first_seen": "2026-10-02",
+      "last_seen": "2026-10-02",
+      "proposed": null
+    },
+    "alexzhang13.github.io": {
+      "articles": 1,
+      "sources": [
+        "Latent Space"
+      ],
+      "first_seen": "2026-10-02",
+      "last_seen": "2026-10-02",
+      "proposed": null
+    },
+    "calcalistech.com": {
+      "articles": 1,
+      "sources": [
+        "Latent Space"
+      ],
+      "first_seen": "2026-10-02",
+      "last_seen": "2026-10-02",
+      "proposed": null
+    },
+    "alphaxiv.org": {
+      "articles": 1,
+      "sources": [
+        "Latent Space"
+      ],
+      "first_seen": "2026-10-02",
+      "last_seen": "2026-10-02",
+      "proposed": null
+    },
+    "scmp.com": {
+      "articles": 1,
+      "sources": [
+        "Latent Space"
+      ],
+      "first_seen": "2026-10-02",
+      "last_seen": "2026-10-02",
+      "proposed": null
+    },
+    "learninpublic.org": {
+      "articles": 1,
+      "sources": [
+        "Latent Space"
+      ],
+      "first_seen": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "proposed": null
+    },
+    "drfeifei.substack.com": {
+      "articles": 1,
+      "sources": [
+        "Latent Space"
+      ],
+      "first_seen": "2026-09-29",
+      "last_seen": "2026-09-29",
+      "proposed": null
+    },
+    "cryptobriefing.com": {
+      "articles": 1,
+      "sources": [
+        "Latent Space"
+      ],
+      "first_seen": "2026-09-29",
+      "last_seen": "2026-09-29",
+      "proposed": null
+    },
+    "cockroachlabs.com": {
+      "articles": 1,
+      "sources": [
+        "The Pragmatic Engineer"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "gergelyorosz.gumroad.com": {
+      "articles": 1,
+      "sources": [
+        "The Pragmatic Engineer"
+      ],
+      "first_seen": "2026-09-29",
+      "last_seen": "2026-09-29",
+      "proposed": null
+    },
+    "mobileatscale.com": {
+      "articles": 1,
+      "sources": [
+        "The Pragmatic Engineer"
+      ],
+      "first_seen": "2026-09-29",
+      "last_seen": "2026-09-29",
+      "proposed": null
+    },
+    "bughunt.productcompass.pm": {
+      "articles": 1,
+      "sources": [
+        "Paweł Huryn (The Product Compass)"
+      ],
+      "first_seen": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "proposed": null
+    },
+    "learn.g2.com": {
+      "articles": 1,
+      "sources": [
+        "Ruben Dominguez (The AI Corner)"
+      ],
+      "first_seen": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "proposed": null
+    },
+    "plaid.com": {
+      "articles": 1,
+      "sources": [
+        "Ruben Dominguez (The AI Corner)"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "claude.dev": {
+      "articles": 1,
+      "sources": [
+        "Hamel Husain"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "isaacflath.com": {
+      "articles": 1,
+      "sources": [
+        "Hamel Husain"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "mlq.ai": {
+      "articles": 1,
+      "sources": [
+        "FinTech Takes (Alex Johnson)"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "taktile.com": {
+      "articles": 1,
+      "sources": [
+        "FinTech Takes (Alex Johnson)"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "techgenyz.com": {
+      "articles": 1,
+      "sources": [
+        "SRE Weekly"
+      ],
+      "first_seen": "2026-09-28",
+      "last_seen": "2026-09-28",
+      "proposed": null
+    },
+    "itnext.io": {
+      "articles": 1,
+      "sources": [
+        "SRE Weekly"
+      ],
+      "first_seen": "2026-09-28",
+      "last_seen": "2026-09-28",
+      "proposed": null
+    },
+    "k3s.io": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-10-02",
+      "last_seen": "2026-10-02",
+      "proposed": null
+    },
+    "thomabravo.com": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-10-02",
+      "last_seen": "2026-10-02",
+      "proposed": null
+    },
+    "arize.com": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-10-02",
+      "last_seen": "2026-10-02",
+      "proposed": null
+    },
+    "marketwatch.com": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-10-02",
+      "last_seen": "2026-10-02",
+      "proposed": null
+    },
+    "dynatrace.com": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-10-02",
+      "last_seen": "2026-10-02",
+      "proposed": null
+    },
+    "bit.cloud": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "proposed": null
+    },
+    "media.mit.edu": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "proposed": null
+    },
+    "newsroom.ibm.com": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "proposed": null
+    },
+    "kubernetes.io": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "proposed": null
+    },
+    "cisa.gov": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "proposed": null
+    },
+    "glow.io": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "proposed": null
+    },
+    "cnn.com": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "proposed": null
+    },
+    "cloudbees.com": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "arango.ai": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "learn.microsoft.com": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "ieeexplore.ieee.org": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "eclipse.org": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "openclaw.ai": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "docs-enterprise.openclaw.org": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "featherless.ai": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
+      "proposed": null
+    },
+    "simple-jev.featherless.ai": {
+      "articles": 1,
+      "sources": [
+        "The New Stack"
+      ],
+      "first_seen": "2026-09-30",
+      "last_seen": "2026-09-30",
       "proposed": null
     }
   }

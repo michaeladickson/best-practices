@@ -1,6 +1,6 @@
 # Model pricing watch
 
-Source: OpenRouter `/api/v1/models` list rates, fetched 2026-09-25 22:12 UTC.
+Source: OpenRouter `/api/v1/models` list rates, fetched 2026-10-02 22:13 UTC.
 
 **These are list rates on OpenRouter's platform, not a bill.** Vertex AI
 and Bedrock price separately and are not represented here — crumbl-ops'
@@ -47,6 +47,6 @@ Regenerated weekly by `digest/model_pricing.py`.
 | Model | Input $/1M | Output $/1M | Batch in | Batch out | Context |
 |---|---|---|---|---|---|
 | `qwen/qwen3.8-max-0902` | $2.00 | $6.00 | n/a | n/a | 1,000,000 |
-| `deepseek/deepseek-v3.2` | $0.27 | $0.40 | n/a | n/a | 163,840 |
-| `moonshotai/kimi-k3` | $3.00 | $15.00 | $2.28 | $11.40 | 1,048,576 |
+| `deepseek/deepseek-v3.2` | $0.28 | $0.42 | n/a | n/a | 163,840 |
+| `moonshotai/kimi-k3` | $2.70 | $13.50 | $2.28 | $11.40 | 1,048,576 |
 | `google/gemma-4-31b-it` | $0.09 | $0.34 | n/a | n/a | 262,144 |
