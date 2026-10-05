@@ -178,16 +178,23 @@ another reason. An unknown key on a skill whose diff you are already reviewing i
 is a free fix; one sitting untouched is not worth a PR of its own.
 
 **Hook drift.** `.claude/hooks/lint_on_write.py` and its test are meant to be
-byte-identical to the canonical copies in best-practices. Compare them on `origin/main`:
+byte-identical to the canonical copies in best-practices. Compare both on `origin/main`.
+The test lives at a different path in the other repos (`tests/test_lint_on_write_hook.py`,
+so their CI collects it), and checking the hook alone missed a test file 87 lines stale in
+two repos (2026-10-05):
 
 ```bash
-C=$(MSYS_NO_PATHCONV=1 git -C C:/Users/micha/best-practices rev-parse --verify -q origin/main:.claude/hooks/lint_on_write.py)
-for r in crumbl-ops command-center wealth-mgmt; do
-  H=$(MSYS_NO_PATHCONV=1 git -C C:/Users/micha/$r rev-parse --verify -q origin/main:.claude/hooks/lint_on_write.py 2>/dev/null)
-  if   [ -z "$H" ];      then echo "hook absent $r"
-  elif [ "$H" = "$C" ]; then echo "hook ok     $r"
-  else                       echo "HOOK DRIFT  $r"; fi
-done
+pair() {  # <label> <canonical path> <target path>
+  C=$(MSYS_NO_PATHCONV=1 git -C C:/Users/micha/best-practices rev-parse --verify -q "origin/main:$2")
+  for r in crumbl-ops command-center wealth-mgmt; do
+    H=$(MSYS_NO_PATHCONV=1 git -C C:/Users/micha/$r rev-parse --verify -q "origin/main:$3" 2>/dev/null)
+    if   [ -z "$H" ];      then echo "$1 absent $r"
+    elif [ "$H" = "$C" ]; then echo "$1 ok     $r"
+    else                       echo "$1 DRIFT  $r"; fi
+  done
+}
+pair hook .claude/hooks/lint_on_write.py      .claude/hooks/lint_on_write.py
+pair test .claude/hooks/test_lint_on_write.py tests/test_lint_on_write_hook.py
 ```
 
 `--verify -q` matters: without it `rev-parse` echoes its argument back when the path is
