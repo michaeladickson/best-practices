@@ -85,6 +85,37 @@ Write like a spec — file paths, expected I/O, constraints. Vague requests burn
 datetime.utcnow(). Fix it to use UTC. The test is in tests/test_auth.py:test_token_expiry."
 ```
 
+## Compression Proxies: Measure the Bill First
+
+Tools like [`headroomlabs-ai/headroom`](https://github.com/headroomlabs-ai/headroom) compress
+tool output, logs and JSON before they reach the model, as a library, a local proxy, or a
+`wrap claude` command. Evaluated 2026-10-08 and **not adopted**:
+
+- **Wrapping Claude Code** reroutes every session through a third-party proxy, registers an
+  extra MCP server in `~/.claude.json`, and its optional output shaper lowers thinking effort
+  on turns it judges routine, which overrides the effort routing above. On a subscription
+  plan the saving is rate-limit room, not money.
+- **Its `learn` command** writes corrections into `CLAUDE.md` with no review step.
+  `/backward-pass` already does that job behind an evidence gate.
+- **Library mode on our own Gemini calls** was the only plausible fit. Measured input across
+  the call sites with token logging (crumbl-ops `llm_call_metrics`, command-center
+  `gemini_tokens` log events, and a dry run of this repo's digest and practice updater) came
+  to about 6.6M tokens and **$2.50 per 30 days** at list price. Output plus thinking was about
+  **$6** over the same period, and input compression does not touch it. The largest prompts
+  are article prose (the digest, about 90k tokens per context) and a repeated catalog prefix
+  (crumbl-ops `sku_auto_match`, about 19.5k tokens per batch). The README itself says prose
+  barely compresses, and a repeated prefix is a caching question, not a compression one.
+
+Re-open if Gemini input spend passes roughly $50 a month, or if a call site starts sending
+large repetitive JSON or logs. The test is a call site's measured `prompt_token_count` times
+volume, not the vendor's benchmark table.
+
+**How to measure an untracked call site:** patch `google.genai.models.Models.generate_content`
+to append `usage_metadata` (`prompt_token_count`, `candidates_token_count`,
+`thoughts_token_count`) to a JSONL file, then run the job's `--dry-run` under it. For prompts
+built from private data, size a synthetic batch with `client.models.count_tokens` instead of
+sending the real rows.
+
 ## Monitoring
 
 - **Measure:** `phuryn/claude-usage`
