@@ -209,6 +209,22 @@
           "reason": "`/financials` and `/month-end` already provide P&L, balance sheet, cash flow analysis, and narratives, with the existing rule preventing a second `METRICS CORE` definition for spreadsheets."
         }
       ]
+    },
+    "3041": {
+      "title": "Weekly digest 2026-10-02: ideas to evaluate",
+      "closed_at": "2026-10-07",
+      "verdicts": [
+        {
+          "idea": "Enhance Claude Code with Native Mods",
+          "verdict": "rejected",
+          "reason": "The proposed `git push --force` confirmation already exists via the dangerous-command hook (`.claude/hooks/check_dangerous_bash.py`), `check_push_gate.py`, and `check_pr_merge_draft.py`, while the `plugin-authoring` skill covers mods if a need arises."
+        },
+        {
+          "idea": "Integrate Local Classifier for Classification",
+          "verdict": "rejected",
+          "reason": "The premise of high-volume classification for cost and latency saving is false, as volume is low (about 12 CS tickets/day), and two named files (`src/cs/email_classifier.py`, `src/ops/sku_matcher.py`) do not exist; the classifier is `src/cs/classifier.py`."
+        }
+      ]
     }
   }
 }
