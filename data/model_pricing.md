@@ -1,6 +1,6 @@
 # Model pricing watch
 
-Source: OpenRouter `/api/v1/models` list rates, fetched 2026-10-02 22:13 UTC.
+Source: OpenRouter `/api/v1/models` list rates, fetched 2026-10-16 23:14 UTC.
 
 **These are list rates on OpenRouter's platform, not a bill.** Vertex AI
 and Bedrock price separately and are not represented here — crumbl-ops'
@@ -33,7 +33,7 @@ Regenerated weekly by `digest/model_pricing.py`.
 | `google/gemini-3.1-flash-lite` | $0.25 | $1.50 | $0.12 | $0.75 | 1,048,576 |
 | `google/gemini-3.5-flash-lite` | $0.30 | $2.50 | $0.15 | $1.25 | 1,048,576 |
 | `google/gemini-3.5-flash` | $1.50 | $9.00 | $0.75 | $4.50 | 1,048,576 |
-| `google/gemini-3.8-flash` | $0.75 | $3.75 | $0.38 | $1.88 | 1,048,576 |
+| `google/gemini-3.8-flash` | $0.83 | $4.12 | $0.38 | $1.88 | 1,048,576 |
 
 ## OpenAI
 
@@ -47,6 +47,6 @@ Regenerated weekly by `digest/model_pricing.py`.
 | Model | Input $/1M | Output $/1M | Batch in | Batch out | Context |
 |---|---|---|---|---|---|
 | `qwen/qwen3.8-max-0902` | $2.00 | $6.00 | n/a | n/a | 1,000,000 |
-| `deepseek/deepseek-v3.2` | $0.28 | $0.42 | n/a | n/a | 163,840 |
-| `moonshotai/kimi-k3` | $2.70 | $13.50 | $2.28 | $11.40 | 1,048,576 |
-| `google/gemma-4-31b-it` | $0.09 | $0.34 | n/a | n/a | 262,144 |
+| `deepseek/deepseek-v3.2` | $0.26 | $0.80 | n/a | n/a | 163,840 |
+| `moonshotai/kimi-k3` | $0.30 | $11.94 | $2.28 | $11.40 | 1,048,576 |
+| `google/gemma-4-31b-it` | $0.20 | $0.40 | n/a | n/a | 262,144 |

@@ -1,7 +1,7 @@
 {
-  "fetched_at": "2026-10-02 22:13 UTC",
+  "fetched_at": "2026-10-16 23:14 UTC",
   "source": "https://openrouter.ai/api/v1/models",
-  "catalog_size": 466,
+  "catalog_size": 467,
   "models": {
     "anthropic/claude-opus-5": {
       "group": "Anthropic",
@@ -78,8 +78,8 @@
     "google/gemini-3.8-flash": {
       "group": "Google (migration targets)",
       "resolved_id": "google/gemini-3.8-flash",
-      "input": 0.75,
-      "output": 3.75,
+      "input": 0.8250000000000001,
+      "output": 4.125,
       "batch_input": 0.375,
       "batch_output": 1.875,
       "context": 1048576
@@ -114,8 +114,8 @@
     "deepseek/deepseek-v3": {
       "group": "Open weight",
       "resolved_id": "deepseek/deepseek-v3.2",
-      "input": 0.28,
-      "output": 0.42,
+      "input": 0.25899999999999995,
+      "output": 0.7999999999999999,
       "batch_input": null,
       "batch_output": null,
       "context": 163840
@@ -123,8 +123,8 @@
     "moonshotai/kimi-k3": {
       "group": "Open weight",
       "resolved_id": "moonshotai/kimi-k3",
-      "input": 2.7,
-      "output": 13.5,
+      "input": 0.30400000000000005,
+      "output": 11.936,
       "batch_input": 2.2800000000000002,
       "batch_output": 11.399999999999999,
       "context": 1048576
@@ -132,8 +132,8 @@
     "google/gemma-4-31b-it": {
       "group": "Open weight",
       "resolved_id": "google/gemma-4-31b-it",
-      "input": 0.09,
-      "output": 0.33999999999999997,
+      "input": 0.19999999999999998,
+      "output": 0.39999999999999997,
       "batch_input": null,
       "batch_output": null,
       "context": 262144
