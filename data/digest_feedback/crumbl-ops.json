@@ -225,6 +225,22 @@
           "reason": "The premise of high-volume classification for cost and latency saving is false, as volume is low (about 12 CS tickets/day), and two named files (`src/cs/email_classifier.py`, `src/ops/sku_matcher.py`) do not exist; the classifier is `src/cs/classifier.py`."
         }
       ]
+    },
+    "3229": {
+      "title": "Weekly digest 2026-10-09: ideas to evaluate",
+      "closed_at": "2026-10-09",
+      "verdicts": [
+        {
+          "idea": "Decision Models for Financial/CS Task Pre-Classification",
+          "verdict": "rejected",
+          "reason": "The use of other AI providers for Gmail content in `src/cs/classifier.py` and `src/cs/donation_screener.py` would violate the Limited Use statement, and `src/ops/sku_shadow.py` already provides confidence scoring."
+        },
+        {
+          "idea": "Just-in-Time Memory with Haiku 5.5 for Crons",
+          "verdict": "rejected",
+          "reason": "`scripts/cron_memory_consolidation.sh` and `scripts/cron_knowledge_curation.sh` are audits run on the Max plan with no per-token charge, so a smaller model or cost-saving pipeline would lower judgment or add an unbilled subsystem."
+        }
+      ]
     }
   }
 }
