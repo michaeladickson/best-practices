@@ -185,9 +185,12 @@ Bring the model to the data, not the data to the model provider.
 - **Reason in the cloud, execute on-premises.** Cloud models can plan, while every tool call touching proprietary code, secrets or internal services runs inside the controlled environment.
 - **Require consent for local file and desktop access.** A desktop agent asks at runtime before touching local files, other applications or system resources.
 
+### 16. Protect against self-replicating AI worms
+Develop specific defenses against the emerging threat of self-replicating AI worms utilizing small, open-weight models on cheap, internet-connected devices. Focus on preventing unauthorized inference and managing model execution on unfamiliar hardware to mitigate the risk of autonomous spread.
+
 ### Theme E — Identity and credentials
 
-### 16. Give every agent a verifiable identity
+### 17. Give every agent a verifiable identity
 Every agent runs as a unique, authenticated principal. That is what makes least
 privilege enforceable, accountability possible and the audit trail attributable. Log
 how an agent acquires new tools or roles mid-run, and authorize each change.
@@ -236,6 +239,7 @@ shared review workflow.
 
 Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 
+- **Anthropic’s red team ran AI on 15 cheap TV boxes. Then the math got unsettling.** (The New Stack) — Develop specific defenses against self-replicating AI worms, focusing on preventing unauthorized inference and managing model execution on unfamiliar hardware. Digest: 2026-10-13.
 - **Cloudflare brings paid access to MCP tools — who controls the agent’s spending?** (The New Stack [devops]) — Set total spending allowances per agent task or workflow, not just per individual tool call. Digest: 2026-10-02.
 - **Quoting Matthew Green** (Simon Willison [ai_engineering]) — Prevent agents from communicating via shared package caches in isolated sandboxes. Digest: 2026-10-01.
 - **OpenAI’s Dots boundary problem rate doubled in longer tests** (The New Stack [devops]) — Recognize and enforce dynamic permission boundaries for agents in chained tasks. Digest: 2026-09-30.
