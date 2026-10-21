@@ -11,6 +11,10 @@ For every feed in feeds.yaml:
     Diff's 3.7-years-frozen feed, and Chip Huyen's — "resolves and returns
     entries" is not "alive")
 
+A second table covers article fetching (digest/article_text.py): for each feed
+whose posts arrived thin in the last FETCH_WINDOW_DAYS, how many got the
+article's own text, how many fetches failed, and how many are still thin.
+
 Writes data/feed_report.md and prints it. Relevance scores are deliberately
 NOT reported — everything scores 9-10, they carry no signal (2026-08-23
 analysis). Incorporations and freshness are the honest yield metrics.
@@ -25,9 +29,14 @@ from urllib.parse import urlparse
 import click
 import yaml
 
+from digest.article_text import is_thin
+
 ROOT = Path(__file__).parent.parent
 REPORT_PATH = ROOT / "data" / "feed_report.md"
 INCORPORATED = ROOT / "data" / "practice_updates" / "incorporated.json"
+# _fetch_feeds reads articles only for posts inside the digest's lookback, so
+# older thin posts were never candidates and would only add noise here.
+FETCH_WINDOW_DAYS = 7
 
 
 def _netloc(url: str) -> str:
@@ -99,8 +108,52 @@ def build_report(days: int = 90) -> str:
     zero = [n for n, s in stats.items() if s["window"] == 0 and _age(s) >= days]
     if zero:
         lines += ["", f"**No posts in {days}d (dead or dormant):** " + ", ".join(zero)]
+    lines += _fetch_section(archive, today)
     lines += _acceptance_section()
     return "\n".join(lines) + "\n"
+
+
+def _fetch_section(archive: dict, today: datetime) -> list[str]:
+    """Article-fetch outcome per feed, for posts that arrived thin this week.
+
+    filled  = the article's text replaced the feed preview (content_fetched)
+    failed  = the fetch returned nothing usable (article_fetch_failed): a 403,
+              a timeout, a non-HTML page, or too little text
+    thin    = neither, and still under THIN_PREVIEW_CHARS: never attempted,
+              which means the fetch budget ran out or the fetch path broke
+    A feed whose posts all carry real text never appears."""
+    cutoff = (today - timedelta(days=FETCH_WINDOW_DAYS)).strftime("%Y-%m-%d")
+    rows: dict[str, dict[str, int]] = {}
+    for post in archive.values():
+        if post.get("published", "") < cutoff:
+            continue
+        if post.get("content_fetched"):
+            key = "filled"
+        elif post.get("article_fetch_failed"):
+            key = "failed"
+        elif is_thin(post.get("content_preview", "")):
+            key = "thin"
+        else:
+            continue
+        row = rows.setdefault(post.get("source") or "?", {"filled": 0, "failed": 0, "thin": 0})
+        row[key] += 1
+    lines = ["", f"## Article fetch ({FETCH_WINDOW_DAYS}d)", ""]
+    if not rows:
+        return lines + [f"No post in the last {FETCH_WINDOW_DAYS} days arrived without text."]
+    lines += [
+        "Posts whose feed entry carried almost no text, by what the article fetch",
+        "did. A failed fetch keeps the feed's preview (OpenAI and CFO Dive answer",
+        "403 to scripts); **still thin** means no fetch was tried.",
+        "",
+        "| Feed | filled | failed | still thin |",
+        "|---|---|---|---|",
+    ]
+    for name, r in sorted(rows.items(), key=lambda kv: (-kv[1]["thin"], -kv[1]["failed"], kv[0])):
+        flag = " ⚠️" if r["thin"] else ""
+        lines.append(f"| {name} | {r['filled']} | {r['failed']} | {r['thin']}{flag} |")
+    tot = {k: sum(r[k] for r in rows.values()) for k in ("filled", "failed", "thin")}
+    lines.append(f"| **total** | {tot['filled']} | {tot['failed']} | {tot['thin']} |")
+    return lines
 
 
 def _acceptance_section() -> list[str]:
