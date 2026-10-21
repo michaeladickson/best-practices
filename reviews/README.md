@@ -72,6 +72,52 @@ staggered (see `AUTOMATION.md`). Each files one issue labeled `depth-review` wit
 3. Set one secret: `CLAUDE_CODE_OAUTH_TOKEN` — that's all, no GCP anything
 4. Ensure `GITHUB_TOKEN` has `issues: write` permission
 
+## Per-PR Review Gate (optional)
+
+`pr-review-template.yml` runs one bounded Claude review on each pull request and posts it
+as a single comment. It reviews when a PR opens or leaves draft, and again whenever the
+`re-review` label is added. A clean review posts nothing. Findings carry `[Important]`,
+`[Nit]` or `[Pre-existing]` and open with a count line (format in
+`review-context-template.md`). It complements the weekly diff review: a cheap tripwire at
+merge time, a deeper audit on cadence.
+
+**Where it runs:** command-center (this template's source, merged 2026-10-21). crumbl-ops
+runs a heavier variant with a merge hook that holds on `[Important]` Medium-or-above
+findings, a two-review cap, a per-commit `review-freshness` status and a usage gate.
+
+**Setup:**
+
+1. Copy `pr-review-template.yml` to `.github/workflows/pr-review.yml`, keeping that exact
+   name (the workflow detects PRs that edit it by path). Edit the `CUSTOMIZE` lines: the
+   repo's prose-only directories, and model and effort.
+2. Fill `.github/prompts/review-context.md` from `review-context-template.md`, including
+   Severity, Finding Tags and Output Format. The review reads it from the base branch, so a
+   PR cannot loosen its own rules.
+3. Add the scratch files to `.gitignore`: `/pr-diff.md`, `/pr-review-rules.md`,
+   `/pr-review-output.md`, `/pr-comment-body.md`.
+4. Confirm the Claude GitHub App covers the repo: github.com/settings/installations →
+   Claude → Configure. The action exchanges an OIDC token for the app's token.
+5. Add the `CLAUDE_CODE_OAUTH_TOKEN` Actions secret, from `claude setup-token`. Without it,
+   every PR gets a green skip and a "Not reviewed" comment.
+6. Require your CI in branch protection, not this review: it is advisory, and a required
+   AI check blocks every merge whenever the model pool is busy.
+7. The PR that adds the workflow gets no AI review: claude-code-action validates the
+   workflow against the default branch and skips. Run `/code-review` locally on it.
+
+**Gotchas the template already handles:**
+- **No re-review on push (`synchronize`):** re-reviews of mid-PR fix-up pushes were about
+  40% of crumbl-ops' review runs in August 2026 (934 runs for 546 PRs).
+- **Nothing is passed through `${{ }}` into the prompt:** a value over ~19.7k chars makes
+  the whole workflow invalid with no lint warning, so the diff is written to a file the
+  reviewer reads.
+- **`--tools`, not just `--allowedTools`:** the reviewer reads untrusted content, so it
+  gets Read/Glob/Grep/Write and nothing else.
+- **Label events get their own concurrency group:** otherwise adding any other label
+  cancels the real review.
+
+Like `workflow-template.yml`, each consumer holds its own copy: a change here needs a PR in
+each repo that adopted it.
+
 ## Updating Prompts
 
 Edit the `.md` files in this directory. Prompts are fetched at runtime from this

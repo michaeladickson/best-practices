@@ -26,7 +26,9 @@ best-practices/
                        #   ai-slop (8th), context-memory (1st), model-hierarchy (15th),
                        #   cto (22nd).
                        #   Consumed by wealth-mgmt; crumbl-ops self-hosts its own
-                       #   prompts; command-center has no review workflow.
+                       #   prompts; command-center has no weekly review workflow.
+    pr-review-template.yml # Optional per-PR Claude review (one comment per PR);
+                       #   from command-center's gate. Setup in reviews/README.md.
     *-review.md        # Scheduled prompts + on-demand audits (ui, devops, ai-slop, ...)
   digest/              # RSS digest tool (module)
     ai_digest.py       # Main logic
