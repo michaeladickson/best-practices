@@ -103,6 +103,17 @@ anchors). Guardrails, since this also edits the anti-slop doc itself:
   they need a human backfill pass.
 - Most weeks change nothing. Review the `[automated]` practice commits like any other diff.
 
+### Thin feed entries are read from the article
+
+Scoring and practice extraction both judge a post by its `content_preview`. When an
+in-window entry has under 200 characters of text (Google Cloud Blog and Hugging Face
+send none; the Hacker News feed sends only links and points), `_fetch_feeds` fetches
+the article page (`digest/article_text.py`, standard library only) and stores the
+text in the archive, so both stages and the second context see it. A site that
+refuses scripts (OpenAI, CFO Dive answer 403) keeps its feed preview and is flagged
+`article_fetch_failed` so the run does not retry it. Capped at `MAX_ARTICLE_FETCHES`
+(100) per feed pass.
+
 ### One-off inputs (digest inbox)
 
 Drop a video transcript, pasted article, or PDF-as-text into `data/digest_inbox/`

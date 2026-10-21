@@ -22,6 +22,8 @@ import structlog
 import yaml
 from dotenv import load_dotenv
 
+from digest.article_text import fetch_article_text, hn_article_url, is_thin
+
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 log = structlog.get_logger()
@@ -137,6 +139,39 @@ FEED_FAILURE_THRESHOLD = float(os.environ.get("FEED_FAILURE_THRESHOLD", "0.5"))
 # set `max_quiet_days` in feeds.yaml to opt out of the noise.
 FEED_STALE_DAYS = int(os.environ.get("FEED_STALE_DAYS", "90"))
 
+# Ceiling on article-page fetches per feed pass. A normal week needs about 60
+# (in-window posts under THIN_PREVIEW_CHARS, 2026-09-01..10-21); the cap bounds the
+# run if a feed suddenly starts sending empty entries.
+MAX_ARTICLE_FETCHES = int(os.environ.get("MAX_ARTICLE_FETCHES", "100"))
+
+
+def _fill_thin_preview(post: dict, archive: dict, budget: list[int]) -> bool:
+    """Give an in-window post whose feed preview is thin the article's own text.
+
+    Reuses text an earlier pass stored in the archive (the second context in a run,
+    or last week's run), else fetches the page while `budget` lasts. Writes the
+    result back into the archive entry so the practice updater, which reads the
+    archive, judges the same text. Returns True when the archive changed."""
+    link = post.get("link", "")
+    if not link or not is_thin(post.get("content_preview", "")):
+        return False
+    cached = archive.get(link)
+    if cached and not is_thin(cached.get("content_preview", "")):
+        post["content_preview"] = cached["content_preview"]
+        return False
+    if (cached or {}).get("article_fetch_failed") or budget[0] <= 0:
+        return False
+    budget[0] -= 1
+    text = fetch_article_text(hn_article_url(post.get("content_preview", "")) or link)
+    entry = archive.setdefault(link, dict(post))
+    if text:
+        post["content_preview"] = entry["content_preview"] = text
+        entry.pop("article_fetch_failed", None)
+        entry["content_fetched"] = True
+    else:
+        entry["article_fetch_failed"] = True
+    return True
+
 
 def _feed_failure_reason(parsed) -> Optional[str]:
     """Return a failure reason for a parsed feed, or None if it looks healthy.
@@ -170,6 +205,8 @@ def _fetch_feeds(feeds: list[dict], days: int = 7) -> tuple[list[dict], dict]:
     posts = []
     archive = _load_archive()
     new_archived = 0
+    enriched = 0
+    fetch_budget = [MAX_ARTICLE_FETCHES]
     failed: list[dict] = []
     stale: list[dict] = []
     ok = 0
@@ -222,6 +259,11 @@ def _fetch_feeds(feeds: list[dict], days: int = 7) -> tuple[list[dict], dict]:
                     "content_preview": content,
                 }
 
+                # A post scored this week is judged by its text; when the feed sent
+                # none, read the article itself. Before archiving, so both agree.
+                if published >= cutoff and _fill_thin_preview(post, archive, fetch_budget):
+                    enriched += 1
+
                 # Archive every post we see (dedup by URL)
                 if link and link not in archive:
                     archive[link] = post
@@ -249,9 +291,10 @@ def _fetch_feeds(feeds: list[dict], days: int = 7) -> tuple[list[dict], dict]:
             log.warning("feed_fetch_failed", source=feed_info["name"], error=str(e))
 
     # Persist archive
-    if new_archived > 0:
+    if new_archived > 0 or enriched > 0:
         _save_archive(archive)
-        log.info("new_posts_archived", count=new_archived)
+        log.info("new_posts_archived", count=new_archived, article_fetches=enriched,
+                 fetch_budget_left=fetch_budget[0])
 
     posts.sort(key=lambda p: p["published"], reverse=True)
     stats = {"total": len(feeds), "ok": ok, "failed": failed, "stale": stale}
