@@ -17,10 +17,19 @@ Perform a comprehensive code review of this codebase. Focus on:
 
 Review all source files: Python, TypeScript, SQL (schema + migrations), configuration (YAML, Dockerfiles, CI workflows), and shell scripts.
 
-Format your findings as a markdown document with:
-- Executive summary (2-3 sentences)
+If nothing is worth fixing, output exactly "No findings this window." and nothing else.
+
+Otherwise, format your findings as a markdown document with:
+- A summary that opens with the count, e.g. "5 findings: 1 High, 3 Medium, 1 Low;
+  2 pre-existing." Then 1-2 sentences on what matters most.
 - Findings grouped by severity (Critical, High, Medium, Low)
 - Each finding should have: file, line number, description, suggested fix
+- Tag each finding **[Introduced]** or **[Pre-existing]**. In a change review,
+  [Pre-existing] means the bug is in code the window's diff did not add or alter:
+  you saw it while reading context. Report it, but never as the change's fault.
+  In a full-scope review, omit the tag.
+- When one bug appears in several places, report it once as a class and list every
+  location, so a single fix covers all of them.
 - Use markdown checkboxes so items can be tracked
 
 Output ONLY the findings, no title or preamble.
