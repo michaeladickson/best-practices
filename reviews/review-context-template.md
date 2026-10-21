@@ -73,7 +73,8 @@ nothing to report, write exactly one line: `No findings.` Otherwise:
 ## What Makes a Good Finding
 - **Concrete**: points to a specific file and line, not "consider adding..."
 - **Proportional**: the fix effort matches the actual risk for this app's scale
-- **Not already tracked**: check existing-issues.md before reporting
+- **Not already tracked**: check existing-issues.md before reporting (weekly review only;
+  the per-PR gate has no such file)
 - **Actionable by this team**: if the fix requires new infrastructure the team can't maintain, skip it
 
 ## What to Skip

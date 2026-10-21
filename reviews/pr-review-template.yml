@@ -1,10 +1,12 @@
 # Per-PR Claude review: one bounded pass over the diff, posted as one comment.
 #
-# TEMPLATE. Copy to .github/workflows/pr-review.yml (that exact name: the
-# docs-only step below greps for it) and follow "Per-PR Review Gate" in
-# reviews/README.md. Lines marked CUSTOMIZE are the repo-specific ones.
+# Installed as .github/workflows/pr-review.yml (that exact name: the docs-only
+# step below greps for it). Source: best-practices reviews/pr-review-template.yml,
+# set up per "Per-PR Review Gate" in its reviews/README.md. Only the lines marked
+# CUSTOMIZE are repo-specific; keep the rest identical to the template, so a diff
+# against it shows only those lines.
 #
-# Source: command-center's pr-review.yml (merged 2026-10-21), itself a smaller
+# Origin: command-center's pr-review.yml (merged 2026-10-21), itself a smaller
 # copy of crumbl-ops' gate, whose comments record every failure this mechanism
 # has hit. No merge hook, no two-review cap, no review-freshness status, no
 # usage gate. One review per PR, plus the `re-review` label to ask again.
@@ -102,10 +104,14 @@ jobs:
           while IFS= read -r f; do
             [ -z "$f" ] && continue
             case "$f" in
+              # CUSTOMIZE: add any other markdown agents are told to follow
+              # (e.g. a knowledge file CLAUDE.md says to read first); `*.md`
+              # below would otherwise skip it as prose.
               CLAUDE.md|*/CLAUDE.md|.claude/*|.github/prompts/*)
                 CODE_CHANGED=true ;;
               *.md|*.docx|*.pdf|*.png|*.jpg|*.jpeg|*.svg|*.xlsx) ;;
-              # CUSTOMIZE: this repo's prose-only directories.
+              # CUSTOMIZE: this repo's prose-only directories. Matters only for
+              # non-markdown files in them; `*.md` above already skips prose.
               docs/*|knowledge/*|decisions/*) ;;
               *) CODE_CHANGED=true ;;
             esac

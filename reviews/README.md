@@ -81,28 +81,44 @@ as a single comment. It reviews when a PR opens or leaves draft, and again whene
 `review-context-template.md`). It complements the weekly diff review: a cheap tripwire at
 merge time, a deeper audit on cadence.
 
-**Where it runs:** command-center (this template's source, merged 2026-10-21). crumbl-ops
+**Where it runs:** command-center (this template's source, merged 2026-10-21) and
+wealth-mgmt (first adoption from the template, its PR #285). crumbl-ops
 runs a heavier variant with a merge hook that holds on `[Important]` Medium-or-above
 findings, a two-review cap, a per-commit `review-freshness` status and a usage gate.
 
 **Setup:**
 
 1. Copy `pr-review-template.yml` to `.github/workflows/pr-review.yml`, keeping that exact
-   name (the workflow detects PRs that edit it by path). Edit the `CUSTOMIZE` lines: the
-   repo's prose-only directories, and model and effort.
-2. Fill `.github/prompts/review-context.md` from `review-context-template.md`, including
-   Severity, Finding Tags and Output Format. The review reads it from the base branch, so a
-   PR cannot loosen its own rules.
-3. Add the scratch files to `.gitignore`: `/pr-diff.md`, `/pr-review-rules.md`,
-   `/pr-review-output.md`, `/pr-comment-body.md`.
-4. Confirm the Claude GitHub App covers the repo: github.com/settings/installations →
-   Claude → Configure. The action exchanges an OIDC token for the app's token.
-5. Add the `CLAUDE_CODE_OAUTH_TOKEN` Actions secret, from `claude setup-token`. Without it,
-   every PR gets a green skip and a "Not reviewed" comment.
+   name (the workflow detects PRs that edit it by path). Change only the `CUSTOMIZE`
+   lines, and only where they differ for this repo; the defaults may already fit. Keep
+   the rest identical, so a diff against the template shows only the `CUSTOMIZE` lines
+   (and, where none changed, the two files have the same git blob).
+   - **Code, not prose:** markdown that agents are told to follow (`CLAUDE.md`, skills,
+     review prompts, and any file a `CLAUDE.md` says to read first) belongs in the first
+     `case` pattern. The blanket `*.md` rule skips everything else as prose.
+   - **Prose-only directories** matter only for non-markdown files in them.
+   - **Model and effort.** If the repo pins model strings in a test, register the model
+     there too, or CI fails.
+2. Write `.github/prompts/review-context.md` from `review-context-template.md`. If the
+   repo already has one (the weekly review reads the same file), add the Severity,
+   Finding Tags, Ground Rules and Output Format sections and keep the rest. Stay under
+   150 lines. The review reads this file from the base branch, so a PR cannot loosen its
+   own rules.
+3. Add the scratch files to `.gitignore` exactly as listed, anchored to the root:
+   `/pr-diff.md`, `/pr-review-rules.md`, `/pr-review-output.md`, `/pr-comment-body.md`.
+4. Confirm the Claude GitHub App covers the repo. The action exchanges an OIDC token for
+   the app's token. A normal `gh` token cannot list app installations (403), so either
+   check github.com/settings/installations → Claude → Configure, or, if the repo already
+   runs claude-code-action (the weekly reviews), find the token exchange succeeding in
+   that run's log.
+5. Make sure the `CLAUDE_CODE_OAUTH_TOKEN` Actions secret exists (`gh secret list`). A repo
+   on the weekly reviews already has it. Otherwise add it, from `claude setup-token`;
+   without it, every PR gets a green skip and a "Not reviewed" comment.
 6. Require your CI in branch protection, not this review: it is advisory, and a required
    AI check blocks every merge whenever the model pool is busy.
 7. The PR that adds the workflow gets no AI review: claude-code-action validates the
-   workflow against the default branch and skips. Run `/code-review` locally on it.
+   workflow against the default branch and skips, and the job posts a "Not reviewed"
+   comment saying so. Run `/code-review` locally on it.
 
 **Gotchas the template already handles:**
 - **No re-review on push (`synchronize`):** re-reviews of mid-PR fix-up pushes were about
