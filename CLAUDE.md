@@ -101,8 +101,9 @@ anchors). Guardrails, since this also edits the anti-slop doc itself:
   rejected and the doc is left untouched (retries next week). Git history is the backstop.
 - **Practice titles capped at 12 words** (`MAX_PRACTICE_TITLE_WORDS`) — both prompts
   ask for the short hand-written register and the validator rejects any edit that adds
-  a longer one. New-only, so the 151 pre-existing long titles do not block future runs;
-  they need a human backfill pass.
+  a longer one. New-only, so a pre-existing long title never blocks a run. Of the 151
+  found on 2026-09-20, 2 remained on 2026-10-21 and were shortened by hand that day;
+  `_overlong_titles()` over the five docs reads 0.
 - Most weeks change nothing. Review the `[automated]` practice commits like any other diff.
 
 ### Thin feed entries are read from the article

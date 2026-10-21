@@ -43,7 +43,7 @@ catch it getting worse? Gating what an agent may *do* belongs in
 ### Analyze AI product failure modes before metrics
 Prioritize a thorough analysis of potential failure modes and unintended behaviors in AI products before defining evaluation metrics. Understanding how a system can fail is crucial to ensuring that the right things are measured for effective improvement.
 
-### Decide which calls earn a floor — and check you did not only measure the easy ones
+### Decide which calls earn a floor; measure the hard ones too
 Not every LLM call needs an eval. The line that has held up: **an LLM call whose output
 reaches someone outside the team, or is written to a durable artifact without review,
 needs a floor.** Internal, reviewed, or throwaway output does not.
@@ -131,7 +131,7 @@ robust to it where you can't.
 
 ### Theme B — Gating change and watching production
 
-### Run the eval on every prompt change AND every model change — in CI
+### Run the eval on every prompt and model change, in CI
 The eval set is a regression gate, not a one-time exercise. Re-run it when a prompt
 changes and when you consider a model upgrade; **fail the change if quality drops**
 below the baseline. This is "prompt-regression testing" / fixture-based testing for
