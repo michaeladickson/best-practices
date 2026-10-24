@@ -241,6 +241,22 @@
           "reason": "`scripts/cron_memory_consolidation.sh` and `scripts/cron_knowledge_curation.sh` are audits run on the Max plan with no per-token charge, so a smaller model or cost-saving pipeline would lower judgment or add an unbilled subsystem."
         }
       ]
+    },
+    "3389": {
+      "title": "Weekly digest 2026-10-16: ideas to evaluate",
+      "closed_at": "2026-10-17",
+      "verdicts": [
+        {
+          "idea": "Pre-commit hooks for observability enforcement",
+          "verdict": "false-premise",
+          "reason": "The pattern it would enforce does not exist, and commits here go through Claude Code PreToolUse hooks, not git pre-commit."
+        },
+        {
+          "idea": "Hybrid retrieval for curation crons",
+          "verdict": "false-premise",
+          "reason": "`scripts/cron_knowledge_curation.sh`'s constraint is not retrieval, and no vector search is installed in the repo."
+        }
+      ]
     }
   }
 }
