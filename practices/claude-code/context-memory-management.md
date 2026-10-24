@@ -94,7 +94,9 @@ Format: pre-assembled markdown brief, newest-first, each fact tagged with its so
 - **A Context Lake** centralizes agent-retrievable knowledge (codebase, APIs, services, team) into one governed store, with access control at the data layer rather than per tool, pre-chunked to support progressive disclosure.
 - **A context *warehouse* adds active components:** a miner that continuously crawls heterogeneous sources for deltas, and a composer that assembles a purpose-built brief for the task at hand instead of serving static retrieval.
 - **Compile knowledge, don't just store it.** An LLM pass that turns raw sources into wikis, summaries and linked concept articles gives agents something queryable, with outputs feeding back in.
+-   **Automate context enrichment from agent and user interactions.** Implement self-learning context enrichment systems that analyze agent and user interactions to identify and fill knowledge gaps. This keeps organizational context accurate and current without manual upkeep.
 -   **Scale to zero.** Agent retrieval load is bursty; serverless components avoid paying for idle.
+-   **Implement cache-aware routing and tiered KV caching.** Employ cache-aware routing combined with a tiered Key-Value cache for distributed LLM inference serving. This efficiently handles bursty agent workloads and long contexts by keeping agent steps on replicas holding their context.
 -   **Add a semantic cache to stop token bleed.** Cache results for identical or semantically similar queries in front of expensive retrievals and model calls.
 -   **Build one retrieval layer for agent context.** As agents multiply, their queries overload and stale fragmented sources; one layer manages volume and freshness.
 -   **Build reliable data architecture for production agents.** Recognize that demo success doesn't guarantee production readiness. Ensure the underlying data architecture can reliably support agents in production, handling disparate, dynamic data sources and managing complex system permissions.
@@ -122,6 +124,7 @@ The asymmetry drives the rule: a paragraph in root `CLAUDE.md` is paid in every 
 -   **Protect the cache.** Lock `--model` and the MCP set at session start; adding an MCP or swapping models mid-session rebuilds the prefix (~10× per miss). See [Token Efficiency](token-efficiency.md).
 -   **Preserve cached context despite reasoning changes.** Design caching mechanisms to intelligently preserve and reuse earlier context even when minor agent parameters, such as reasoning effort levels or tool availability, change. This improves cache hit rates and reduces re-processing costs.
 -   **Curate the harness footprint.** Every tool from every connected MCP sits in context *every* turn — the same always-loaded tax as a fat `CLAUDE.md`. Prefer narrow, single-purpose MCP servers; disable unused ones.
+-   **Implement resource hygiene for local agent deployments.** Establish practices for managing host machine resources used by local agents, such as automatically closing idle development servers, scheduling heavy workloads, and offloading background tasks to separate machines to maintain usability.
 -   **Prune the session deliberately.** Named categories worth dropping: superseded standing instructions, unused tool definitions, transient files, stale screenshots, dead browser results, repeated command output, rejected answers. Reported to cut reused input by up to 90%.
 -   **Prevent context packers discarding relevant information.** Rigorously evaluate context packing mechanisms to ensure that relevant information is not unintentionally discarded after query decomposition and retrieval. The packing stage should be optimized to retain all necessary context for the agent's task.
 -   **Structure prompts for prefix caching.** Most spend is resending the same system prompt, tool list and static docs every call; ordering for cache hits is the single biggest lever.
@@ -129,7 +132,9 @@ The asymmetry drives the rule: a paragraph in root `CLAUDE.md` is paid in every 
 -   **Rules files beat hoping.** Agents default to internal training knowledge even when tools and knowledge bases exist; an explicit rules file forcing external-context-first is what makes retrieval reliable.
 -   **Enterprise tasks want holistic context.** Real workflows need broader assembly than benchmarks imply — interconnected decisions, not isolated snippets.
 -   **Don't tokenmaxx.** Token volume is not productivity. Tie consumption to delivered outcomes, or the budget grows without the value.
+-   **Account for all token components in simulated usage.** Ensure debugging and cost analysis tools accurately calculate simulated token usage, including costs from tool calls, system prompts, and reasoning tokens. This provides a comprehensive view of resource consumption for agentic workflows.
 -   **Enforce token budgets per developer or team.** Implement and enforce token consumption budgets at the individual developer or team level. This drives accountability for AI efficiency and cost management, encouraging developers to optimize prompt engineering and agent designs.
+-   **Specialize small model vocabularies to cut inference cost.** Optimize domain-specific small language models by specializing their vocabularies and tokenizers. This significantly reduces inference cost and token count by avoiding fragmentation and excess in general-purpose vocabularies.
 -   **Preserve reasoning state between requests.** A harness that carries the model's opaque reasoning state across turns spares it reconstructing its own thinking on long tasks.
 -   **Manage the quadratic history tax.** Stateless APIs re-bill the whole history as input on every call; compact or summarize it, and keep the pre-compaction history in a log for audit and debugging.
 -   **Implement automatic background context compaction.** Summarize older messages in the background to maintain token limits without pausing the agent's active work. This ensures continuous operation and efficient context management.
@@ -301,6 +306,11 @@ Use [`reviews/context-memory-review.md`](../../reviews/context-memory-review.md)
 
 Synthesized from saved digest articles (`data/digest_knowledge/`) plus production use:
 
+-   **Introducing new self-learning context enrichment in Knowledge Catalog** (Google Cloud Blog) — Automate context enrichment from agent and user interactions. Digest: 2026-10-22.
+-   **How Specializing the Vocabulary of SLMs Can Cut Inference Cost by 77% in Real Applications** (Hugging Face Blog) — Specialize small model vocabularies to cut inference cost. Digest: 2026-10-21.
+-   **The $899 Mac mini comes with 16 GB of memory, less than I'd start a new agent computer with. Buy the memory and storage you need, without overpaying or falling short.** (Nate Jones) — Implement resource hygiene for local agent deployments. Digest: 2026-10-20.
+-   **Announcing llm-d 1.0: Open distributed inference for agents on Google Cloud TPUs and GPUs** (Google Cloud Blog) — Implement cache-aware routing and tiered KV caching. Digest: 2026-10-20.
+-   **llm-echo 0.5** (Simon Willison) — Account for all token components in simulated usage. Digest: 2026-10-19.
 -   **[AINews] Pi 1.0, Pi Durable, and AIE NYC** (Latent Space [ai_engineering]) — Implement automatic background context compaction. Digest: 2026-10-02.
 -   **Just-in-Time Memory** (Pascal Biese (LLM Watch) [ai_engineering]) — Curate task-adaptive memory at read time. Digest: 2026-10-01.
 -   **Cohere’s faster query model barely dents retrieval quality in its tests** (The New Stack [devops]) — Use different models for embedding index and query. Digest: 2026-09-30.
