@@ -1,7 +1,7 @@
 {
-  "fetched_at": "2026-10-16 23:14 UTC",
+  "fetched_at": "2026-10-24 00:59 UTC",
   "source": "https://openrouter.ai/api/v1/models",
-  "catalog_size": 467,
+  "catalog_size": 469,
   "models": {
     "anthropic/claude-opus-5": {
       "group": "Anthropic",
@@ -35,8 +35,8 @@
       "resolved_id": "google/gemini-2.5-flash",
       "input": 0.3,
       "output": 2.5,
-      "batch_input": 0.15,
-      "batch_output": 1.25,
+      "batch_input": null,
+      "batch_output": null,
       "context": 1048576
     },
     "google/gemini-2.5-pro": {
@@ -44,8 +44,8 @@
       "resolved_id": "google/gemini-2.5-pro",
       "input": 1.25,
       "output": 10.0,
-      "batch_input": 0.625,
-      "batch_output": 5.0,
+      "batch_input": null,
+      "batch_output": null,
       "context": 1048576
     },
     "google/gemini-3.1-flash-lite": {
@@ -114,8 +114,8 @@
     "deepseek/deepseek-v3": {
       "group": "Open weight",
       "resolved_id": "deepseek/deepseek-v3.2",
-      "input": 0.25899999999999995,
-      "output": 0.7999999999999999,
+      "input": 0.28,
+      "output": 0.42,
       "batch_input": null,
       "batch_output": null,
       "context": 163840
@@ -123,8 +123,8 @@
     "moonshotai/kimi-k3": {
       "group": "Open weight",
       "resolved_id": "moonshotai/kimi-k3",
-      "input": 0.30400000000000005,
-      "output": 11.936,
+      "input": 0.23900000000000002,
+      "output": 10.8,
       "batch_input": 2.2800000000000002,
       "batch_output": 11.399999999999999,
       "context": 1048576
