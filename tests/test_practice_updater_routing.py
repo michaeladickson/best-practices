@@ -157,3 +157,13 @@ def test_a_candidate_without_a_reader_action_is_dropped(tmp_path, monkeypatch):
     pu._run_docs([B], [], posts, {}, True, lambda: client)
     assert integrated == {"B": ["Kept"]}
     assert '"reader_action"' in client.prompts[0]
+
+
+def test_a_response_that_ignores_reader_action_blocks_the_run(tmp_path, monkeypatch):
+    cand = _cand("b.md", POST_B["link"])
+    del cand["reader_action"]
+    client, integrated = _setup(tmp_path, monkeypatch, json.dumps({"candidates": [cand]}))
+    ledger = {}
+    results = pu._run_docs([B], [], [POST_B], ledger, False, lambda: client)
+    assert results[0]["status"].startswith("error:")
+    assert integrated == {} and ledger == {}

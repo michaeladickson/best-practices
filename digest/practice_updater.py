@@ -288,6 +288,12 @@ Rules:
     except (json.JSONDecodeError, AttributeError) as e:
         log.error("extract_json_parse_failed", error=str(e), head=(resp.text or "")[:200])
         return None
+    if cands and not any("reader_action" in c for c in cands):
+        # Every candidate dropping for a missing field reads exactly like a quiet
+        # week. A response that ignored the field altogether is a schema failure:
+        # block, like an unparseable one, so the articles are retried.
+        log.error("extract_reader_action_missing", candidates=len(cands))
+        return None
     eligible = {d["path"]: d["eligible_urls"] for d in targets}
     kept = []
     for c in cands:
