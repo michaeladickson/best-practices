@@ -177,8 +177,8 @@ reference), and the inert keys already in place stay until the file is being tou
 another reason. An unknown key on a skill whose diff you are already reviewing in step 2
 is a free fix; one sitting untouched is not worth a PR of its own.
 
-**Hook drift.** `.claude/hooks/lint_on_write.py` and its test are meant to be
-byte-identical to the canonical copies in best-practices. Compare both on `origin/main`.
+**Hook drift.** `.claude/hooks/lint_on_write.py`, `.claude/hooks/closing_keyword_gate.py`
+and their tests are meant to be byte-identical to the canonical copies in best-practices. Compare both on `origin/main`.
 The test lives at a different path in the other repos (`tests/test_lint_on_write_hook.py`,
 so their CI collects it), and checking the hook alone missed a test file 87 lines stale in
 two repos (2026-10-05):
@@ -195,6 +195,8 @@ pair() {  # <label> <canonical path> <target path>
 }
 pair hook .claude/hooks/lint_on_write.py      .claude/hooks/lint_on_write.py
 pair test .claude/hooks/test_lint_on_write.py tests/test_lint_on_write_hook.py
+pair gate .claude/hooks/closing_keyword_gate.py      .claude/hooks/closing_keyword_gate.py
+pair gtst .claude/hooks/test_closing_keyword_gate.py tests/test_closing_keyword_gate.py
 ```
 
 `--verify -q` matters: without it `rev-parse` echoes its argument back when the path is

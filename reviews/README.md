@@ -29,6 +29,26 @@ Two design rules worth knowing:
   silently ate the monthly reviews in the old layout. Every schedule entry in the
   template fires at a distinct minute; keep it that way when editing.
 
+Every run leaves a record, and a lost window can be re-run:
+
+- **Run audit.** `Record outcome` runs `if: always()` after the review. It writes the
+  review step's outcome (`success`, `failure`, `skipped`, or `not reached`) and the
+  issue this run filed, or "no issue filed", to the step summary, and
+  `review-output.md` is uploaded as the `review-output-<type>` artifact. A run that
+  found nothing and a run that failed to file used to look the same; `gh run view
+  <id>` now tells them apart.
+- **`since` on manual dispatch.** A scoped type's window is "8 days before now", so a
+  failed run could never be re-run over its own window. Dispatch with `since` set to a
+  commit SHA or a `YYYY-MM-DD` date to review from there:
+
+  ```bash
+  gh workflow run weekly-reviews.yml -f review_type=data-qa -f since=2026-08-05
+  ```
+
+  The input is read from `env`, never interpolated into the script, and anything that
+  is neither an existing commit nor a strict date fails the step. Full-scope types
+  ignore it.
+
 ## On-Demand Audit Prompts
 
 Not in the scheduled rotation — paste into a Claude Code session in the target repo,
