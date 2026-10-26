@@ -273,8 +273,9 @@ def main() -> int:
     checks = []
     try:
         for v, args, cd in found:
-            cwd = (os.path.normpath(os.path.join(base, os.path.expanduser(_local_path(_expand(cd, shell_vars)))))
-                   if cd else base)
+            target_dir = _local_path(_expand(cd, shell_vars)) if cd else None
+            cwd = (os.path.normpath(os.path.join(base, os.path.expanduser(target_dir)))
+                   if target_dir else base)
             repo_flag = _flag(args, "--repo", "-R")
             repo = ("-R", _expand(repo_flag, shell_vars)) if repo_flag else ()
             target = next((a for a in args if not a.startswith("-")), "")
