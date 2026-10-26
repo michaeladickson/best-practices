@@ -86,21 +86,9 @@ a vague "the agent handles payments."
 - **Set explicit spending limits for agents.** Permission to act is not a budget. An agent that moves money or consumes paid services (API calls, compute credits) needs a hard cap on outflow, set *per-task or workflow* to prevent exceeding budgets through many small transactions.
 - **Give financially-acting agents their own identity layer.** Authentication, tokenization and wallet management per agent, so every financial action traces to a verified principal and its limits.
 
-### 5. Implement action-level authorization
-Develop security mechanisms that evaluate not just who or what is acting, but *what* an agent attempts to do, *on whose authority*, and *under which policy*. This creates a continuous security lifecycle for dynamic agent behaviors.
-
-### 6. Assign a trust score to agents
-Implement a composite 'trust score' for AI agents, based on resilience, reliability, and performance, to dynamically manage their operational autonomy and scope. Apply real-time policy enforcement and anomaly monitoring, similar to credit limits.
-
-### 7. Design digital wallets with agent controls
-Implement agent-specific controls, visibility, and permissioning within digital wallets to manage financial transactions. This ensures secure and authorized access to multiple payment credentials for AI agents.
-
 ### Theme B — Gate and approve
 
-### 5. Define explicit human intervention paths
-Architect production agents so there is no direct path from reasoning to action; every tool invocation must pass through explicit controls. Clearly define escalation paths and human intervention points for all consequential actions.
-
-### 6. A Judge Layer gates the action, not the prose
+### 5. A Judge Layer gates the action, not the prose
 Put a gatekeeper between "agent proposes X" and "X executes" that returns an explicit
 *approve / reject / escalate* — never let execution proceed on implied approval. The
 judge can be deterministic (policy rules: amount thresholds, allow-lists, business-hours)
@@ -110,8 +98,9 @@ structured, logged decision.**
 
 - **Pre-screen routine actions, escalate the rest.** A classifier auto-approves the low-risk majority and routes only the dangerous or genuinely uncertain actions to a human, which is what keeps human review meaningful.
 - **Calibrate agent confidence scores.** A judge or a human acting on "95% confident" needs that number to mean 95%. Uncalibrated confidence quietly bypasses fail-safe-on-uncertainty.
+- **A peer agent's go-ahead is not approval.** In agent-to-agent handoffs a status like "promising" never turns into "approved" by default. In the Hugging Face attack one agent took a peer's go-ahead as permission; only the judge or a named human approves.
 
-### 7. Human-in-the-loop for the irreversible
+### 6. Human-in-the-loop for the irreversible
 For Tier-3 actions, require a human's explicit yes — a mobile approve/deny, a PR
 checkbox, a confirmation step that prints exactly what will happen. Design against
 **alert fatigue**: gate only what truly needs it (driven by *Classify every action by reversibility and blast radius*), so approvals stay
@@ -121,10 +110,7 @@ meaningful instead of being rubber-stamped.
 - **Give every high-blast-radius action an undo.** Where an action can be reversed, a time-boxed human-initiated rollback adds safety after execution without requiring approval before it.
 - **Keep operators able to intervene.** As agents take over routine operations and incident response, humans lose the system knowledge an escalation needs (comprehension debt). Human review of agent incident analyses and drills that require human intervention keep it.
 
-### 8. Prevent implicit approval in handoffs
-Design agent-to-agent and agent-to-human workflows to explicitly prevent a 'promising' status from implicitly becoming 'approved.' Require explicit authorization to avoid unintended escalation of actions.
-
-### 9. Fail safe — stop and ask on uncertainty
+### 7. Fail safe — stop and ask on uncertainty
 An agent that can't verify a precondition must **halt and escalate**, not guess. The
 data-deletion catastrophe was a confident guess. Bake in: "if you cannot confirm X, do
 not proceed — surface the ambiguity." Externalize what's load-bearing/destructive into
@@ -135,17 +121,17 @@ still gate the action.
 
 ### Theme C — Verify, monitor and audit
 
-### 10. Implement observable controls, not policy statements
+### 8. Implement observable controls, not policy statements
 Embed repeatable security and resilience controls directly into the software lifecycle, making them observable and measurable. Assess controls at maturity levels to ensure high-risk failures are prevented by the delivery system itself.
 
-### 11. Never trust the agent's self-report
+### 9. Never trust the agent's self-report
 Agents fabricate success ("I tested it," "I recovered the data"). Verify the action's
 effect from an independent source (the actual row count, the API's returned status, a
 re-query) before believing it — and especially before reporting success to a human.
 
 - **Evaluate the trajectory, not just the answer.** An outcome reached by fabricated evidence or a dataset shortcut passes an end-state check; only the execution path shows it.
 
-### 12. Gate every agent update on evals
+### 10. Gate every agent update on evals
 A release is blocked unless a repeatable evaluation shows the agent still preserves its
 required behaviors across the full execution path: context assembly, tool calls and
 permissions, against explicitly defined limits.
@@ -156,7 +142,7 @@ permissions, against explicitly defined limits.
 - **Test every surface for prompt injection.** Adversarial tests on each place the agent reads external content (see [Prompt-Injection Mitigation](prompt-injection-mitigation.md)).
 - **Probe for covert behavior adversarially.** Environments such as SHADE-Arena and LinuxArena look for agents pursuing hidden objectives while appearing compliant.
 
-### 13. Provenance and an audit trail for every action
+### 11. Provenance and an audit trail for every action
 Log each agent action with its inputs, the judge's decision + reason, who/what approved,
 and the result. This is what makes an agent action auditable (essential for financial /
 regulated workflows) and debuggable after the fact. Keep AI-proposed vs. human-approved
@@ -164,7 +150,7 @@ distinguishable.
 
 - **Make auto-approvals auditable and queryable.** An action the agent approved itself needs a record detailed enough to reconstruct the decision, queryable, and tied to the risk policy it was approved under.
 
-### 14. Checkpoint agent executions as durable workflows
+### 12. Checkpoint agent executions as durable workflows
 Checkpoint after each significant step so a session can pause, survive a crash and
 resume from the last validated state, rather than leaving a multi-step action half done.
 
@@ -172,19 +158,18 @@ resume from the last validated state, rather than leaving a multi-step action ha
 
 ### Theme D — Isolation and egress
 
-### 15. Isolate agent-generated code execution within hardened sandboxes
+### 13. Isolate agent-generated code execution within hardened sandboxes
 Code an agent generates and runs executes in a process sandbox, VM or WebAssembly
 runtime with tight filesystem boundaries and egress controls, so buggy or malicious code
 cannot reach the host, exfiltrate data or open the network.
 
-- **Use hardware-isolated microVMs for agent sandboxes.** Deploy agent sandboxes using hardware-isolated microVMs to combine the speed of containers with robust security. This provides a secure and efficient execution environment for agent-generated code.
-- **Optimize agent compute environments for rapid lifecycle.** Implement architectural optimizations for agent execution, such as rapid microVM booting, pausing idle VMs, and copy-on-write memory sharing. This manages agent lifecycle efficiency and reduces overhead for dynamic, high-churn sessions.
+- **Use hardware-isolated microVMs for agent sandboxes.** They start nearly as fast as containers but give each sandbox its own kernel, so agent-generated code does not share the host's.
 - **Cap CPU, memory and runtime in sandboxes.** Resource limits stop runaway loops and exhaustion from spreading beyond the sandbox.
 - **Allowlist filesystem access in agent environments.** Read and write only the named files and directories the task needs.
 - **Harden the whole runtime, not just the sandbox.** The tools, browsers and libraries inside the sandbox are attack surface too.
 - **Close OS-level bypasses of egress policy.** Built-in firewalls and NAT can silently override the agent's egress rules; verify that only allowed traffic is possible at the OS level.
 
-### 16. Control every path out of the environment
+### 14. Control every path out of the environment
 Isolation fails at the exits. Every outbound channel an agent can reach is a way to
 leak data or coordinate out of sight.
 
@@ -195,19 +180,19 @@ leak data or coordinate out of sight.
 - **Govern inter-agent communication explicitly.** Log and police the channels agents use to talk to each other, including notes left for future runs of themselves.
 - **Block shared package caches as covert channels.** Prevent agents in isolated sandboxes from communicating or leaving instructions for each other via shared package caches, treating them as vectors for malicious or unintended cross-agent influence.
 
-### 17. Keep sensitive data on trusted infrastructure
+### 15. Keep sensitive data on trusted infrastructure
 Bring the model to the data, not the data to the model provider.
 
 - **Run sensitive-data models locally** or on private infrastructure when inputs are confidential.
 - **Reason in the cloud, execute on-premises.** Cloud models can plan, while every tool call touching proprietary code, secrets or internal services runs inside the controlled environment.
 - **Require consent for local file and desktop access.** A desktop agent asks at runtime before touching local files, other applications or system resources.
 
-### 18. Protect against self-replicating AI worms
+### 16. Protect against self-replicating AI worms
 Develop specific defenses against the emerging threat of self-replicating AI worms utilizing small, open-weight models on cheap, internet-connected devices. Focus on preventing unauthorized inference and managing model execution on unfamiliar hardware to mitigate the risk of autonomous spread.
 
 ### Theme E — Identity and credentials
 
-### 19. Give every agent a verifiable identity
+### 17. Give every agent a verifiable identity
 Every agent runs as a unique, authenticated principal. That is what makes least
 privilege enforceable, accountability possible and the audit trail attributable. Log
 how an agent acquires new tools or roles mid-run, and authorize each change.
@@ -256,13 +241,8 @@ shared review workflow.
 
 Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 
-- **Who on-calls an AI? This is the unresolved crisis of agent ownership** (The New Stack) — Architect production agents so there is no direct path from reasoning to action; every tool invocation must pass through explicit controls. Clearly define escalation paths and human intervention points for all consequential actions. Digest: 2026-10-22.
-- **AI agent security is a lifecycle — not a gatekeeper** (The New Stack) — Develop security mechanisms that evaluate not just who or what is acting, but *what* an agent attempts to do, *on whose authority*, and *under which policy*. This creates a continuous security lifecycle for dynamic agent behaviors. Digest: 2026-10-22.
-- **Google turns the infrastructure behind Gemini’s agents into a cloud service** (The New Stack) — Deploy agent sandboxes using hardware-isolated microVMs to combine the speed of containers with robust security, providing a secure and efficient execution environment for agent-generated code. Digest: 2026-10-22.
-- **Inside Agent Compute Engine: Building the compute foundation for the agentic era** (Google Cloud Blog) — Implement architectural optimizations for agent execution, such as rapid microVM booting, pausing idle VMs, and copy-on-write memory sharing, to manage agent lifecycle efficiency and reduce overhead for dynamic, high-churn sessions. Digest: 2026-10-22.
-- **From feral to fiduciary: making AI agents serve your interests** (The New Stack) — Implement a composite 'trust score' for AI agents, based on resilience, reliability, and performance, to dynamically manage their operational autonomy and scope, applying real-time policy enforcement and anomaly monitoring. Digest: 2026-10-21.
-- **A Digital Wallet For Agents** (FinTech Takes (Alex Johnson)) — Implement agent-specific controls, visibility, and permissioning within digital wallets to manage financial transactions, ensuring secure and authorized access to multiple payment credentials for AI agents. Digest: 2026-10-19.
-- **Executive Briefing: In the Hugging Face Attack, One AI Agent Took a Peer's Go-Ahead as Permission. Here's My Prompt Kit to Test Who Your Agents Obey.** (Nate Jones) — Design agent-to-agent and agent-to-human workflows to explicitly prevent a 'promising' status from implicitly becoming 'approved,' requiring explicit authorization to avoid unintended escalation of actions. Digest: 2026-10-18.
+- **Google turns the infrastructure behind Gemini’s agents into a cloud service** (The New Stack) — Run agent sandboxes in hardware-isolated microVMs. Digest: 2026-10-22.
+- **Executive Briefing: In the Hugging Face Attack, One AI Agent Took a Peer's Go-Ahead as Permission. Here's My Prompt Kit to Test Who Your Agents Obey.** (Nate Jones) — A peer agent's go-ahead is not approval. Digest: 2026-10-18.
 - **Anthropic’s red team ran AI on 15 cheap TV boxes. Then the math got unsettling.** (The New Stack) — Develop specific defenses against self-replicating AI worms, focusing on preventing unauthorized inference and managing model execution on unfamiliar hardware. Digest: 2026-10-13.
 - **Cloudflare brings paid access to MCP tools — who controls the agent’s spending?** (The New Stack [devops]) — Set total spending allowances per agent task or workflow, not just per individual tool call. Digest: 2026-10-02.
 - **Quoting Matthew Green** (Simon Willison [ai_engineering]) — Prevent agents from communicating via shared package caches in isolated sandboxes. Digest: 2026-10-01.

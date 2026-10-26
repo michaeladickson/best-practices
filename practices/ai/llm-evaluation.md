@@ -103,7 +103,7 @@ Start small (20–50 cases) and grow it.
 | Open-ended generation | rubric score (LLM-as-judge) + spot human review |
 
 - **Check that confidence is calibrated.** Where a model reports a probability, measure whether its stated confidence matches its actual accuracy on your task.
-- **Tune decision model thresholds for binary evaluations.** Optimize the performance of decision models in automated evaluations by carefully tuning their classification thresholds. This ensures the best balance between catching failures and avoiding false alarms in binary pass/fail assessments.
+- **Tune a binary judge's threshold on labeled cases.** A pass/fail decision model's cutoff sets the trade between missed failures and false alarms; pick it on labeled data rather than taking the default.
 
 ### LLM-as-judge for open-ended outputs — but validate the judge
 For generation tasks where exact-match doesn't apply, score against an explicit rubric
@@ -123,6 +123,8 @@ inside pipelines — data one AI component extracts or summarizes before storing
 passing on can silently poison downstream context ("silent hallucination"). In domains
 demanding mathematical or logical rigor (code, math, planning), step up from spot-checks
 to formal verification of the artifact.
+
+- **Grade agent work by the end state it leaves.** Compare the final database state with the expected one in an executable check instead of reading the agent's account. The same check can serve as a reward signal if you post-train.
 
 ### Account for non-determinism in evaluation
 Outputs vary run to run, and more so with external tools enabled. Quantify the
@@ -199,12 +201,6 @@ recall accurately while misapplying meaning or context.
 
 - **Evaluate RAG infrastructure at scale — including access control.** Naive RAG fails at production scale (timeouts, data loss); evaluate ingestion, prompt caching, cost and latency as part of quality, and verify retrieval honors RBAC and multi-tenant isolation.
 
-### Use executable checks on database state for RL rewards
-Evaluate agent work by comparing the final database state with the expected outcome using executable checks. Employ these executable signals as reward functions for post-training agents to improve repeatable success.
-
-### Benchmark agents for continual learning from experience
-Develop benchmarks that measure an agent's ability to learn from past experiences and improve performance, rather than just recalling stored facts. This assesses genuine learning capabilities beyond simple information retrieval.
-
 ### Evaluate the orchestration layer: routers, decomposition, tool prompts
 Multi-agent decomposition and dynamic model routing are their own failure surfaces.
 Evaluate the router's decisions and the decomposition quality by their effect on
@@ -245,9 +241,6 @@ open-weight viability — alongside raw capability.
 
 ### Estimate full benchmark scores from a subset
 For efficient evaluation of frequently changing agents, develop methods to reliably estimate full benchmark scores from a statistically significant subset of questions. This allows for faster re-testing cycles with quantifiable error margins.
-
-### Augment open model benchmarks with agent workflow evaluations
-Supplement public open model benchmarks with internal evaluations that run against custom agent workflows. This assesses production readiness and repeated performance under realistic conditions, beyond optimal benchmark scores.
 
 ### Probe benchmarks for overfitting — and publish your eval methodology
 Models memorize benchmark patterns. Vary known benchmark prompts and probe for direct
@@ -393,10 +386,8 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **Cursor acquired Firetiger. A month later, it launched a bot that tracks code changes from PR to production.** (The New Stack) — establish a continuous pipeline to track and monitor code changes from PR to production for regressions. Digest: 2026-09-24.
 - **Papers You Should Know About** (Pascal Biese (LLM Watch)) — estimate full benchmark scores from a statistically significant subset of questions for efficient evaluation. Digest: 2026-09-25.
 - **Claude’s new auto eval tool** (Hamel Husain [ai_engineering]) — efficient human feedback for evaluation. Digest: 2026-09-30.
-- **How To Use Decision Models for Evals** (Hamel Husain) — Optimize the performance of decision models in automated evaluations by carefully tuning their classification thresholds. Digest: 2026-10-20.
-- **Assess the entire inference stack — not just open model benchmarks** (The New Stack) — Supplement public open model benchmarks with internal evaluations that run against custom agent workflows. Digest: 2026-10-21.
-- **Five AI agent harnesses took the same memory test. The results weren’t even close.** (The New Stack) — Develop benchmarks that measure an agent's ability to learn from past experiences and improve performance. Digest: 2026-10-22.
-- **Turning Database Grading into RL Rewards: Post-Training Agents with ThinkingBox** (Hugging Face Blog) — Evaluate agent work by comparing the final database state with the expected outcome using executable checks. Digest: 2026-10-23.
+- **How To Use Decision Models for Evals** (Hamel Husain) — Tune a binary judge's threshold on labeled cases. Digest: 2026-10-20.
+- **Turning Database Grading into RL Rewards: Post-Training Agents with ThinkingBox** (Hugging Face Blog) — Grade agent work by the end state it leaves. Digest: 2026-10-23.
 
 ## Where Used
 

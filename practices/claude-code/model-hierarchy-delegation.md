@@ -142,32 +142,26 @@ The more job context lives in files, folders, search, embeddings, project notes,
 
 -   **Audit provider independence.** Periodically run a standard set of prompts and tests on a real project with a different provider, to find out whether it could continue the work if cost, policy or capability forced a switch.
 
-### 8. Adopt common API specifications for LLM interactions
-Utilize open, common API specifications like Open Responses to standardize how agents interact with different LLM providers. This reduces vendor-specific integrations and enhances model portability and flexibility.
-
-### 9. Build AI gateways with small cores and modular plugins
-Design AI gateways with a minimal core and modular plugins for functionalities like model providers, routing, and security, inspired by architectures like Nginx. This enhances flexibility, simplifies maintenance, and isolates changes.
-
 ### Theme B — Delegation: what goes to a subagent
 
-### 10. Delegate mechanical and scoped work; keep judgment in the parent
+### 8. Delegate mechanical and scoped work; keep judgment in the parent
 The parent decides *which* skills to author, *whether* a finding is real, *how* a change fits the architecture. A subagent does *"read these four files and return the DocNumber assertion location"* or *"verify each of these 12 commands runs without error and return `{command, ok, error}`."* If a subtask can be defined by a fixed input and a **structured** output, it can probably be delegated.
 
 -   **Define what good looks like before delegating.** The outcome and quality bar go in the handoff; a subagent that knows the target needs less review and less rescue.
 
-### 11. Never delegate the judgment layer
+### 9. Never delegate the judgment layer
 The parent keeps: authoring decisions, drop / merge / route decisions, the final synthesis, and anything touching money movement, prod writes, deletes, or outbound comms. Subagents produce inputs to the parent's judgment; they never *perform* it.
 
-### 12. Give the parent a rule, not a script
+### 10. Give the parent a rule, not a script
 Tell the parent the tier table above and let it route. Vincent's version: *"use your judgement to decide an appropriate lower power model."* Prescribing which model to spawn where kills the judgment that makes delegation win.
 
 -   **Prompt frontier models briefly.** State the objective and trust the model to orchestrate subagents; step-by-step detail written for weaker models hobbles it.
 -   **Drop negative constraints and example padding.** Long "don't do X" lists and piles of examples can lower output quality on current frontier models. Say what you want.
 
-### 13. Watch for spawn-overhead-dominates
+### 11. Watch for spawn-overhead-dominates
 Every subagent spawn has fixed cost (context load, prompt, roundtrip). For very small tasks — *does this file exist* — inline is cheaper than delegating. Rule of thumb: if the task's own tokens are less than about 10× the spawn overhead, do it inline in the parent.
 
-### 14. Verify with a different, cheaper agent
+### 12. Verify with a different, cheaper agent
 After a working subagent finishes, send its output and the completion condition to a smaller, faster model (e.g., Haiku) as an independent verifier, so the worker never grades its own homework.
 
 -   **Keep the reviewer context-blind.** A verifier that has not seen the generating agent's reasoning judges the artifact on its merits, not on the story that produced it.
@@ -175,10 +169,10 @@ After a working subagent finishes, send its output and the completion condition 
 
 ### Theme C — Running the tree
 
-### 15. Depth cap: 2. Team cap: small.
+### 13. Depth cap: 2. Team cap: small.
 One subagent tier under the parent — no nesting further. Depth-3+ orchestrations compound spawn overhead and lose reviewability. Small teams (≤ ~5 concurrent) match Anthropic's Claude Code cost docs: *"keep teams small, shut down teammates when they are done."*
 
-### 16. Orchestrate parallel subagents for large tasks
+### 14. Orchestrate parallel subagents for large tasks
 For demanding work, the frontier model coordinates several subagents on distinct workstreams at once ('ultra' effort levels), trading tokens for a stronger result sooner.
 
 -   **Track multi-stage work with a state machine.** Sequential stages (reproduce, diagnose, verify, fix) each go to a specialist subagent, with progress in an explicit state machine (GitHub labels work) so every handoff is visible.
@@ -188,21 +182,21 @@ For demanding work, the frontier model coordinates several subagents on distinct
 -   **Keep talking while background subagents work.** When a subagent takes the slow reasoning or search, the parent keeps the user informed instead of going silent.
 -   **Run long unsupervised subagents in a persistent cloud environment**, so the work continues when the local machine is off.
 
-### 17. Design for agent swarms under simple interfaces
+### 15. Design for agent swarms under simple interfaces
 Implement complex tasks using an 'invisible swarm of agents' orchestrated beneath a simple, user-facing interface. This abstracts complexity and provides a more coherent user experience.
 
-### 18. Prevent overthinking from exceeding token limits
+### 16. Prevent overthinking from exceeding token limits
 When using effort controls or high reasoning settings, monitor for cases where models 'overthink' and exceed token limits before producing a valid output. Implement safeguards to prevent this costly and unproductive behavior.
 
-### 19. Shutdown discipline
+### 17. Shutdown discipline
 Every subagent shuts down as soon as its structured return lands in the parent. Long-lived teammates burn tokens and drift; short-lived ones are what make the economics work.
 
-### 20. Structured returns, never free-form prose
+### 18. Structured returns, never free-form prose
 Subagents return JSON or terse markdown against a small schema the parent can review at a glance. Free-form returns force the parent to re-read the raw material the subagent already consumed — that defeats the whole point of delegating.
 
 -   **Standardize the cross-session recap.** For work spread across parallel sessions, a recap skill that always reports the goal, status with evidence, blocked-on-person vs. blocked-on-technical, and next steps with an owner.
 
-### 21. Log the delegation trail
+### 19. Log the delegation trail
 Record each spawn: subagent model, task summary, structured return. That's what makes the tree auditable, and what lets you retro whether the delegation ratio is actually cost-effective for this repo instead of a comforting story.
 
 ## Adjacent Concerns
@@ -244,8 +238,6 @@ Use [`reviews/model-hierarchy-review.md`](../../reviews/model-hierarchy-review.m
 
 Saved articles synthesized here (full summaries in `data/digest_knowledge/`), and the Claude Code team's own guidance:
 
--   **OpenAI donates Open Responses, its spec for a common LLM API, to the Agentic AI Foundation** (The New Stack) — Standardize LLM interactions with open API specifications to reduce vendor lock-in. Digest: 2026-10-22.
--   **Respan spent two years building on LiteLLM. One upgrade made it start over.** (The New Stack) — Design AI gateways with a minimal core and modular plugins for flexibility and maintainability. Digest: 2026-10-21.
 -   **Academia is for Ambition — Alex Zhang, MIT** (Latent Space [ai_engineering]) — Implement complex tasks using an 'invisible swarm of agents' under a simple interface. Digest: 2026-10-02.
 -   **The Pulse: Firebase’s global outage & poor response** (The Pragmatic Engineer [engineering]) — Design systems for flexible budget allocation across diverse AI models and partners. Digest: 2026-10-01.
 -   **Claude Sonnet 5.5** (Simon Willison [ai_engineering]) — Prevent models 'overthinking' and exceeding token limits, especially with effort controls. Digest: 2026-09-29.
