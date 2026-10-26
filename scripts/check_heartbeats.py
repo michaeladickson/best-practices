@@ -38,6 +38,14 @@ CHECKS = [
         "path": str(ROOT / "data" / "feed_archive" / "posts.json"),
         "max_age_days": 9,
     },
+    # Written only on a good read, so a page that keeps failing goes stale here
+    # even if its "page unreadable" issue could not be filed.
+    {
+        "name": "Gemini deprecations watch (inside weekly run)",
+        "type": "file_mtime",
+        "path": str(ROOT / "data" / "model_deprecations.json"),
+        "max_age_days": 9,
+    },
     {
         "name": "weekly-skills-sync (Mon 8am)",
         "type": "json_last_run",

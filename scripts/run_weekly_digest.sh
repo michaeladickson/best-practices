@@ -312,11 +312,14 @@ python3 scripts/check_gh_usage.py || echo "WARNING: GH usage tripwire fired or c
 # Standing price check on the model watchlist. Files an issue only when a
 # tracked model's rate moves >=5% or leaves the feed; otherwise it just
 # refreshes data/model_pricing.md and the weekly commit carries the diff.
-python3 -m digest.model_pricing || echo "WARNING: model pricing check failed" >&2
+# Same step watches the Gemini API deprecations page: files an issue when a
+# gemini-2.5-* row's shutdown date changes, and a separate "page unreadable"
+# issue (exit 1, WARNING below) when the page cannot be fetched or parsed.
+python3 -m digest.model_pricing || echo "WARNING: model pricing or Gemini deprecations check failed" >&2
 
-git add data/feed_report.md data/feed_candidates.json data/model_pricing.md data/model_pricing.json 2>/dev/null
+git add data/feed_report.md data/feed_candidates.json data/model_pricing.md data/model_pricing.json data/model_deprecations.json 2>/dev/null
 if ! git diff --cached --quiet; then
-  git commit -q -m "Weekly telemetry: feed report + citation ledger + model pricing [automated]"
+  git commit -q -m "Weekly telemetry: feed report + citation ledger + model pricing + Gemini deprecations [automated]"
   git push -q origin main || echo "WARNING: push of telemetry failed" >&2
 fi
 
