@@ -71,6 +71,11 @@ EXCLUDE = {
     "claude.com", "anthropic.com",  # already covered by the two Anthropic feeds
     "discord.gg", "discord.com", "slack.com", "meetup.com", "eventbrite.com",
     "lu.ma", "twitch.tv", "notion.site", "docs.google.com", "forms.gle",
+    # The 2026-10-26 triage of 12 open proposals: product apps and an event host
+    # (luma.com is lu.ma's new domain), press-release wires, and OpenAI's own
+    # subdomains, which the OpenAI Blog feed already covers (as with anthropic.com).
+    "luma.com", "chatgpt.com", "openai.com",
+    "prnewswire.com", "businesswire.com", "globenewswire.com",
 }
 
 FEED_PROBES = ["/feed", "/rss", "/feed.xml", "/rss.xml", "/atom.xml", "/index.xml"]
@@ -265,13 +270,18 @@ def propose(ledger: dict, dry_run: bool) -> list[str]:
         key=lambda kv: -kv[1]["articles"])
     for domain, entry in ready[:MAX_PROPOSALS_PER_RUN]:
         feed_url = resolve_feed(domain)
-        if feed_url:
-            action = (f"Feed found: `{feed_url}`\n\nTo subscribe, add to "
-                      f"`digest/config/feeds.yaml` (pick a category).")
-        else:
-            action = ("No feed found (autodiscovery + conventional paths). "
-                      "Check the site manually; route one-off finds through the "
-                      "digest inbox rather than a scraper.")
+        if not feed_url:
+            # A feed candidate with no feed asks for a manual site check that never
+            # happened: on 2026-10-26, 6 of the 12 open proposals had no feed, the
+            # oldest 31 days untouched. Record it in the ledger and file nothing.
+            log.info("candidate_no_feed", domain=domain, articles=entry["articles"])
+            if dry_run:
+                print(f"[dry-run] no feed, not filed: {domain}")
+            entry["proposed"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            entry["no_feed"] = True
+            continue
+        action = (f"Feed found: `{feed_url}`\n\nTo subscribe, add to "
+                  f"`digest/config/feeds.yaml` (pick a category).")
         title = f"Feed candidate: {domain} (cited in {entry['articles']} articles)"
         body = (f"`{domain}` crossed the citation threshold.\n\n"
                 f"- Cited in **{entry['articles']}** distinct articles "
