@@ -77,6 +77,15 @@ NEAR_CAP_RATIO = 0.85
 # structural guards: the 26 legacy offenders must not reject every future run.
 MAX_PRACTICE_TITLE_WORDS = 12
 
+# Total new practices per run, across all docs. The extraction prompt has always said
+# "most weeks will yield 0-3", and the model ignored it every week: the 2026-10-23 run
+# added 23, 19 of them off-topic or restating an existing practice, and put back 5
+# headings into code-review-and-ai-slop.md two days after a hand consolidation took it
+# from 40 practices to 23. A prompt sentence is not a limit. The model lists
+# candidates best-first; high confidence outranks medium; the rest are dropped and
+# their articles marked seen like any other article that produced nothing.
+MAX_CANDIDATES_PER_RUN = 3
+
 
 def _load_doc_config(path: Optional[str] = None) -> tuple[list[dict], list[str]]:
     p = Path(path) if path else CONFIG_DIR / "practice-docs.yaml"
@@ -194,8 +203,12 @@ Here are this week's articles:
 {_posts_block(posts)}
 
 Identify only GENUINELY NEW, concretely-actionable best practices that NONE of the
-documents above already cover. Be strict: most weeks will yield 0-3 across all of them.
+documents above already cover. Be strict: most weeks will yield 0-3 across all of them,
+and at most {MAX_CANDIDATES_PER_RUN} will be used. List candidates best-first.
 Ignore vendor news, pricing, model-release chatter, and anything generic or off-topic.
+Also drop: a vendor's product pitch restated as a practice, model-serving or training
+infrastructure (inference routing, KV caches, tokenizers) unless a document's scope
+names it, and anything only a platform vendor could act on.
 
 Routing — each practice goes in exactly ONE document:
 - Set "doc" to the single path it fits best. Never propose the same idea twice for
@@ -263,7 +276,11 @@ Rules:
                         practice=c.get("practice"), reason="unknown doc or source")
             continue
         kept.append(c)
-    return kept
+    kept.sort(key=lambda c: c.get("confidence") != "high")  # stable: keeps model order
+    for c in kept[MAX_CANDIDATES_PER_RUN:]:
+        log.warning("extract_candidate_dropped", doc=c.get("doc"),
+                    practice=c.get("practice"), reason="over run cap")
+    return kept[:MAX_CANDIDATES_PER_RUN]
 
 
 def _integrate(client, doc_text: str, topic: str, candidates: list[dict],
@@ -326,6 +343,8 @@ YOUR PREVIOUS ATTEMPT WAS REJECTED BY VALIDATION: {fix_note}
 Two practice titles whose first three content words match count as duplicates. If the
 two practices are the same idea, merge them into one; if they differ, reword one title
 so it leads with what distinguishes it. Titles stay at 12 words maximum.
+If a practice number repeats, renumber every `### N.` heading in order from the top
+of "## Best Practices", across all themes.
 """
     resp = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
     if not resp.text:
@@ -409,6 +428,27 @@ def _overlong_titles(text: str) -> set[str]:
             if len(t.split()) > MAX_PRACTICE_TITLE_WORDS}
 
 
+_NUMBERED_HEADING_RE = re.compile(r"^###\s+(\d+)\.\s")
+
+
+def _repeated_practice_numbers(text: str) -> set[int]:
+    """Practice numbers used by more than one `### N.` heading above `## Sources`.
+
+    The 2026-10-23 run inserted three practices at the end of one theme and one at
+    the start of the next, and renumbered only from the second insertion, so
+    agent-action-safety.md carried 5, 6 and 7 twice. No other guard reads numbers."""
+    seen: set[int] = set()
+    repeated: set[int] = set()
+    for ln in text.splitlines():
+        if ln.strip().lower().startswith("## sources"):
+            break
+        m = _NUMBERED_HEADING_RE.match(ln.strip())
+        if m:
+            n = int(m.group(1))
+            (repeated if n in seen else seen).add(n)
+    return repeated
+
+
 def _where_used_lines(text: str) -> list[str]:
     """Non-blank lines of the '## Where Used' section, to the end of the doc."""
     lines = text.splitlines()
@@ -458,11 +498,15 @@ def _validate(old: str, new: str, required_anchors: list[str]) -> tuple[bool, st
         t = next(iter(fresh_long))
         return False, (f"new practice title over {MAX_PRACTICE_TITLE_WORDS} words "
                        f"({len(t.split())}): {t!r}")
+    fresh_repeats = _repeated_practice_numbers(new) - _repeated_practice_numbers(old)
+    if fresh_repeats:
+        return False, f"new repeated practice number: {sorted(fresh_repeats)}"
     return True, "ok"
 
 
 # _validate reasons the model can repair on a second attempt (see _process_doc).
-RETRYABLE_REJECTIONS = ("new duplicate practice heading", "new practice title over")
+RETRYABLE_REJECTIONS = ("new duplicate practice heading", "new practice title over",
+                        "new repeated practice number")
 
 
 def _prepare_doc(doc: dict, posts: list[dict], ledger: dict) -> dict:

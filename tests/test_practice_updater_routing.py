@@ -127,3 +127,17 @@ def test_no_targets_means_no_llm_call(tmp_path, monkeypatch):
     client, _ = _setup(tmp_path, monkeypatch, json.dumps({"candidates": []}))
     pu._run_docs([A, B], [], [], {}, True, lambda: client)
     assert client.prompts == []
+
+
+def test_run_keeps_at_most_the_cap_high_confidence_first(tmp_path, monkeypatch):
+    posts = [{"link": f"https://example.test/{i}", "title": "beta", "content_preview": "x"}
+             for i in range(5)]
+    cands = [_cand("b.md", p["link"], practice=f"Practice {i}",
+                   confidence="medium" if i < 2 else "high")
+             for i, p in enumerate(posts)]
+    client, integrated = _setup(tmp_path, monkeypatch, json.dumps({"candidates": cands}))
+    ledger = {}
+    pu._run_docs([B], [], posts, ledger, False, lambda: client)
+    assert integrated == {"B": ["Practice 2", "Practice 3", "Practice 4"]}
+    # The dropped ones' articles are seen, not retried next week.
+    assert set(ledger["b.md"]) == {p["link"] for p in posts}

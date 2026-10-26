@@ -80,3 +80,15 @@ def test_structural_rejection_is_not_retried(tmp_path, monkeypatch):
     result, calls = _run(tmp_path, monkeypatch, LINKS_DROPPED)
     assert result["status"].startswith("rejected:markdown links dropped")
     assert len(calls) == 1
+
+
+def test_a_repeated_practice_number_is_rejected_and_retried(tmp_path, monkeypatch):
+    numbered = DOC.replace("### Keep the existing practice",
+                           "### Theme A\n\n### 1. Keep the existing practice\n\n### 2. Second")
+    repeated = numbered.replace("### 2. Second",
+                                "### 2. Second\n\n### 3. New one\n\n### Theme B\n\n### 3. Third")
+    ok, reason = pu._validate(numbered, repeated, [])
+    assert not ok and reason == "new repeated practice number: [3]"
+    assert reason.startswith(pu.RETRYABLE_REJECTIONS)
+    # A repeat the doc already had does not block every later run.
+    assert pu._validate(repeated, repeated + "\n", [])[0]

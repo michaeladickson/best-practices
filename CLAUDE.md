@@ -104,6 +104,10 @@ anchors). Guardrails, since this also edits the anti-slop doc itself:
   a longer one. New-only, so a pre-existing long title never blocks a run. Of the 151
   found on 2026-09-20, 2 remained on 2026-10-21 and were shortened by hand that day;
   `_overlong_titles()` over the five docs reads 0.
+- **At most 3 new practices per run** (`MAX_CANDIDATES_PER_RUN`), high confidence first.
+  The prompt's "most weeks yield 0-3" was ignored every week; the 2026-10-23 run added 23,
+  and 19 were cut by hand on 2026-10-26. The validator also rejects a newly repeated
+  `### N.` practice number (that run left 5, 6 and 7 twice in agent-action-safety.md).
 - Most weeks change nothing. Review the `[automated]` practice commits like any other diff.
 
 ### Thin feed entries are read from the article
