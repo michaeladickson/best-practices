@@ -207,7 +207,12 @@ def _local_path(path: str, nt: bool = os.name == "nt") -> str:
     return path
 
 
-_HEREDOC_OPEN = re.compile(r"<<-?\s*(['\"]?)(\w+)\1")
+# A heredoc operator, not a here-string (`<<<`) or a shift (`n<<1`): `<<` after
+# whitespace, a separator or `(`, and a delimiter that starts like a word. A
+# here-string opener `@'` or `@"` ends its line and follows whitespace, `=` or
+# `(`; "bot@" at the end of a quoted email is not one.
+_HEREDOC_OPEN = re.compile(r"(?<![^\s|;&(])<<(?!<)-?\s*(['\"]?)([A-Za-z_]\w*)\1")
+_HERESTRING_OPEN = re.compile(r"(?:^|[\s=(])@(['\"])\s*$")
 
 
 def _strip_heredocs(command: str) -> str:
@@ -217,20 +222,27 @@ def _strip_heredocs(command: str) -> str:
     owner/app 264") was parsed as a command, checked against the wrong PR,
     and failed closed (2026-10-26). Only command finding uses this; the raw
     text, bodies included, is still what gets scanned for closing words.
+
+    A body whose terminator never comes is kept, not dropped: an opener read
+    by mistake (`$((n<<1))`, `"a << b"`) hid every later line, so a merge
+    after it passed with nothing checked (re-review, 2026-10-26).
     """
-    out, ends = [], []
+    out, ends, held = [], [], []
     for line in command.split("\n"):
         if ends:
             end = ends[0]
             if line.strip() == end or (end.endswith("@") and line.lstrip().startswith(end)):
                 ends.pop(0)
                 out.append(line)
+                held = []
+            else:
+                held.append(line)
             continue
         out.append(line)
         ends = [m.group(2) for m in _HEREDOC_OPEN.finditer(line)]
-        if re.search(r"@['\"]\s*$", line):
-            ends.append(line.rstrip()[-1] + "@")
-    return "\n".join(out)
+        if m := _HERESTRING_OPEN.search(line):
+            ends.append(m.group(1) + "@")
+    return "\n".join(out + held)
 
 
 def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str], str | None]]:
@@ -259,6 +271,14 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
         if not _is_pr_verb(tokens, i):
             continue
         args = []
+        # `GH_REPO=o/r gh pr merge 46` points this one command at o/r. A prefix
+        # binds only the command it precedes; read as a whole-command setting,
+        # it redirected a later merge in the same chain to the wrong repo.
+        k = i - 1
+        while k >= 0 and re.match(r"^[A-Za-z_]\w*=", tokens[k]):
+            if tokens[k].startswith("GH_REPO="):
+                args += ["-R", tokens[k].split("=", 1)[1]]
+            k -= 1
         for j in range(i + 3, len(tokens)):
             t = tokens[j]
             if t in _SEPARATORS or _is_pr_verb(tokens, j):
@@ -313,16 +333,22 @@ def text_to_scan(verb: str, args: list[str], repo: list[str],
 
 
 _ISSUE_LIMIT = 1000
-_HEREDOC = re.compile(r"<<-?\s*['\"]?\w+|@['\"]\s*$", re.MULTILINE)
+# The body on stdin is visible only when the heredoc is on the gh command's own
+# line, or a PowerShell here-string is piped straight into it.
+_STDIN_BODY = re.compile(r"\bgh\s+pr\s+(?:create|edit|merge)\b[^\n]*?(?<![^\s|;&(])<<(?!<)"
+                         r"|^\s*['\"]@\s*\|\s*gh\s+pr\b", re.MULTILINE)
 _XARGS = re.compile(r"\bxargs\b[^;&|\n]*\bgh\s+pr\s+(?:create|edit|merge)\b")
-# `GH_REPO=o/r gh pr merge 46` and PowerShell's `$env:GH_REPO = "o/r"` point gh
-# at another repo, and the gate read this one's PR #46 and open issues.
-_PS_GH_REPO = re.compile(r"""\$env:GH_REPO\s*=\s*["']?([^"'\s;]+)""", re.IGNORECASE)
+# `export GH_REPO=o/r` and PowerShell's `$env:GH_REPO = "o/r"` point every later
+# gh at another repo, and the gate read this one's PR and open issues. A bare
+# `GH_REPO=o/r gh ...` prefix binds one command: _pr_commands turns it into -R.
+_GH_REPO = re.compile(r"""(?:\bexport\s+GH_REPO=|\$env:GH_REPO\s*=\s*)["']?([^"'\s;]+)""",
+                      re.IGNORECASE)
+_GH_HOST = re.compile(r"\bGH_HOST=|\$env:GH_HOST\s*=", re.IGNORECASE)
 
 
-def _gh_repo(command: str, shell_vars: dict[str, str]) -> str | None:
-    m = _PS_GH_REPO.search(command)
-    return shell_vars.get("GH_REPO") or (m.group(1) if m else None)
+def _gh_repo(command: str) -> str | None:
+    m = _GH_REPO.search(command)
+    return m.group(1) if m else None
 
 
 # PowerShell is the primary shell in these sessions, and `gh` is on its PATH. A
@@ -338,14 +364,21 @@ def main() -> int:
     found = _pr_commands(command, payload.get("tool_name"))
     if not found:
         return 0
-    if _XARGS.search(command):
+    # Whole-command signals are read with heredoc bodies removed: a PR body that
+    # says "GH_REPO=..." or "xargs gh pr merge" is prose, not a setting.
+    stripped = _strip_heredocs(command)
+    if _GH_HOST.search(stripped):
+        print("closing_keyword_gate: GH_HOST points gh at another host, whose issues "
+              "the gate does not read. Run the `gh pr` command without it.", file=sys.stderr)
+        return 2
+    if _XARGS.search(stripped):
         # `... | xargs -n1 gh pr merge` gives gh its PR on stdin, so the gate
         # would read the current branch's PR instead of the ones being merged.
         print("closing_keyword_gate: a `gh pr` command fed by xargs names PRs the "
               "gate cannot see. Run each `gh pr merge <n>` on its own.", file=sys.stderr)
         return 2
     verb = "/".join(dict.fromkeys(v for v, _, _ in found))
-    shell_vars = _shell_vars(command)
+    shell_vars = _shell_vars(stripped)
     base = payload.get("cwd") or os.getcwd()
     checks = []
     try:
@@ -353,10 +386,10 @@ def main() -> int:
             target_dir = _local_path(_expand(cd, shell_vars)) if cd else None
             cwd = (os.path.normpath(os.path.join(base, os.path.expanduser(target_dir)))
                    if target_dir else base)
-            repo_flag = _flag(args, "--repo", "-R") or _gh_repo(command, shell_vars)
+            repo_flag = _flag(args, "--repo", "-R") or _gh_repo(stripped)
             repo = ("-R", _expand(repo_flag, shell_vars)) if repo_flag else ()
             target = _target(v, args)
-            if _flag(args, "--body-file", "-F") == "-" and not _HEREDOC.search(command):
+            if _flag(args, "--body-file", "-F") == "-" and not _STDIN_BODY.search(stripped):
                 raise RuntimeError("--body-file - reads stdin, which the gate cannot see; "
                                    "write the body to a file or pass it as a heredoc")
             if not repo and (m := _PR_URL.match(target)):
