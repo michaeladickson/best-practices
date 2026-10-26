@@ -4,6 +4,11 @@
 # runs when someone remembers to run pytest locally is not one. The suite is
 # offline by construction (tests/conftest.py refuses network), so it needs no
 # secrets.
+#
+# .claude/hooks is named explicitly because pytest.ini's testpaths covers only
+# tests/. The hooks there are the canonical copies other repos re-copy, so a
+# broken one spreads. test_lint_on_write.py fails collection under CI when ruff
+# is missing rather than skipping, hence the pinned ruff below.
 
 name: Tests
 
@@ -24,6 +29,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: pip install -r digest/requirements.txt pytest
+        run: pip install -r digest/requirements.txt pytest ruff==0.17.0
       - name: Run tests
-        run: python -m pytest -q
+        run: python -m pytest -q tests .claude/hooks
