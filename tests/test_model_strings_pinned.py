@@ -51,7 +51,10 @@ _MODEL_RE = re.compile(
     # different and more expensive model, and Flash and Flash-Lite collapse
     # onto one string. Flash-Lite is Google's recommended successor to 2.5
     # Flash, so that is where the next bump is most likely to land.
-    r"gemini-\d+\.\d+-(?:flash|pro)(?:-[a-z0-9]+)*"
+    # The minor version is optional: Google ships whole-number ids too
+    # ("gemini-3-pro-preview", "gemini-3-flash-preview" on the deprecations page
+    # 2026-10-26), and a pattern that required "\d+\.\d+" never saw them.
+    r"gemini-\d+(?:\.\d+)?-(?:flash|pro)(?:-[a-z0-9]+)*"
     r"|claude-(?:opus|sonnet|haiku|fable|mythos)-\d+(?:-\d+)*"
     r")"
 )
@@ -69,6 +72,8 @@ def test_model_regex_captures_qualified_ids_in_full():
         "gemini-2.5-flash-image": "gemini-2.5-flash-image",
         "gemini-2.5-flash-lite-preview-09-2025": "gemini-2.5-flash-lite-preview-09-2025",
         'model="models/gemini-3.6-flash"': "gemini-3.6-flash",
+        "gemini-3-pro-preview": "gemini-3-pro-preview",
+        "gemini-3-flash-preview": "gemini-3-flash-preview",
         "claude-opus-5": "claude-opus-5",
         "claude-opus-5-5": "claude-opus-5-5",
         "claude-fable-5-1": "claude-fable-5-1",
