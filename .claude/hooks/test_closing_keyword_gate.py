@@ -13,6 +13,7 @@ hook by walking up from its own location, so it runs unchanged in either place.
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -230,6 +231,41 @@ def test_a_quoted_body_file_is_read_when_the_command_does_not_shlex(monkeypatch,
     got, err = _run(monkeypatch, capsys, command)
     assert "could not check" not in err
     assert got == code
+
+
+@pytest.mark.parametrize("text,code", [("Small fixes from #261.", 2), ("Clean body.", 0)])
+def test_a_powershell_backslash_path_keeps_its_backslashes(monkeypatch, capsys, tmp_path,
+                                                            text, code):
+    """POSIX shlex read `C:\\Users\\...\\b.md` as `C:Users...b.md`, so every
+    PowerShell create with a Windows path failed closed (2026-10-26)."""
+    body = tmp_path / "body.md"
+    body.write_text(text, encoding="utf-8")
+    win = str(body).replace("/", "\\")
+    assert gate._pr_commands(f"gh pr create --body-file {win}", "PowerShell")[0][1] == [
+        "--body-file", win]
+    if os.name == "nt":                   # only there is the backslash path real
+        got, err = _run(monkeypatch, capsys, f"gh pr create --title t --body-file {win}",
+                        tool="PowerShell")
+        assert "could not check" not in err
+        assert got == code
+
+
+def test_powershell_tokens_keep_hash_numbers():
+    """shlex.shlex treats `#` as a comment by default; shlex.split does not."""
+    assert gate._pr_commands("gh pr edit 12 --title '#261 stays open'", "PowerShell")[0][1] == [
+        "12", "--title", "#261 stays open"]
+
+
+@pytest.mark.parametrize("path,expected", [
+    ("/c/Users/m/b.md", "C:/Users/m/b.md"),
+    ("/d", "D:/"),
+    ("/tmp/b.md", "/tmp/b.md"),                  # not a drive letter
+    ("C:/Users/m/b.md", "C:/Users/m/b.md"),
+])
+def test_an_msys_path_is_opened_as_windows_reads_it(path, expected):
+    """Git Bash prints `/c/Users/...`; Windows Python read that as C:\\c\\Users."""
+    assert gate._local_path(path, nt=True) == expected
+    assert gate._local_path(path, nt=False) == path
 
 
 def test_an_unresolvable_path_still_fails_closed(monkeypatch, capsys):
