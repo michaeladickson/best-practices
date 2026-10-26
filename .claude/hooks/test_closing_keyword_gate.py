@@ -387,3 +387,77 @@ def test_prose_inside_a_heredoc_is_not_a_command(command):
 def test_a_command_after_a_heredoc_is_still_found():
     command = "cat > b.md <<'EOF'\nthe gh pr merge 1 idea\nEOF\ngh pr merge 264 --squash"
     assert [(v, a) for v, a, _ in gate._pr_commands(command)] == [("merge", ["264", "--squash"])]
+
+
+# ── the re-review of those fixes (2026-10-26) ─────────────────────────────
+
+@pytest.mark.parametrize("before", [
+    "x=$((n<<1))",                          # a shift, not a heredoc
+    'jq . <<< "text"',                      # a here-string, not a heredoc
+    'echo "a << b"',                        # quoted text; its "terminator" never comes
+    'git config user.email "bot@"',         # ends in @", not a PowerShell here-string
+])
+def test_a_false_heredoc_opener_does_not_hide_a_later_merge(before):
+    """Each of these opened a heredoc that never closed, so every later line
+    was dropped and the merge after it passed unchecked."""
+    command = before + "\ngh pr merge 264 --squash"
+    assert [v for v, _, _ in gate._pr_commands(command)] == ["merge"]
+
+
+def test_a_false_opener_still_lets_the_merge_be_checked(monkeypatch, capsys):
+    code, err = _run(monkeypatch, capsys, "x=$((n<<1))\ngh pr merge 264 --squash",
+                     body="The small fixes from #261.")
+    assert code == 2 and "#261" in err
+
+
+def test_a_gh_repo_prefix_binds_only_its_own_command(monkeypatch, capsys):
+    """`GH_REPO=o/r gh pr view 5 && gh pr merge 46` merges THIS repo's #46."""
+    calls = []
+    _run(monkeypatch, capsys, "GH_REPO=o/r gh pr view 5 && gh pr merge 46 --squash",
+         body="clean", calls=calls)
+    issue_list = next(a for a, _ in calls if a[:2] == ["issue", "list"])
+    assert "-R" not in issue_list
+
+
+def test_export_gh_repo_applies_to_later_commands(monkeypatch, capsys):
+    calls = []
+    _run(monkeypatch, capsys, "export GH_REPO=o/r && gh pr merge 46 --squash",
+         body="clean", calls=calls)
+    issue_list = next(a for a, _ in calls if a[:2] == ["issue", "list"])
+    assert issue_list[2:4] == ["-R", "o/r"]
+
+
+def test_gh_repo_in_a_body_is_prose_not_a_setting(monkeypatch, capsys):
+    """A PR body describing `GH_REPO=owner/app` redirected the open-issue list,
+    so a close of one of this repo's issues passed."""
+    calls = []
+    command = ("cat > b.md <<'EOF'\nexport GH_REPO=owner/app is the trick\nEOF\n"
+               "gh pr merge 46 --squash")
+    _run(monkeypatch, capsys, command, body="clean", calls=calls)
+    issue_list = next(a for a, _ in calls if a[:2] == ["issue", "list"])
+    assert "-R" not in issue_list
+
+
+def test_a_piped_body_fails_closed_even_with_a_heredoc_elsewhere(monkeypatch, capsys):
+    command = "cat > n.md <<'EOF'\nnotes\nEOF\ncat b.md | gh pr create --title t --body-file -"
+    code, err = _run(monkeypatch, capsys, command)
+    assert code == 2 and "stdin" in err
+
+
+def test_a_powershell_here_string_piped_into_create_is_scanned(monkeypatch, capsys):
+    command = "@'\nSmall fixes from #261.\n'@ | gh pr create --title t --body-file -"
+    code, err = _run(monkeypatch, capsys, command, tool="PowerShell")
+    assert code == 2 and "#261" in err
+
+
+def test_xargs_in_a_body_is_prose(monkeypatch, capsys):
+    command = ("cat > b.md <<'EOF'\nnever run xargs gh pr merge\nEOF\n"
+               "gh pr create --title t --body-file b.md")
+    monkeypatch.setattr(gate, "text_to_scan", lambda *a, **k: "clean")
+    code, err = _run(monkeypatch, capsys, command)
+    assert code == 0 and "xargs" not in err
+
+
+def test_gh_host_fails_closed(monkeypatch, capsys):
+    code, err = _run(monkeypatch, capsys, "GH_HOST=ghe.example.com gh pr merge 46")
+    assert code == 2 and "GH_HOST" in err
