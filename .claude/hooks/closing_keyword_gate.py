@@ -148,6 +148,15 @@ def _is_pr_verb(tokens: list[str], i: int) -> bool:
             and tokens[i + 2:i + 3] in (["create"], ["edit"], ["merge"]))
 
 
+def _unquote(token: str) -> str:
+    """One matching pair of surrounding quotes off, a trailing `;` kept."""
+    tail = ";" if token.endswith(";") else ""
+    core = token[:-1] if tail else token
+    if len(core) >= 2 and core[0] == core[-1] and core[0] in "\"'":
+        core = core[1:-1]
+    return core + tail
+
+
 def _pr_commands(command: str) -> list[tuple[str, list[str], str | None]]:
     """(verb, its own args, the `cd` in force) for EVERY gh pr command in it.
 
@@ -161,7 +170,10 @@ def _pr_commands(command: str) -> list[tuple[str, list[str], str | None]]:
     try:
         tokens = shlex.split(command, posix=True)
     except ValueError:
-        tokens = command.split()
+        # An apostrophe anywhere (a heredoc written earlier in the command)
+        # makes shlex raise. Plain split kept the quotes on "$SP/body.md", and
+        # a correct create failed closed on a path with quotes in it.
+        tokens = [_unquote(t) for t in command.split()]
     found = []
     cd = None
     for i in range(len(tokens)):

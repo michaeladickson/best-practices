@@ -216,6 +216,22 @@ def test_a_body_file_named_through_a_shell_variable_is_read(monkeypatch, capsys,
     assert code == 2, "the body behind $SP was not read, or not flagged"
 
 
+@pytest.mark.parametrize("text,code", [("Small fixes from #261.", 2), ("Clean body.", 0)])
+def test_a_quoted_body_file_is_read_when_the_command_does_not_shlex(monkeypatch, capsys,
+                                                                     tmp_path, text, code):
+    """An apostrophe in a heredoc written earlier in the same command makes
+    shlex raise, and the whitespace fallback kept the quotes around
+    "$SP/body.md", so a correct `gh pr create` failed closed on a path with
+    literal quotes in it (2026-10-26)."""
+    (tmp_path / "body.md").write_text(text, encoding="utf-8")
+    command = (f'SP="{tmp_path.as_posix()}"\n'
+               "cat > $SP/notes.md <<'EOF'\nthe repo's own copy\nEOF\n"
+               'gh pr create --title t --body-file "$SP/body.md"')
+    got, err = _run(monkeypatch, capsys, command)
+    assert "could not check" not in err
+    assert got == code
+
+
 def test_an_unresolvable_path_still_fails_closed(monkeypatch, capsys):
     monkeypatch.delenv("NOPE_UNSET", raising=False)
     code, err = _run(monkeypatch, capsys,
