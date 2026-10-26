@@ -148,7 +148,35 @@ def _is_pr_verb(tokens: list[str], i: int) -> bool:
             and tokens[i + 2:i + 3] in (["create"], ["edit"], ["merge"]))
 
 
-def _pr_commands(command: str) -> list[tuple[str, list[str], str | None]]:
+def _unquote(token: str) -> str:
+    """One matching pair of surrounding quotes off, a trailing `;` kept."""
+    tail = ";" if token.endswith(";") else ""
+    core = token[:-1] if tail else token
+    if len(core) >= 2 and core[0] == core[-1] and core[0] in "\"'":
+        core = core[1:-1]
+    return core + tail
+
+
+def _split(command: str, shell: str) -> list[str]:
+    # PowerShell has no backslash escape (its escape is the backtick), and
+    # POSIX shlex read `C:\Users\...\b.md` as `C:Users...b.md`.
+    if shell != "PowerShell":
+        return shlex.split(command, posix=True)
+    lex = shlex.shlex(command, posix=True)
+    lex.whitespace_split, lex.escape, lex.commenters = True, "", ""
+    return list(lex)
+
+
+def _local_path(path: str, nt: bool = os.name == "nt") -> str:
+    """An MSYS path (`/c/Users/...`, what Git Bash prints) as Windows Python
+    opens it. Windows Python read `/c/...` as `C:\\c\\...` and found nothing."""
+    m = re.match(r"^/([A-Za-z])(/.*)?$", path)
+    if nt and m and not os.path.exists(path):
+        return f"{m.group(1).upper()}:{m.group(2) or '/'}"
+    return path
+
+
+def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str], str | None]]:
     """(verb, its own args, the `cd` in force) for EVERY gh pr command in it.
 
     Every one, not the first: `gh pr edit ... && gh pr merge ...` is the chain
@@ -159,9 +187,12 @@ def _pr_commands(command: str) -> list[tuple[str, list[str], str | None]]:
     PR #46 and open issues, found nothing, and passed.
     """
     try:
-        tokens = shlex.split(command, posix=True)
+        tokens = _split(command, shell)
     except ValueError:
-        tokens = command.split()
+        # An apostrophe anywhere (a heredoc written earlier in the command)
+        # makes shlex raise. Plain split kept the quotes on "$SP/body.md", and
+        # a correct create failed closed on a path with quotes in it.
+        tokens = [_unquote(t) for t in command.split()]
     found = []
     cd = None
     for i in range(len(tokens)):
@@ -205,7 +236,7 @@ def text_to_scan(verb: str, args: list[str], repo: list[str],
              _flag(args, "--subject") or ""]
     body_file = _flag(args, "--body-file", "-F")
     if body_file:
-        with open(_expand(body_file, shell_vars or {}), encoding="utf-8") as f:
+        with open(_local_path(_expand(body_file, shell_vars or {})), encoding="utf-8") as f:
             parts.append(f.read())
     if verb == "merge":
         target = [a for a in args if not a.startswith("-")][:1]
@@ -233,7 +264,7 @@ def main() -> int:
     if payload.get("tool_name") not in _SHELL_TOOLS:
         return 0
     command = (payload.get("tool_input") or {}).get("command") or ""
-    found = _pr_commands(command)
+    found = _pr_commands(command, payload.get("tool_name"))
     if not found:
         return 0
     verb = "/".join(dict.fromkeys(v for v, _, _ in found))
@@ -242,8 +273,9 @@ def main() -> int:
     checks = []
     try:
         for v, args, cd in found:
-            cwd = (os.path.normpath(os.path.join(base, os.path.expanduser(_expand(cd, shell_vars))))
-                   if cd else base)
+            target_dir = _local_path(_expand(cd, shell_vars)) if cd else None
+            cwd = (os.path.normpath(os.path.join(base, os.path.expanduser(target_dir)))
+                   if target_dir else base)
             repo_flag = _flag(args, "--repo", "-R")
             repo = ("-R", _expand(repo_flag, shell_vars)) if repo_flag else ()
             target = next((a for a in args if not a.startswith("-")), "")
