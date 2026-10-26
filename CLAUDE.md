@@ -108,6 +108,10 @@ anchors). Guardrails, since this also edits the anti-slop doc itself:
   The prompt's "most weeks yield 0-3" was ignored every week; the 2026-10-23 run added 23,
   and 19 were cut by hand on 2026-10-26. The validator also rejects a newly repeated
   `### N.` practice number (that run left 5, 6 and 7 twice in agent-action-safety.md).
+- **Every candidate states a `reader_action`**: what a reader of the doc does
+  differently. The model is told to drop a candidate with none; code drops only a
+  missing one or one opening with an awareness verb ("consider", "recognize"), a floor
+  under the model's judgment rather than a substitute for it.
 - Most weeks change nothing. Review the `[automated]` practice commits like any other diff.
 
 ### Thin feed entries are read from the article

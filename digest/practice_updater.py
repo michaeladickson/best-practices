@@ -176,6 +176,24 @@ def _docs_block(docs: list[dict]) -> str:
     return block
 
 
+# A practice changes what the reader does. Most of the 19 candidates cut by hand from
+# the 2026-10-23 run named nothing a reader of these docs would do ("assign a trust
+# score to agents", "design AI gateways with small cores"). The extraction must now
+# state that action, and the prompt tells it to drop a candidate that has none; that
+# judgment is the model's. This check is only the floor under it: a missing action,
+# or one that opens with a verb of awareness, is dropped in code. None of those 19
+# titles opened with one, so the floor alone would not have caught them.
+_AWARENESS_VERBS = frozenset({
+    "consider", "recognize", "understand", "be", "explore", "think", "note",
+    "appreciate", "acknowledge", "realize", "remember", "learn",
+})
+
+
+def _names_a_reader_action(action) -> bool:
+    words = str(action or "").strip().lower().split()
+    return bool(words) and words[0] not in _AWARENESS_VERBS
+
+
 def _extract_candidates(client, docs: list[dict], posts: list[dict]) -> Optional[list[dict]]:
     """Stage 1 — find NEW practices, each routed to exactly ONE doc.
 
@@ -230,6 +248,7 @@ Return a JSON object:
       "source_url": "exact URL from the article block",
       "source_date": "YYYY-MM-DD from the article block",
       "confidence": "high|medium|low",
+      "reader_action": "1 sentence: what a reader of that doc does differently after reading it, starting with a concrete verb",
       "not_already_covered_because": "1 sentence naming the closest existing practice in ANY document and why this differs"
     }}
   ]
@@ -252,6 +271,9 @@ like AI output):
 
 Rules:
 - Only include high or medium confidence items. Drop low-confidence ones.
+- Every candidate needs a "reader_action": the concrete thing a reader of that doc
+  would do differently. If the honest answer is "consider", "be aware of",
+  "recognize" or "understand" something, it is not a practice: drop it.
 - Each candidate MUST map to a specific article in the block above (real URL), and
   the practice must be something that article actually says. Never attribute a
   practice to an article whose content does not support it.
@@ -274,6 +296,10 @@ Rules:
         if c.get("source_url") not in eligible.get(c.get("doc"), ()):
             log.warning("extract_candidate_dropped", doc=c.get("doc"),
                         practice=c.get("practice"), reason="unknown doc or source")
+            continue
+        if not _names_a_reader_action(c.get("reader_action")):
+            log.warning("extract_candidate_dropped", doc=c.get("doc"),
+                        practice=c.get("practice"), reason="no reader action")
             continue
         kept.append(c)
     kept.sort(key=lambda c: c.get("confidence") != "high")  # stable: keeps model order

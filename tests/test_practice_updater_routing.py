@@ -59,8 +59,10 @@ def _setup(tmp_path, monkeypatch, body):
     return client, integrated
 
 
-def _cand(doc, url, practice="Do the new thing", confidence="high"):
-    return {"doc": doc, "practice": practice, "source_url": url, "confidence": confidence}
+def _cand(doc, url, practice="Do the new thing", confidence="high",
+          reader_action="Set the judge's threshold on 50 labeled cases"):
+    return {"doc": doc, "practice": practice, "source_url": url, "confidence": confidence,
+            "reader_action": reader_action}
 
 
 def test_one_extraction_call_sees_every_doc(tmp_path, monkeypatch):
@@ -141,3 +143,17 @@ def test_run_keeps_at_most_the_cap_high_confidence_first(tmp_path, monkeypatch):
     assert integrated == {"B": ["Practice 2", "Practice 3", "Practice 4"]}
     # The dropped ones' articles are seen, not retried next week.
     assert set(ledger["b.md"]) == {p["link"] for p in posts}
+
+
+def test_a_candidate_without_a_reader_action_is_dropped(tmp_path, monkeypatch):
+    posts = [{"link": f"https://example.test/r{i}", "title": "beta", "content_preview": "x"}
+             for i in range(4)]
+    cands = [_cand("b.md", posts[0]["link"], practice="Kept"),
+             _cand("b.md", posts[1]["link"], practice="No action", reader_action=None),
+             _cand("b.md", posts[2]["link"], practice="Blank", reader_action="  "),
+             _cand("b.md", posts[3]["link"], practice="Awareness",
+                   reader_action="Consider the trade-offs of agent autonomy")]
+    client, integrated = _setup(tmp_path, monkeypatch, json.dumps({"candidates": cands}))
+    pu._run_docs([B], [], posts, {}, True, lambda: client)
+    assert integrated == {"B": ["Kept"]}
+    assert '"reader_action"' in client.prompts[0]
