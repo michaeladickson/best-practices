@@ -173,12 +173,25 @@ def collect(models: list[dict]) -> dict:
     return out
 
 
-def diff(old: dict, new: dict) -> list[str]:
-    """Material changes only, phrased for a human reading an issue title."""
+# Groups whose movement files an issue. The rest of the watchlist still lands in the
+# weekly table (data/model_pricing.md) but never in the issue queue. From 2026-09-18 to
+# 2026-10-24 the job filed five pricing issues, and kimi-k3 moved in every one. Four
+# held nothing but open-weight re-rates on models no workload here runs; the fifth
+# also moved a Gemini migration target, and would still be filed.
+ISSUE_GROUPS = frozenset({"Anthropic", "Google (in use)", "Google (migration targets)"})
+
+
+def diff(old: dict, new: dict, groups: frozenset | None = None) -> list[str]:
+    """Material changes only, phrased for a human reading an issue title.
+
+    `groups` limits the result to watchlist groups that warrant an issue; None
+    reports every group (the dry-run view)."""
     changes: list[str] = []
     old_models = old.get("models", {})
 
     for key, cur in new.items():
+        if groups is not None and cur.get("group") not in groups:
+            continue
         prev = old_models.get(key)
         if prev is None:
             continue  # first sighting is not a change
@@ -247,7 +260,7 @@ def file_issue(changes: list[str], dry_run: bool) -> None:
     title = f"Model pricing moved ({len(changes)} change{'s' if len(changes) > 1 else ''})"
     body = (
         "Weekly price check found material movement (>= "
-        f"{MATERIAL_CHANGE:.0%}) on the watchlist.\n\n"
+        f"{MATERIAL_CHANGE:.0%}) on a model we run or might migrate to.\n\n"
         + "\n".join(f"- {c}" for c in changes)
         + "\n\nFull table: `data/model_pricing.md`.\n\n"
         "**Before acting on any number here:** these are OpenRouter list rates. "
@@ -544,8 +557,9 @@ def check_pricing(dry_run: bool) -> None:
     SNAPSHOT.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
     REPORT.write_text(render(snapshot), encoding="utf-8")
 
-    if changes:
-        file_issue(changes, dry_run=False)
+    to_file = diff(old, current, ISSUE_GROUPS)
+    if to_file:
+        file_issue(to_file, dry_run=False)
 
 
 @click.command()
