@@ -461,3 +461,41 @@ def test_xargs_in_a_body_is_prose(monkeypatch, capsys):
 def test_gh_host_fails_closed(monkeypatch, capsys):
     code, err = _run(monkeypatch, capsys, "GH_HOST=ghe.example.com gh pr merge 46")
     assert code == 2 and "GH_HOST" in err
+
+
+# ── the command-center re-review of those fixes (2026-10-26) ──────────────
+
+def test_a_heredoc_for_a_later_command_does_not_vouch_for_a_piped_body(monkeypatch, capsys):
+    """The heredoc after `&&` belongs to cat, and gh reads b.md on stdin."""
+    command = ("cat b.md | gh pr edit 5 --body-file - && cat > n.md <<'EOF'\n"
+               "notes\nEOF")
+    code, err = _run(monkeypatch, capsys, command)
+    assert code == 2 and "stdin" in err
+
+
+@pytest.mark.parametrize("text,code", [("Small fixes from #261.", 2), ("Clean body.", 0)])
+def test_a_heredoc_piped_into_create_is_scanned(monkeypatch, capsys, text, code):
+    """`cat <<'EOF' | gh pr create --body-file -` is a common correct form."""
+    command = f"cat <<'EOF' | gh pr create --title t --body-file -\n{text}\nEOF"
+    got, err = _run(monkeypatch, capsys, command)
+    assert "could not check" not in err and got == code
+
+
+def test_gh_repo_on_the_line_before_is_not_a_prefix(monkeypatch, capsys):
+    """Not exported, so gh merges in the cwd repo; shlex had dropped the newline."""
+    calls = []
+    _run(monkeypatch, capsys, "GH_REPO=o/r\ngh pr merge 46 --squash", body="clean", calls=calls)
+    issue_list = next(a for a, _ in calls if a[:2] == ["issue", "list"])
+    assert "-R" not in issue_list
+
+
+def test_an_explicit_repo_flag_wins_over_a_gh_repo_prefix(monkeypatch, capsys):
+    calls = []
+    _run(monkeypatch, capsys, "GH_REPO=a/b gh pr merge 46 -R c/d", body="clean", calls=calls)
+    issue_list = next(a for a, _ in calls if a[:2] == ["issue", "list"])
+    assert issue_list[2:4] == ["-R", "c/d"]
+
+
+def test_a_heredoc_with_no_space_is_still_a_heredoc():
+    command = "cat<<EOF > b.md\nthen gh pr merge 1 here\nEOF\ngh pr merge 264 --squash"
+    assert [(v, a) for v, a, _ in gate._pr_commands(command)] == [("merge", ["264", "--squash"])]
