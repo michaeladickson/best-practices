@@ -12,7 +12,8 @@ When you intentionally bump a model:
      articles through `python -m digest.practice_updater --dry-run`) and compare.
   2. Update EXPECTED_MODEL_STRINGS below, with the reason.
   3. Move the price watch (WATCHLIST "Google (in use)" in digest/model_pricing.py)
-     to the new id; the test at the bottom fails until you do.
+     and the deprecation watch (DEPRECATION_WATCH_PREFIXES) to the new id; the
+     two tests at the bottom fail until you do.
   4. Update the documented default in practices/ai/gemini-integration.md.
 
 Scope: code only (.py/.yml/.yaml/.sh under digest/, scripts/,
@@ -111,7 +112,7 @@ def test_model_strings_match_pinned_set():
         "Before bumping: run the old and new model on the same week's articles "
         "(`python -m digest.practice_updater --dry-run`) and compare the edits. "
         "Then update EXPECTED_MODEL_STRINGS in this file with the reason, move "
-        "the price watch in digest/model_pricing.py, and "
+        "the price and deprecation watches in digest/model_pricing.py, and "
         "update the default in practices/ai/gemini-integration.md."
     )
 
@@ -128,3 +129,12 @@ def test_price_watch_tracks_the_models_in_use():
         f"pinned Gemini ids {sorted(_pinned_gemini() - in_use)} are not in "
         "WATCHLIST['Google (in use)'] in digest/model_pricing.py")
 
+
+def test_deprecation_watch_covers_the_models_in_use():
+    """The deprecations-page watch filters rows by prefix. A model we call that
+    no prefix covers would never raise a shutdown-date issue."""
+    uncovered = {m for m in _pinned_gemini()
+                 if not m.startswith(model_pricing.DEPRECATION_WATCH_PREFIXES)}
+    assert not uncovered, (
+        f"{sorted(uncovered)} not covered by DEPRECATION_WATCH_PREFIXES "
+        f"{model_pricing.DEPRECATION_WATCH_PREFIXES} in digest/model_pricing.py")
