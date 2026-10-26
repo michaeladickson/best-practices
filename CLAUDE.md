@@ -191,6 +191,28 @@ the turn that wrote it. `.claude/hooks/lint_on_write.py` is the canonical copy, 
   a green check that tested nothing; wealth-mgmt's CI installs only its runtime lock, so
   it carries an explicit pinned `pip install ruff` step for this.
 
+`.claude/hooks/closing_keyword_gate.py` is the second canonical hook, with
+`test_closing_keyword_gate.py` beside it (same pytest command).
+
+- **What:** PreToolUse on Bash and PowerShell. On `gh pr create`, `edit` and `merge` it
+  blocks (exit 2) a close/fix/resolve word within two words of an OPEN issue's number,
+  in any form GitHub honours (`#N`, `owner/repo#N`, the issue URL). A merge reads the
+  PR's title, body, every commit and the merge commit GitHub will write; a branch ending
+  `-fixes` beside a title starting `#N:` closed an issue that way. A reference into
+  another repo always counts.
+- **Deliberate close:** a line of its own, `Closes #N`. Anything else that should close
+  an issue is rewritten, not excused.
+- **Fails closed:** a gate that cannot read the PR or the open issues blocks with the
+  reason. It reads every `gh pr` command in a chain, the `cd` before it, shell variables
+  assigned in the same command, and the raw text where a heredoc body survives.
+- **Installed in:** best-practices and wealth-mgmt (its test under `tests/`). Not yet in
+  crumbl-ops or command-center; each gets its own PR, and crumbl-ops already runs merge
+  gates as PreToolUse (`check_pr_merge_draft.py`), so check the order there. Same sync as `lint_on_write.py`: change the canonical copy
+  first, then re-copy; `/skills-sync` step 5 pairs both files.
+- **In a worktree session the live hook is the MAIN checkout's copy**, since
+  `$CLAUDE_PROJECT_DIR` resolves there. A hook change takes effect only after merge and
+  pull into the main checkout.
+
 ## Configuration
 
 - `digest/config/feeds.yaml` — All RSS feed sources
