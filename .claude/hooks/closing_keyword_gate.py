@@ -211,7 +211,8 @@ def _local_path(path: str, nt: bool = os.name == "nt") -> str:
 # whitespace, a separator or `(`, and a delimiter that starts like a word. A
 # here-string opener `@'` or `@"` ends its line and follows whitespace, `=` or
 # `(`; "bot@" at the end of a quoted email is not one.
-_HEREDOC_OPEN = re.compile(r"(?<![^\s|;&(])<<(?!<)-?\s*(['\"]?)([A-Za-z_]\w*)\1")
+_HEREDOC_OPEN = re.compile(r"(?<![^\s|;&(])<<(?!<)-?\s*(['\"]?)([A-Za-z_]\w*)\1"
+                           r"|(?<=[A-Za-z])<<(?!<)-?(['\"]?)([A-Za-z_]\w*)\3(?=\s*(?:$|[|;&>]))")
 _HERESTRING_OPEN = re.compile(r"(?:^|[\s=(])@(['\"])\s*$")
 
 
@@ -239,10 +240,15 @@ def _strip_heredocs(command: str) -> str:
                 held.append(line)
             continue
         out.append(line)
-        ends = [m.group(2) for m in _HEREDOC_OPEN.finditer(line)]
+        ends = [m.group(2) or m.group(4) for m in _HEREDOC_OPEN.finditer(line)]
         if m := _HERESTRING_OPEN.search(line):
             ends.append(m.group(1) + "@")
     return "\n".join(out + held)
+
+
+def _prefix_on_gh_line(command: str, value: str) -> bool:
+    return re.search(r"GH_REPO=['\"]?" + re.escape(value) + r"['\"]?"
+                     r"(?:[ \t]+[A-Za-z_]\w*=\S*)*[ \t]+\S*gh[ \t]+pr\b", command) is not None
 
 
 def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str], str | None]]:
@@ -274,10 +280,11 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
         # `GH_REPO=o/r gh pr merge 46` points this one command at o/r. A prefix
         # binds only the command it precedes; read as a whole-command setting,
         # it redirected a later merge in the same chain to the wrong repo.
+        prefix = None
         k = i - 1
         while k >= 0 and re.match(r"^[A-Za-z_]\w*=", tokens[k]):
             if tokens[k].startswith("GH_REPO="):
-                args += ["-R", tokens[k].split("=", 1)[1]]
+                prefix = tokens[k].split("=", 1)[1]
             k -= 1
         for j in range(i + 3, len(tokens)):
             t = tokens[j]
@@ -287,6 +294,10 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
                 args.append(t[:-1])
                 break
             args.append(t)
+        # shlex drops newlines, so `GH_REPO=o/r` alone on the line before looked
+        # like a prefix; and gh lets an explicit -R win over the variable.
+        if prefix and _flag(args, "--repo", "-R") is None and _prefix_on_gh_line(command, prefix):
+            args += ["-R", prefix]
         found.append((tokens[i + 2], args, cd))
     return found
 
@@ -333,10 +344,14 @@ def text_to_scan(verb: str, args: list[str], repo: list[str],
 
 
 _ISSUE_LIMIT = 1000
-# The body on stdin is visible only when the heredoc is on the gh command's own
-# line, or a PowerShell here-string is piped straight into it.
-_STDIN_BODY = re.compile(r"\bgh\s+pr\s+(?:create|edit|merge)\b[^\n]*?(?<![^\s|;&(])<<(?!<)"
-                         r"|^\s*['\"]@\s*\|\s*gh\s+pr\b", re.MULTILINE)
+# The body on stdin is visible only when the heredoc belongs to the gh command
+# itself (no `;`, `&` or `|` between them), a heredoc is piped straight into it
+# (`cat <<'EOF' | gh pr create --body-file -`), or a PowerShell here-string is.
+# A heredoc for another command later on the line let a piped body through.
+_STDIN_BODY = re.compile(
+    r"\bgh\s+pr\s+(?:create|edit|merge)\b[^\n;&|]*?(?<![^\s|;&(])<<(?!<)"
+    r"|(?<![^\s|;&(])<<(?!<)-?\s*['\"]?\w+['\"]?[^\n;&|]*\|\s*gh\s+pr\b"
+    r"|^\s*['\"]@\s*\|\s*gh\s+pr\b", re.MULTILINE)
 _XARGS = re.compile(r"\bxargs\b[^;&|\n]*\bgh\s+pr\s+(?:create|edit|merge)\b")
 # `export GH_REPO=o/r` and PowerShell's `$env:GH_REPO = "o/r"` point every later
 # gh at another repo, and the gate read this one's PR and open issues. A bare
