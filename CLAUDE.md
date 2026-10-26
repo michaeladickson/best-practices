@@ -209,10 +209,13 @@ the turn that wrote it. `.claude/hooks/lint_on_write.py` is the canonical copy, 
 - **Fails closed:** a gate that cannot read the PR or the open issues blocks with the
   reason. It reads every `gh pr` command in a chain, the `cd` before it, shell variables
   assigned in the same command, and the raw text where a heredoc body survives.
-- **Installed in:** best-practices and wealth-mgmt (its test under `tests/`). Not yet in
-  crumbl-ops or command-center; each gets its own PR, and crumbl-ops already runs merge
-  gates as PreToolUse (`check_pr_merge_draft.py`), so check the order there. Same sync as `lint_on_write.py`: change the canonical copy
-  first, then re-copy; `/skills-sync` step 5 pairs both files.
+- **Installed in:** best-practices, crumbl-ops, command-center and wealth-mgmt, each
+  wired in `.claude/settings.json` by its own `Bash|PowerShell` PreToolUse entry; the
+  other repos keep the test under `tests/`. In crumbl-ops it runs beside
+  `check_pr_merge_draft.py`. Order does not matter: Claude Code runs matching hooks in
+  parallel, any block stops the call, and that hook only denies or asks. Same sync as
+  `lint_on_write.py`: change the canonical copy first, then re-copy; `/skills-sync`
+  step 5 pairs both files. Low review findings accepted at install are in issue #69.
 - **In a worktree session the live hook is the MAIN checkout's copy**, since
   `$CLAUDE_PROJECT_DIR` resolves there. A hook change takes effect only after merge and
   pull into the main checkout.
