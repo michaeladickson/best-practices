@@ -310,3 +310,80 @@ def test_a_pr_url_names_the_repo_its_issues_come_from(monkeypatch, capsys):
          body="clean", calls=calls)
     issue_list = next(a for a, _ in calls if a[:2] == ["issue", "list"])
     assert ["-R", "owner/other-repo"] == issue_list[2:4]
+
+
+# ── findings from the first install PRs' reviews (2026-10-26) ─────────────
+
+@pytest.mark.parametrize("command,target", [
+    ("gh pr merge -R a/b 264 --squash", "264"),
+    ("gh pr merge --subject x 264", "264"),
+    ("gh pr merge -m 264", "264"),                  # -m is --merge, no value
+    ("gh pr edit -m v1 12 --title t", "12"),        # -m is --milestone on edit
+    ("gh pr merge --squash", ""),                   # the current branch's PR
+])
+def test_the_pr_is_the_first_argument_that_is_not_a_flag_value(command, target):
+    """`gh pr merge -R owner/app 264` read `owner/app` as the PR and blocked."""
+    verb, args, _ = gate._pr_commands(command)[0]
+    assert gate._target(verb, args) == target
+
+
+def test_a_merge_with_the_repo_flag_first_reads_the_right_pr(monkeypatch, capsys):
+    calls = []
+    code, _ = _run(monkeypatch, capsys, "gh pr merge -R a/b 264 --squash",
+                   body="clean", calls=calls)
+    view = next(a for a, _ in calls if a[:2] == ["pr", "view"])
+    assert view[2] == "264" and code == 0
+
+
+@pytest.mark.parametrize("text,code", [("Small fixes from #261.", 2), ("Clean body.", 0)])
+def test_a_body_from_a_heredoc_on_stdin_is_scanned(monkeypatch, capsys, text, code):
+    """`--body-file -` opened a file named "-" and failed closed on every such
+    create; the heredoc it reads is in the raw command the gate scans."""
+    command = f"gh pr create --title t --body-file - <<'EOF'\n{text}\nEOF"
+    got, err = _run(monkeypatch, capsys, command)
+    assert "could not check" not in err and got == code
+
+
+def test_a_body_piped_on_stdin_fails_closed(monkeypatch, capsys):
+    code, err = _run(monkeypatch, capsys, "cat b.md | gh pr create --title t --body-file -")
+    assert code == 2 and "stdin" in err
+
+
+def test_an_open_issue_list_at_the_limit_fails_closed(monkeypatch, capsys):
+    """gh lists newest first; a full page drops the oldest open issues, and a
+    close aimed at one of them passed as clean."""
+    code, err = _run(monkeypatch, capsys, "gh pr create --title t --body x",
+                     open_issues=range(1, gate._ISSUE_LIMIT + 1))
+    assert code == 2 and "incomplete" in err
+
+
+@pytest.mark.parametrize("command,tool", [
+    ("GH_REPO=o/r gh pr merge 46 --squash", "Bash"),
+    ('$env:GH_REPO = "o/r"; gh pr merge 46 --squash', "PowerShell"),
+])
+def test_gh_repo_points_the_check_at_that_repo(monkeypatch, capsys, command, tool):
+    calls = []
+    _run(monkeypatch, capsys, command, body="clean", calls=calls, tool=tool)
+    issue_list = next(a for a, _ in calls if a[:2] == ["issue", "list"])
+    assert issue_list[2:4] == ["-R", "o/r"]
+
+
+def test_a_merge_fed_by_xargs_fails_closed(monkeypatch, capsys):
+    """gh reads the PR from stdin, so the gate would check the branch's PR."""
+    code, err = _run(monkeypatch, capsys, "echo 1 2 | xargs -n1 gh pr merge --squash")
+    assert code == 2 and "xargs" in err
+
+
+@pytest.mark.parametrize("command", [
+    "python3 - <<'PY'\n# then gh pr merge -R owner/app 264\nprint(1)\nPY",
+    "$s = @'\nrun gh pr merge -R owner/app 264 next\n'@\nWrite-Output $s",
+    "$s = @'\nrun gh pr merge 264 next\n'@ | Out-File x.md",
+])
+def test_prose_inside_a_heredoc_is_not_a_command(command):
+    """The live gate blocked a patch script whose comment mentioned a merge."""
+    assert gate._pr_commands(command) == []
+
+
+def test_a_command_after_a_heredoc_is_still_found():
+    command = "cat > b.md <<'EOF'\nthe gh pr merge 1 idea\nEOF\ngh pr merge 264 --squash"
+    assert [(v, a) for v, a, _ in gate._pr_commands(command)] == [("merge", ["264", "--squash"])]

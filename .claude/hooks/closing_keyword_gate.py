@@ -130,17 +130,48 @@ def _flag(args: list[str], *names: str) -> str | None:
 
 
 def _gh(args: list[str], cwd: str | None = None) -> str:
-    # Each call under 25s. One merge is two calls (the PR, the open issues), so
-    # the gate finishes inside the 60s hook timeout in settings.json. Past that
-    # timeout Claude Code treats the hook as making NO decision, and the merge
-    # would run unchecked. Two merges chained in one command can exceed it.
-    out = subprocess.run(["gh", *args], capture_output=True, timeout=25, cwd=cwd)
+    # Each call under 20s. One merge is two gh calls (the PR, the open issues)
+    # plus a 5s `git remote` per command in _repo_slug, so an edit chained to a
+    # merge is 20+20+5+5 = 50s, inside the 60s hook timeout in settings.json.
+    # Past that timeout Claude Code treats the hook as making NO decision, and
+    # the merge would run unchecked. Two merges chained in one command can
+    # still exceed it.
+    out = subprocess.run(["gh", *args], capture_output=True, timeout=20, cwd=cwd)
     if out.returncode != 0:
         raise RuntimeError(out.stderr.decode("utf-8", "replace").strip()[:300])
     return out.stdout.decode("utf-8", "replace")
 
 
 _SEPARATORS = {"&&", "||", ";", "|", "&"}
+
+# Flags that take a value, per verb. The PR is the first argument that is
+# neither a flag nor such a value: `gh pr merge -R owner/app 264` read
+# `owner/app` as the PR and blocked a correct merge. Per verb because `-m` is
+# `--merge` (no value) on merge and `--milestone` on edit.
+_VALUE_FLAGS = {
+    "merge": {"-t", "--subject", "-b", "--body", "-F", "--body-file", "-A",
+              "--author-email", "--match-head-commit", "-R", "--repo"},
+    "edit": {"-t", "--title", "-b", "--body", "-F", "--body-file", "-B", "--base",
+             "-m", "--milestone", "--add-assignee", "--remove-assignee", "--add-label",
+             "--remove-label", "--add-project", "--remove-project", "--add-reviewer",
+             "--remove-reviewer", "-R", "--repo"},
+}
+
+
+def _target(verb: str, args: list[str]) -> str:
+    """The PR a merge or edit names, or "" (create has none; "" is the branch's)."""
+    takes_value = _VALUE_FLAGS.get(verb)
+    if takes_value is None:
+        return ""
+    skip = False
+    for a in args:
+        if skip:
+            skip = False
+        elif a in takes_value:
+            skip = True
+        elif not a.startswith("-"):
+            return a
+    return ""
 
 
 def _is_pr_verb(tokens: list[str], i: int) -> bool:
@@ -176,6 +207,32 @@ def _local_path(path: str, nt: bool = os.name == "nt") -> str:
     return path
 
 
+_HEREDOC_OPEN = re.compile(r"<<-?\s*(['\"]?)(\w+)\1")
+
+
+def _strip_heredocs(command: str) -> str:
+    """The command with heredoc and here-string BODIES removed.
+
+    Prose in a body written earlier in the command ("then gh pr merge -R
+    owner/app 264") was parsed as a command, checked against the wrong PR,
+    and failed closed (2026-10-26). Only command finding uses this; the raw
+    text, bodies included, is still what gets scanned for closing words.
+    """
+    out, ends = [], []
+    for line in command.split("\n"):
+        if ends:
+            end = ends[0]
+            if line.strip() == end or (end.endswith("@") and line.lstrip().startswith(end)):
+                ends.pop(0)
+                out.append(line)
+            continue
+        out.append(line)
+        ends = [m.group(2) for m in _HEREDOC_OPEN.finditer(line)]
+        if re.search(r"@['\"]\s*$", line):
+            ends.append(line.rstrip()[-1] + "@")
+    return "\n".join(out)
+
+
 def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str], str | None]]:
     """(verb, its own args, the `cd` in force) for EVERY gh pr command in it.
 
@@ -186,12 +243,13 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
     `cd ../other-repo && gh pr merge 46` was checked against THIS repo's
     PR #46 and open issues, found nothing, and passed.
     """
+    command = _strip_heredocs(command)
     try:
         tokens = _split(command, shell)
     except ValueError:
-        # An apostrophe anywhere (a heredoc written earlier in the command)
-        # makes shlex raise. Plain split kept the quotes on "$SP/body.md", and
-        # a correct create failed closed on a path with quotes in it.
+        # An odd apostrophe or quote outside a heredoc makes shlex raise. Plain
+        # split kept the quotes on "$SP/body.md", and a correct create failed
+        # closed on a path with quotes in it.
         tokens = [_unquote(t) for t in command.split()]
     found = []
     cd = None
@@ -235,11 +293,11 @@ def text_to_scan(verb: str, args: list[str], repo: list[str],
     parts = [_flag(args, "--title", "-t") or "", _flag(args, "--body", "-b") or "",
              _flag(args, "--subject") or ""]
     body_file = _flag(args, "--body-file", "-F")
-    if body_file:
+    if body_file and body_file != "-":     # stdin: main() checks the heredoc
         with open(_local_path(_expand(body_file, shell_vars or {})), encoding="utf-8") as f:
             parts.append(f.read())
     if verb == "merge":
-        target = [a for a in args if not a.startswith("-")][:1]
+        target = [t] if (t := _target(verb, args)) else []
         pr = json.loads(_gh(["pr", "view", *target, *repo,
                              "--json", "number,title,body,commits,headRefName"], cwd=cwd))
         parts += [pr.get("title") or "", pr.get("body") or ""]
@@ -252,6 +310,19 @@ def text_to_scan(verb: str, args: list[str], repo: list[str],
         for c in pr.get("commits") or []:
             parts += [c.get("messageHeadline") or "", c.get("messageBody") or ""]
     return "\n\n".join(parts)
+
+
+_ISSUE_LIMIT = 1000
+_HEREDOC = re.compile(r"<<-?\s*['\"]?\w+|@['\"]\s*$", re.MULTILINE)
+_XARGS = re.compile(r"\bxargs\b[^;&|\n]*\bgh\s+pr\s+(?:create|edit|merge)\b")
+# `GH_REPO=o/r gh pr merge 46` and PowerShell's `$env:GH_REPO = "o/r"` point gh
+# at another repo, and the gate read this one's PR #46 and open issues.
+_PS_GH_REPO = re.compile(r"""\$env:GH_REPO\s*=\s*["']?([^"'\s;]+)""", re.IGNORECASE)
+
+
+def _gh_repo(command: str, shell_vars: dict[str, str]) -> str | None:
+    m = _PS_GH_REPO.search(command)
+    return shell_vars.get("GH_REPO") or (m.group(1) if m else None)
 
 
 # PowerShell is the primary shell in these sessions, and `gh` is on its PATH. A
@@ -267,6 +338,12 @@ def main() -> int:
     found = _pr_commands(command, payload.get("tool_name"))
     if not found:
         return 0
+    if _XARGS.search(command):
+        # `... | xargs -n1 gh pr merge` gives gh its PR on stdin, so the gate
+        # would read the current branch's PR instead of the ones being merged.
+        print("closing_keyword_gate: a `gh pr` command fed by xargs names PRs the "
+              "gate cannot see. Run each `gh pr merge <n>` on its own.", file=sys.stderr)
+        return 2
     verb = "/".join(dict.fromkeys(v for v, _, _ in found))
     shell_vars = _shell_vars(command)
     base = payload.get("cwd") or os.getcwd()
@@ -276,9 +353,12 @@ def main() -> int:
             target_dir = _local_path(_expand(cd, shell_vars)) if cd else None
             cwd = (os.path.normpath(os.path.join(base, os.path.expanduser(target_dir)))
                    if target_dir else base)
-            repo_flag = _flag(args, "--repo", "-R")
+            repo_flag = _flag(args, "--repo", "-R") or _gh_repo(command, shell_vars)
             repo = ("-R", _expand(repo_flag, shell_vars)) if repo_flag else ()
-            target = next((a for a in args if not a.startswith("-")), "")
+            target = _target(v, args)
+            if _flag(args, "--body-file", "-F") == "-" and not _HEREDOC.search(command):
+                raise RuntimeError("--body-file - reads stdin, which the gate cannot see; "
+                                   "write the body to a file or pass it as a heredoc")
             if not repo and (m := _PR_URL.match(target)):
                 repo = ("-R", m.group(1))       # a PR URL names its own repo
             # The raw command as well as the parsed flags. shlex cannot read a
@@ -292,9 +372,15 @@ def main() -> int:
         open_issues = {}
         for (repo, cwd), _, _ in checks:
             if (repo, cwd) not in open_issues:
-                open_issues[(repo, cwd)] = {int(n) for n in _gh(
-                    ["issue", "list", *repo, "--state", "open", "--limit", "500",
-                     "--json", "number", "--jq", ".[].number"], cwd=cwd).split()}
+                numbers = _gh(["issue", "list", *repo, "--state", "open", "--limit",
+                               str(_ISSUE_LIMIT), "--json", "number", "--jq", ".[].number"],
+                              cwd=cwd).split()
+                # gh lists newest first, so a full page drops the oldest open
+                # issues, and a close aimed at one of them would pass as clean.
+                if len(numbers) >= _ISSUE_LIMIT:
+                    raise RuntimeError(f"{len(numbers)} open issues reached the "
+                                       f"{_ISSUE_LIMIT} listing limit; the list is incomplete")
+                open_issues[(repo, cwd)] = {int(n) for n in numbers}
     except Exception as e:  # noqa: BLE001 - fail closed, with the reason
         print(f"closing_keyword_gate: could not check this `gh pr {verb}` for "
               f"accidental issue closes ({type(e).__name__}: {e}). Fix the cause "
