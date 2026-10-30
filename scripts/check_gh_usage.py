@@ -66,7 +66,10 @@ ISSUE_TITLE = "GH usage tripwire: spend trajectory needs a look"
 # account). Verified 2026-08 from the billing UI's AI usage report
 # (total_monthly_quota). Update when the Copilot plan changes.
 CREDIT_QUOTA = 1500.0
-NET_BUDGET_USD = 40.0
+# Raised from $40 on 2026-10-30 (command-center#713). October ran ~$95 net,
+# 73% of it crumbl-ops' Tests suite: ~500 PRs x 2.6 runs x ~10 billed minutes.
+# The remaining mechanical cuts were worth ~$11/mo, so the line moved instead.
+NET_BUDGET_USD = 100.0
 WOW_GROWTH_ALERT = 0.30
 WOW_MIN_BASE_MINUTES = 500.0
 
