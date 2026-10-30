@@ -99,6 +99,7 @@ Format: pre-assembled markdown brief, newest-first, each fact tagged with its so
 -   **Build one retrieval layer for agent context.** As agents multiply, their queries overload and stale fragmented sources; one layer manages volume and freshness.
 -   **Build reliable data architecture for production agents.** Recognize that demo success doesn't guarantee production readiness. Ensure the underlying data architecture can reliably support agents in production, handling disparate, dynamic data sources and managing complex system permissions.
 -   **Centralize business context in a data platform.** Use an integrated data platform as the central repository for enterprise-wide business context, including ontologies and operational data. Agents should query this platform to persistently 'learn how the business works' and maintain contextual awareness.
+-   **Ground agents in a unified semantic model graph.** Consolidate semantic models from existing enterprise tools like Looker, dbt, and Snowflake into a single context graph. This grounds AI agents in trusted business definitions, ensuring consistent metrics and reducing hallucinations across agent interactions by unifying pre-existing semantic models from various data tools.
 -   **Use different models for embedding index and query.** Leverage a more robust embedding model for indexing data and a faster, cheaper model for queries within the same embedding space. This optimizes for latency and cost in RAG and agent workloads without re-embedding the entire corpus.
 
 ## Context Budget
@@ -306,6 +307,7 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 -   **Cohere’s faster query model barely dents retrieval quality in its tests** (The New Stack [devops]) — Use different models for embedding index and query. Digest: 2026-09-30.
 -   **Your AI agent aced the demo. Your data may still derail it.** (The New Stack [devops]) — Build reliable data architecture for production agents. Digest: 2026-09-30.
 -   **Microsoft Fabric is where AI agents learn how the business works** (The New Stack [devops]) — Centralize business context in a data platform. Digest: 2026-09-30.
+-   **Grounding agents in one context graph connecting semantic models you already trust** (Google Cloud Blog) — Consolidate semantic models into a single context graph. Digest: 2026-10-29.
 -   **Microsoft’s new Copilot agents get their own email, calendar — and a place in the org chart** (The New Stack [devops]) — Provide agents persistent organizational context. Digest: 2026-09-25.
 -   **Tutorial: Replace Your $3K/month Data Analyst With a Claude Skill** (The AI Break [ai_engineering]) — Validate input schema for data analysis skills. Digest: 2026-09-25.
 -   **Query decomposition doesn’t fix context starvation — it just moves it** (The New Stack [devops]) — Prevent context packers discarding relevant information. Digest: 2026-09-24.
