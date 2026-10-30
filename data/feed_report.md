@@ -1,4 +1,4 @@
-# Feed Yield Report — 2026-10-24
+# Feed Yield Report — 2026-10-30
 
 Trailing window: 90 days. Yield = practice-doc incorporations
 (finance/macro feeds legitimately score 0 here — they feed the repo
@@ -8,43 +8,43 @@ frozen archive, not a quiet author. Regenerated weekly; not hand-edited.
 
 | Feed | posts (90d) | incorporated (90d) | incorporated (all) | newest post | age (d) |
 |---|---|---|---|---|---|
-| The New Stack | 334 | 291 | 524 | 2026-10-24 | 0 |
-| Simon Willison | 272 | 161 | 286 | 2026-10-24 | 0 |
-| Google Cloud Blog | 205 | 94 | 100 | 2026-10-23 | 1 |
-| Latent Space | 116 | 84 | 148 | 2026-10-23 | 1 |
-| OpenAI Blog | 190 | 59 | 92 | 2026-10-23 | 1 |
-| Ruben Dominguez (The AI Corner) | 67 | 47 | 83 | 2026-10-23 | 1 |
-| Lenny's Newsletter | 72 | 45 | 79 | 2026-10-22 | 2 |
-| Nate Jones | 45 | 38 | 73 | 2026-10-22 | 2 |
-| The AI Break | 52 | 34 | 56 | 2026-10-23 | 1 |
-| Accounting Today | 130 | 31 | 32 | 2026-10-23 | 1 |
-| The Pragmatic Engineer | 33 | 27 | 47 | 2026-10-22 | 2 |
-| Hugging Face Blog | 73 | 23 | 23 | 2026-10-23 | 1 |
-| FinTech Takes (Alex Johnson) | 47 | 19 | 19 | 2026-10-24 | 0 |
-| CFO Dive | 131 | 13 | 32 | 2026-10-24 | 0 |
-| Anthropic News | 33 | 11 | 12 | 2026-10-22 | 2 |
-| SRE Weekly | 13 | 10 | 18 | 2026-10-19 | 5 |
-| Hacker News: claude code (50+ points) | 28 | 9 | 9 | 2026-10-17 | 7 |
-| Net Interest (Marc Rubinstein) | 12 | 9 | 15 | 2026-10-23 | 1 |
-| Software Testing Weekly | 12 | 9 | 9 | 2026-10-21 | 3 |
-| Postgres Weekly | 12 | 8 | 13 | 2026-10-21 | 3 |
-| Pascal Biese (LLM Watch) | 8 | 8 | 13 | 2026-10-18 | 6 |
-| Compound With AI | 15 | 6 | 12 | 2026-10-18 | 6 |
-| Paweł Huryn (The Product Compass) | 11 | 6 | 13 | 2026-10-20 | 4 |
-| Matt Pocock (AI Hero) | 12 | 5 | 29 | 2026-10-05 | 19 |
-| Kun Chen (Kun's Field Notes) | 3 | 3 | 3 | 2026-09-09 | 45 |
-| Sebastian Raschka (Ahead of AI) | 4 | 2 | 2 | 2026-09-29 | 25 |
-| Will Larson (Irrational Exuberance) | 4 | 2 | 3 | 2026-10-17 | 7 |
-| Hamel Husain | 3 | 2 | 2 | 2026-10-20 | 4 |
-| Charity Majors (Honeycomb) | 3 | 2 | 7 | 2026-10-08 | 16 |
-| Last Week in AWS | 1 | 1 | 1 | 2026-09-24 | 30 |
-| Kyla Scanlon | 3 | 0 | 0 | 2026-10-15 | 9 |
-| Anthropic Engineering | 2 | 0 | 0 | 2026-10-13 | 11 |
-| Rahul Agarwal (MLWhiz) | 2 | 0 | 1 | 2026-10-18 | 6 |
-| ARC Prize | 1 | 0 | 0 | 2026-09-03 | 51 |
-| AI Engineering | 0 | 0 | 2 | 2026-05-24 | 153 ⚠️ |
-| Eugene Yan | 0 | 0 | 0 | 2026-06-21 | 125 ⚠️ |
-| The Macro Compass | 0 | 0 | 0 | 2026-07-13 | 103 ⚠️ |
+| The New Stack | 335 | 293 | 550 | 2026-10-31 | -1 |
+| Simon Willison | 265 | 159 | 298 | 2026-10-30 | 0 |
+| Google Cloud Blog | 206 | 109 | 117 | 2026-10-30 | 0 |
+| Latent Space | 120 | 88 | 158 | 2026-10-30 | 0 |
+| OpenAI Blog | 201 | 65 | 102 | 2026-10-30 | 0 |
+| Ruben Dominguez (The AI Corner) | 69 | 50 | 88 | 2026-10-31 | -1 |
+| Lenny's Newsletter | 73 | 47 | 83 | 2026-10-28 | 2 |
+| Nate Jones | 46 | 40 | 77 | 2026-10-28 | 2 |
+| Accounting Today | 130 | 36 | 40 | 2026-10-31 | -1 |
+| The AI Break | 52 | 34 | 59 | 2026-10-30 | 0 |
+| Hugging Face Blog | 77 | 29 | 29 | 2026-10-30 | 0 |
+| The Pragmatic Engineer | 34 | 29 | 50 | 2026-10-30 | 0 |
+| FinTech Takes (Alex Johnson) | 49 | 21 | 23 | 2026-10-31 | -1 |
+| CFO Dive | 133 | 13 | 33 | 2026-10-31 | -1 |
+| Anthropic News | 34 | 12 | 14 | 2026-10-28 | 2 |
+| Hacker News: claude code (50+ points) | 31 | 11 | 11 | 2026-10-30 | 0 |
+| SRE Weekly | 13 | 11 | 19 | 2026-10-26 | 4 |
+| Net Interest (Marc Rubinstein) | 13 | 10 | 16 | 2026-10-30 | 0 |
+| Software Testing Weekly | 12 | 10 | 10 | 2026-10-26 | 4 |
+| Postgres Weekly | 12 | 9 | 14 | 2026-10-28 | 2 |
+| Pascal Biese (LLM Watch) | 8 | 8 | 14 | 2026-10-25 | 5 |
+| Paweł Huryn (The Product Compass) | 12 | 7 | 14 | 2026-10-30 | 0 |
+| Compound With AI | 15 | 6 | 13 | 2026-10-25 | 5 |
+| Matt Pocock (AI Hero) | 12 | 5 | 29 | 2026-10-05 | 25 |
+| Sebastian Raschka (Ahead of AI) | 5 | 3 | 3 | 2026-10-24 | 6 |
+| Will Larson (Irrational Exuberance) | 5 | 3 | 4 | 2026-10-30 | 0 |
+| Kun Chen (Kun's Field Notes) | 3 | 3 | 3 | 2026-09-09 | 51 |
+| Hamel Husain | 3 | 2 | 2 | 2026-10-20 | 10 |
+| Charity Majors (Honeycomb) | 3 | 2 | 7 | 2026-10-08 | 22 |
+| Kyla Scanlon | 4 | 1 | 1 | 2026-10-29 | 1 |
+| Last Week in AWS | 1 | 1 | 1 | 2026-09-24 | 36 |
+| Anthropic Engineering | 2 | 0 | 0 | 2026-10-13 | 17 |
+| Rahul Agarwal (MLWhiz) | 2 | 0 | 1 | 2026-10-18 | 12 |
+| ARC Prize | 1 | 0 | 0 | 2026-09-03 | 57 |
+| AI Engineering | 0 | 0 | 2 | 2026-05-24 | 159 ⚠️ |
+| Eugene Yan | 0 | 0 | 0 | 2026-06-21 | 131 ⚠️ |
+| The Macro Compass | 0 | 0 | 0 | 2026-07-13 | 109 ⚠️ |
 
 **No posts in 90d (dead or dormant):** AI Engineering, Eugene Yan, The Macro Compass
 
@@ -56,15 +56,15 @@ did. A failed fetch keeps the feed's preview (OpenAI and CFO Dive answer
 
 | Feed | filled | failed | still thin |
 |---|---|---|---|
-| CFO Dive | 0 | 10 | 2 ⚠️ |
-| OpenAI Blog | 0 | 19 | 1 ⚠️ |
-| Accounting Today | 10 | 0 | 1 ⚠️ |
-| Hacker News: claude code (50+ points) | 0 | 0 | 1 ⚠️ |
+| OpenAI Blog | 0 | 23 | 1 ⚠️ |
+| CFO Dive | 0 | 16 | 0 |
+| Hacker News: claude code (50+ points) | 2 | 2 | 0 |
+| Accounting Today | 20 | 0 | 0 |
 | Anthropic News | 2 | 0 | 0 |
-| Compound With AI | 1 | 0 | 0 |
-| Google Cloud Blog | 20 | 0 | 0 |
-| Hugging Face Blog | 12 | 0 | 0 |
-| **total** | 45 | 29 | 5 |
+| Google Cloud Blog | 18 | 0 | 0 |
+| Hugging Face Blog | 10 | 0 | 0 |
+| Ruben Dominguez (The AI Corner) | 2 | 0 | 0 |
+| **total** | 54 | 41 | 1 |
 
 ## Digest idea acceptance (from evaluation verdicts)
 

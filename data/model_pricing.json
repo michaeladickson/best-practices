@@ -1,7 +1,7 @@
 {
-  "fetched_at": "2026-10-24 00:59 UTC",
+  "fetched_at": "2026-10-30 22:12 UTC",
   "source": "https://openrouter.ai/api/v1/models",
-  "catalog_size": 469,
+  "catalog_size": 456,
   "models": {
     "anthropic/claude-opus-5": {
       "group": "Anthropic",
@@ -114,8 +114,8 @@
     "deepseek/deepseek-v3": {
       "group": "Open weight",
       "resolved_id": "deepseek/deepseek-v3.2",
-      "input": 0.28,
-      "output": 0.42,
+      "input": 0.26,
+      "output": 0.38,
       "batch_input": null,
       "batch_output": null,
       "context": 163840
@@ -123,8 +123,8 @@
     "moonshotai/kimi-k3": {
       "group": "Open weight",
       "resolved_id": "moonshotai/kimi-k3",
-      "input": 0.23900000000000002,
-      "output": 10.8,
+      "input": 0.192,
+      "output": 15.0,
       "batch_input": 2.2800000000000002,
       "batch_output": 11.399999999999999,
       "context": 1048576
