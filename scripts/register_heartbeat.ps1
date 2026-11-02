@@ -14,6 +14,10 @@ if (-not (Test-Path "$RepoPath\logs")) {
 $Action = New-ScheduledTaskAction -Execute "$RepoPath\scripts\check_heartbeats.cmd" -WorkingDirectory $RepoPath
 
 $Trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Tuesday -At 9:00AM
+# New-ScheduledTaskTrigger writes the start with today's UTC offset, which pins the task
+# to UTC: registered in daylight time, it fired an hour early once standard time
+# began (measured 11/1/2026). No offset = wall clock.
+$Trigger.StartBoundary = ([datetime]$Trigger.StartBoundary).ToString("yyyy-MM-ddTHH:mm:ss")
 
 $Settings = New-ScheduledTaskSettingsSet `
     -AllowStartIfOnBatteries `
