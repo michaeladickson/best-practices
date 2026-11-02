@@ -10,6 +10,10 @@ $Action = New-ScheduledTaskAction -Execute "powershell.exe" `
 
 # Daily 2:00 AM local time
 $Trigger = New-ScheduledTaskTrigger -Daily -At 2:00AM
+# New-ScheduledTaskTrigger writes the start with today's UTC offset, which pins the task
+# to UTC: registered in daylight time, it fired an hour early once standard time
+# began (measured 11/1/2026). No offset = wall clock.
+$Trigger.StartBoundary = ([datetime]$Trigger.StartBoundary).ToString("yyyy-MM-ddTHH:mm:ss")
 
 $Settings = New-ScheduledTaskSettingsSet `
     -AllowStartIfOnBatteries `
