@@ -257,6 +257,38 @@
           "reason": "`scripts/cron_knowledge_curation.sh`'s constraint is not retrieval, and no vector search is installed in the repo."
         }
       ]
+    },
+    "3648": {
+      "title": "Weekly digest 2026-10-30: ideas to evaluate",
+      "closed_at": "2026-10-31",
+      "verdicts": [
+        {
+          "idea": "Agent operation durability for financial transactions",
+          "verdict": "already-built",
+          "reason": "QBO posting is code, not an agent; the nightly sync is the sole poster (`crumbl-nightly-sync`), and the double-post guard is QBO itself by looking up an existing JE by its PrivateNote dedup tag (`src/qbo/CLAUDE.md`, \"JE idempotency\")."
+        },
+        {
+          "idea": "Human-in-the-loop approval for agent actions",
+          "verdict": "rejected",
+          "reason": "Money-moving writes already sit behind Tier-2 gates in `src/qbo/CLAUDE.md` and remittance BillPayments go through Michael's approve lane (`src/payments/approval.py`)."
+        }
+      ]
+    },
+    "3528": {
+      "title": "Weekly digest 2026-10-23: ideas to evaluate",
+      "closed_at": "2026-10-31",
+      "verdicts": [
+        {
+          "idea": "Implement granular action-level authorization for operational agents",
+          "verdict": "already-built",
+          "reason": "Granular action-level authorization is already in place with QBO-mutating call classifications, enforced gates at the chokepoint, read-only QBO MCP, and PreToolUse hooks, while the proposed integration files `src/qbo/qbo_poster.py` and `src/payroll/payroll_processor.py` do not exist."
+        },
+        {
+          "idea": "Adopt self-learning context enrichment for knowledge curation cron",
+          "verdict": "rejected",
+          "reason": "`scripts/cron_knowledge_curation.sh` reads `knowledge/`, `CLAUDE.md` and `docs/` directly, so retrieval is not its constraint, and corrections already feed back through the memory capture rule (`/wrap-up`) rather than query monitoring."
+        }
+      ]
     }
   }
 }
