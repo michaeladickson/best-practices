@@ -1,7 +1,7 @@
 {
-  "fetched_at": "2026-10-30 22:12 UTC",
+  "fetched_at": "2026-11-06 23:11 UTC",
   "source": "https://openrouter.ai/api/v1/models",
-  "catalog_size": 456,
+  "catalog_size": 458,
   "models": {
     "anthropic/claude-opus-5": {
       "group": "Anthropic",
@@ -124,7 +124,7 @@
       "group": "Open weight",
       "resolved_id": "moonshotai/kimi-k3",
       "input": 0.192,
-      "output": 15.0,
+      "output": 16.0,
       "batch_input": 2.2800000000000002,
       "batch_output": 11.399999999999999,
       "context": 1048576
