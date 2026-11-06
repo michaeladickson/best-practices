@@ -224,6 +224,11 @@ measure provisioning latency, concurrent capacity, and dependency fidelity.
 - **Test whether agents can escape the eval environment.** Include scenarios that probe for side channels, unintended communication paths and isolation flaws.
 - **Simulate users, not just tasks.** Digital twins of human behavior, built from interviews, observation and transactions and checked with causal methods such as RCTs, surface emergent behavior before deployment.
 
+### Reconstruct production environments for simulation
+To evaluate how changes affect agent behavior, reconstruct the agent’s production environment, including its tools, APIs, and databases. This approach helps catch unanticipated failures caused by complex, non-deterministic interactions in the real environment.
+
+- Build evaluation pipelines that reconstruct the agent's full production environment to test changes and simulate complex, non-deterministic behaviors.
+
 ### Test safety multi-turn and in-environment
 Single-turn safety checks miss most real attacks. Evaluate across multi-turn
 interactions, and test prompt injection where it actually arrives — embedded in web
@@ -388,6 +393,7 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **Claude’s new auto eval tool** (Hamel Husain [ai_engineering]) — efficient human feedback for evaluation. Digest: 2026-09-30.
 - **How To Use Decision Models for Evals** (Hamel Husain) — Tune a binary judge's threshold on labeled cases. Digest: 2026-10-20.
 - **Turning Database Grading into RL Rewards: Post-Training Agents with ThinkingBox** (Hugging Face Blog) — Grade agent work by the end state it leaves. Digest: 2026-10-23.
+- **Raindrop simulates your agent’s world to catch what your changes break** (The New Stack) — simulates agent's world to catch what changes break. Digest: 2026-11-05.
 
 ## Where Used
 

@@ -45,6 +45,7 @@ Three places a fact can live, by scope:
 -   **Provide agents persistent organizational context.** Integrate persistent organizational context into agent identity and state management. This includes structured understanding of company policies, roles, and structure to enable more accurate and aligned agent behavior.
 -   **Test memory fidelity when migrating platforms.** An agent's value is partly its learned routines; check they survive a move, not just the explicit memory files.
 -   **Set retention and lifecycle for stored memory.** Interaction streams an agent captures and facts it derives are sensitive assets: decide what is kept, for how long, with whose consent, and when it is deleted.
+-   **Implement offline memory consolidation and rule prediction.** Agents can use idle time between interactions, a process called "dreaming," to distill experiences from logs into long-term knowledge and integrate them into a memory store. This includes writing rules that predict future relevance, turning memory into a predictive mechanism.
 
 ## Retrieval Contracts (Sources of Truth)
 
@@ -415,6 +416,7 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 -   **This week in Claude Code, 2026-08-28** (Claude Code team newsletter, via digest inbox) — per-agent persistent memory: `memory:` frontmatter → `.claude/agent-memory/`. Added 2026-08-28.
 -   **Your AI agent failed. The model might not be the problem.** (The New Stack) — Record agent internal monologue for debugging. Digest: 2026-09-20.
 -   **Trying the Software factory pattern.** (Will Larson (Irrational Exuberance)) — Agents manage project goals via task system. Digest: 2026-09-20.
+-   **The components of agent memory** (Anthropic Engineering) — Design agent memory systems to include a "dreaming" phase for offline consolidation of experiences into actionable rules and long-term knowledge. Digest: 2026-11-06.
 
 ## Where Used
 
