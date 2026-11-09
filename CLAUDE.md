@@ -98,7 +98,10 @@ anchors). Guardrails, since this also edits the anti-slop doc itself:
   the week's articles seen.
 - **Structural validation before write** — H1 + required anchors (`## Sources`,
   `## Where Used`) must survive and length must stay in bounds, else the write is
-  rejected and the doc is left untouched (retries next week). Git history is the backstop.
+  rejected and the doc is left untouched. Its candidates are **not** retried: the ledger
+  records successes only and the `--days 7` window slides past them by next Friday, so
+  re-run `python -m digest.practice_updater --days 7` in the main checkout the same week
+  (2026-08-28 precedent). Git history is the backstop.
 - **Practice titles capped at 12 words** (`MAX_PRACTICE_TITLE_WORDS`) — both prompts
   ask for the short hand-written register and the validator rejects any edit that adds
   a longer one. New-only, so a pre-existing long title never blocks a run. Of the 151
@@ -112,7 +115,7 @@ anchors). Guardrails, since this also edits the anti-slop doc itself:
   differently. The model is told to drop a candidate with none; code drops only a
   missing one or one opening with an awareness verb ("consider", "recognize"), a floor
   under the model's judgment rather than a substitute for it.
-- Most weeks change nothing. Review the `[automated]` practice commits like any other diff.
+- Most weeks edit at least one doc (12 of 14 Fridays, 8/07 to 11/06). Review each `[automated]` practice commit like any other diff.
 
 ### Thin feed entries are read from the article
 
