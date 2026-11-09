@@ -186,11 +186,11 @@ def _target(verb: str, args: list[str]) -> str:
 
 
 # `gh` as a command word: alone, at the end of a path, or right after what
-# shlex.split leaves attached: shell punctuation (`x&&gh`, `$(gh`) or the
-# newline of a `\` line continuation (`\ngh`, two sessions' commands in 90
-# days). Not after `=`: `--grep=gh pr create` is a search, and a bare
-# endswith("gh") ran it (#82).
-_GH_WORD = re.compile(r"(?:^|[\s\\/;&|(`${}!])gh(?:\.exe)?$", re.IGNORECASE)
+# shlex.split leaves attached: shell punctuation (`x&&gh`, `$(gh`), the newline
+# of a `\` line continuation (`\ngh`, two sessions' commands in 90 days), or a
+# quote the fallback split kept (`'gh` after a stray apostrophe). Not after
+# `=`: `--grep=gh pr create` is a search, and a bare endswith("gh") ran it (#82).
+_GH_WORD = re.compile(r"(?:^|[\s\\/;&|(`${}!'\"])gh(?:\.exe)?$", re.IGNORECASE)
 
 
 def _is_pr_verb(tokens: list[str], i: int) -> bool:
@@ -342,8 +342,11 @@ def _words(text: str, shell: str) -> list[str]:
     """`text` as words plus operator tokens (`|`, `&&`, `;`, `(`, a newline,
     `>&`), quotes respected. shlex.split drops newlines and leaves `|bash`,
     `x&&bash` and `(bash` as one word, so a shell there was no shell and two
-    lines read as one statement (#82). Bash backticks are operators too."""
+    lines read as one statement (#82). Bash backticks are operators too. A
+    newline after `|`, `&&` or `||` continues the statement, as in the shell:
+    read as an end, it cut `echo '...' |` from the `bash` on the next line."""
     text = text.replace("`\n" if shell == "PowerShell" else "\\\n", " ")
+    text = re.sub(r"(\|\||&&|\|&?)[ \t]*\n", r"\1 ", text)
     punct = _OPERATOR_CHARS + ("" if shell == "PowerShell" else "`")
     try:
         lex = shlex.shlex(text, posix=True, punctuation_chars=punct)
@@ -359,16 +362,15 @@ def _words(text: str, shell: str) -> list[str]:
 
 
 def _kind(token: str) -> str:
-    """"word"; "redirect" (`>`, `<<`, `>&`); "pipe" (`|`, `|&`, `)|`); "group"
-    (`(`, `)`, a backtick); or "stmt" (`&&`, `||`, `;`, `&`, a newline)."""
+    """"word"; "redirect" (`>`, `<<`, `>&`); "pipe" (`|`, `|&`, `)|`); "stmt"
+    (`&&`, `||`, `;`, `&`, a newline); or "group" (`(`, `)`, a backtick)."""
     if not token or token.strip(_OPERATOR_CHARS + "`"):
         return "word"
     if "<" in token or ">" in token:
         return "redirect"
-    core = token.strip("()`")
-    if not core:
-        return "group"
-    return "pipe" if core in ("|", "|&") else "stmt"
+    if "|" in token.replace("||", ""):
+        return "pipe"
+    return "stmt" if token.strip("()`") else "group"
 
 
 def _prefix_on_gh_line(command: str, value: str) -> bool:
@@ -418,7 +420,30 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
         if prefix and _flag(args, "--repo", "-R") is None and _prefix_on_gh_line(command, prefix):
             args += ["-R", prefix]
         found.append((tokens[i + 2], args, cd))
+    for t in tokens:
+        # `out="$(gh pr merge 264 2>&1)"`: quoted, the substitution is one
+        # token, and the merge in it ran with nothing found (#82).
+        for inner in _substitutions(t, shell):
+            found += [(v, a, c or cd) for v, a, c in _pr_commands(inner, shell)]
     return found
+
+
+def _substitutions(token: str, shell: str) -> list[str]:
+    """The text of each unescaped `$(...)` in a token that names a `gh pr`
+    verb. Not backticks: once shlex drops the quotes, a Markdown code span in
+    a PR body or a single-quoted sed pattern reads the same as a backtick
+    substitution. In 90 days of commands, backticks and escaped `\\$(` gave 5
+    false finds; the 2 real ones, merges looped inside `"$(...)"`, were not."""
+    out = []
+    for m in re.finditer(r"(?<!\\)\$\(", token):
+        depth, rest = 1, token[m.end():]
+        for i, ch in enumerate(rest):
+            depth += (ch == "(") - (ch == ")")
+            if depth == 0:
+                rest = rest[:i]
+                break
+        out.append(rest)
+    return [s for s in out if _PR_VERB.search(s)]
 
 
 _PR_URL = re.compile(r"https?://github\.com/([\w.-]+/[\w.-]+)/pull/\d+")
@@ -581,20 +606,27 @@ def _statement_start(words: list[str], c: int) -> int:
     at the group that encloses it."""
     depth = 0
     for i in range(c - 1, -1, -1):
-        t, k = words[i], _kind(words[i])
+        t = words[i]
         if t == "}":
             depth += 1
         elif t == "{":
             if depth == 0:
                 return i + 1
             depth -= 1
-        elif k in ("stmt", "pipe", "group"):
-            if k == "stmt" and depth == 0:
-                return i + 1
-            depth += t.count(")")
-            if t.count("(") > depth:
-                return i + 1
-            depth -= t.count("(")
+        elif _kind(t) in ("stmt", "pipe", "group"):
+            # Right to left within the token: in `\n)` the newline is inside
+            # the group the `)` closes; in `);` the `;` is outside it.
+            for j in range(len(t) - 1, -1, -1):
+                ch = t[j]
+                if ch == ")":
+                    depth += 1
+                elif ch == "(":
+                    if depth == 0:
+                        return i + 1
+                    depth -= 1
+                elif depth == 0 and (ch in ";\n" or (ch == "&" and t[j - 1:j] != "|")
+                                     or (ch == "|" and "||" in t[max(j - 1, 0):j + 2])):
+                    return i + 1
     return 0
 
 
@@ -627,23 +659,28 @@ def _run_by_another_shell(words: list[str], prose: set[int], bodies: list[tuple[
                           shell: str, depth: int = 2) -> str | None:
     """The first `gh pr` command another shell would run, or None.
 
-    A shell counts only as a command word (_command_words), never as a word in
-    a grep pattern or a path. What it runs: its own arguments (`bash -c '...'`,
-    `ssh host '...'`, `eval`), and, when a pipe feeds it, every word earlier in
+    A shell counts in its own simple command, never across a pipe or `&&`:
+    `grep "gh pr merge" f | grep -v bash` runs nothing. In a simple command it
+    counts as the command word (_command_words) or as any later word, since a
+    wrapper the gate does not list still runs it (`setsid bash -c`, `find
+    -exec sh -c`). It runs the arguments after it (`bash -c '...'`, `ssh host
+    '...'`, `eval`) and, as a command word fed by a pipe, every word earlier in
     its statement (`echo '...' | bash`). An argument counts when it parses as a
     `gh pr` command, not just text that names one (`bash -c 'grep "gh pr
-    create" f'`). A heredoc body counts when a shell is a command word in what
-    reads it (_owner), not in a title, and not when gh itself reads it.
+    create" f'`). A heredoc body counts when any word in what reads it (_owner)
+    is a shell, except a title or body.
     """
     for c in _command_words(words):
-        if not _is_shell_word(words[c]):
-            continue
         end = c + 1
         while end < len(words) and _kind(words[end]) in ("word", "redirect"):
             end += 1
-        given = list(range(c + 1, end))
+        shells = [s for s in range(c, end) if s not in prose
+                  and _kind(words[s]) == "word" and _is_shell_word(words[s])]
+        if not shells:
+            continue
+        given = list(range(shells[0] + 1, end))
         start = _statement_start(words, c)
-        if any(_kind(words[i]) == "pipe" for i in range(start, c)):
+        if shells[0] == c and any(_kind(words[i]) == "pipe" for i in range(start, c)):
             given += range(start, c)
         for i in given:
             if i not in prose and _kind(words[i]) == "word" and _runs_pr(words[i], shell, depth):
@@ -651,7 +688,10 @@ def _run_by_another_shell(words: list[str], prose: set[int], bodies: list[tuple[
     for around, body in bodies:
         if _runs_pr(body, shell, depth):
             reads = _words(around, shell)
-            if any(_is_shell_word(reads[c]) for c in _command_words(reads)):
+            prose_here = _prose(reads)
+            if any(_kind(w) == "word" and _is_shell_word(w) and i not in prose_here
+                   and (i == 0 or _kind(reads[i - 1]) != "redirect")    # `<<SH`, `> sh.log`
+                   for i, w in enumerate(reads)):
                 return around.split("\n")[0]
     return None
 

@@ -587,10 +587,10 @@ def test_a_pr_command_written_as_prose_passes(monkeypatch, capsys, command):
 
 # ── #82: the reviews of the #69 copies (2026-11-09) ───────────────────────
 # A shell counts only as a command word, found in words that keep the
-# operators, newlines and quotes shlex.split drops. 21 of the 29 cases added
-# for #82 had the wrong result on 79acb4ca; the rest (wrappers, a group piped
-# to a shell, a bare wsl, gh after punctuation or a line continuation) passed
-# there and guard what reading command words must keep.
+# operators, newlines and quotes shlex.split drops. 25 of the 44 cases added
+# for #82 have the wrong result on 79acb4ca; the rest passed there and guard
+# what reading command words must keep, among them 9 forms the first such
+# reading lost (a pipe ending a line, a shell after an unlisted wrapper).
 
 @pytest.mark.parametrize("command", [
     "echo 'gh pr merge 264 --squash' |bash",
@@ -607,6 +607,18 @@ def test_a_pr_command_written_as_prose_passes(monkeypatch, capsys, command):
     "gh pr edit 5 --add-label x | bash <<'EOF'\ngh pr merge 264 --squash\nEOF",
     "ssh host 'cd app && sh' <<'EOF'\ngh pr merge 264 --squash\nEOF",
     "ssh host \"cd /repo; bash\" <<EOF\ngh pr merge 264 --squash\nEOF",
+    # The reviews of the #82 copies: forms 79acb4ca blocked that its first
+    # command-word reading passed. A newline after `|` continues the pipeline,
+    "echo 'gh pr merge 264 --squash' |\nbash",
+    "echo 'gh pr merge 264 --squash' | \n  bash",
+    "(\n  echo 'gh pr merge 264 --squash'\n) | bash",
+    # and a shell after a wrapper the gate does not list still runs.
+    "setsid bash -c 'gh pr merge 264 --squash'",
+    "flock /tmp/l bash -c 'gh pr merge 264 --squash'",
+    "watch -n1 bash -c 'gh pr merge 264 --squash'",
+    "wsl ~ -e bash -c 'gh pr merge 264 --squash'",
+    "find . -maxdepth 0 -exec sh -c 'gh pr merge 264 --squash' \\;",
+    "setsid bash <<'EOF'\ngh pr merge 264 --squash\nEOF",
 ])
 def test_a_shell_glued_to_punctuation_or_behind_a_quote_fails_closed(monkeypatch, capsys,
                                                                      command):
@@ -631,6 +643,25 @@ def test_a_path_that_contains_gh_repo_is_not_the_variable(monkeypatch, capsys, c
     ("/usr/bin/gh pr edit 5 --add-label x", ["edit"]),
     ("git log --grep=gh pr create", []),
     ("echo high pr merge", []),
+    ("echo don't && bash -c 'gh pr merge 264 --squash'", ["merge"]),   # fallback keeps 'gh
+    ('out="$(gh pr merge 264 --squash 2>&1)"; echo "$out"', ["merge"]),
+    # A Markdown code span in a body is not a substitution the gate reads.
+    ("gh pr create --title t --body \"Run \\`gh pr merge 5\\` after\"", ["create"]),
 ])
 def test_gh_is_a_command_word_not_a_suffix(command, verbs):
     assert [v for v, _, _ in gate._pr_commands(command)] == verbs
+
+
+@pytest.mark.parametrize("text,code", [("Small fixes from #261.", 2), ("Clean body.", 0)])
+def test_a_merge_captured_in_a_quoted_substitution_is_checked(monkeypatch, capsys, text, code):
+    """Before #82 this merge was never found, so it ran with nothing checked."""
+    calls = []
+    code_, err = _run(monkeypatch, capsys, 'out="$(gh pr merge 264 --squash 2>&1)"',
+                      body=text, calls=calls)
+    assert code_ == code and calls, err
+
+
+def test_a_heredoc_delimiter_named_like_a_shell_is_not_a_shell(monkeypatch, capsys):
+    code, err = _run(monkeypatch, capsys, "cat > notes.txt <<SH\nthen gh pr merge 5\nSH",
+                     open_issues=())
+    assert code == 0, err
