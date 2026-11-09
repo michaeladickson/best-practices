@@ -37,10 +37,20 @@ date where there was "No shutdown date announced", or a new row that arrives
 dated), it files an issue. A page that cannot be fetched or parsed files its own issue and exits
 non-zero: "fetched and found nothing" is not "nothing announced".
 
+Vertex AI keeps a separate retirement calendar, and crumbl-ops and wealth-mgmt
+call Gemini through Vertex (VERTEX_CALLERS). So the run also reads Vertex's
+model-versions page and, from each of those repos' main branch, the Gemini ids
+its tests/test_model_strings_pinned.py pins. When a pinned model gains a fixed
+retirement date, gets a different one, or drops off the page, or a repo starts
+calling a model that already has one, it files an issue in the repo that calls
+the model: the migration lands there. An unreadable page or pin file files here
+and exits non-zero, like the AI Studio watch.
+
 Run: python -m digest.model_pricing [--dry-run] [--deprecations-only]
 """
 from __future__ import annotations
 
+import ast
 import html
 import json
 import re
@@ -118,6 +128,33 @@ UNREADABLE_ISSUE_TITLE = "Gemini deprecations watch: page unreadable"
 # The page listed 86 distinct model ids on 2026-10-26. Far fewer means the markup
 # changed under the parser, which must read as a failure, not as a quiet page.
 MIN_PAGE_ROWS = 40
+
+# cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions redirects
+# here (2026-11-09).
+VERTEX_VERSIONS_URL = (
+    "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-versions")
+VERTEX_SNAPSHOT = ROOT / "data" / "vertex_model_versions.json"
+# Repos whose Gemini calls go through Vertex, and the file in each whose
+# EXPECTED_MODEL_STRINGS lists every model id its code calls (a test there fails
+# otherwise). Read from the default branch each run, so a bump there moves the
+# watch with no edit here.
+VERTEX_CALLERS = {
+    "michaeladickson/crumbl-ops": "tests/test_model_strings_pinned.py",
+    "michaeladickson/wealth-mgmt": "tests/test_model_strings_pinned.py",
+}
+VERTEX_UNREADABLE_TITLE = "Vertex model-versions watch: unreadable"
+NOT_LISTED = "not listed"
+# 57 model rows across 7 tables on 2026-11-09.
+MIN_VERTEX_ROWS = 30
+# "November 19, 2026" is a fixed date. "September 2, 2027 or later" and "No
+# sooner than May 20, 2028" are floors, which the page says only move later.
+_FIXED_DATE = re.compile(r"[A-Z][a-z]+ \d{1,2}, \d{4}")
+
+
+def _get(url: str) -> str:
+    req = urllib.request.Request(url, headers={"User-Agent": "best-practices-digest"})
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+        return resp.read().decode("utf-8", errors="replace")
 
 
 def _fetch() -> list[dict]:
@@ -288,19 +325,21 @@ def file_issue(changes: list[str], dry_run: bool) -> None:
 
 
 class _TableRows(HTMLParser):
-    """Every <tr> on the page as a list of cell texts, tagged with the h2 it
-    sits under. Standard library only, like digest/article_text.py."""
+    """Every <tr> on the page as a list of cell texts, tagged with the heading
+    (h2 unless told otherwise) it sits under. Standard library only, like
+    digest/article_text.py."""
 
-    def __init__(self):
+    def __init__(self, heading: str = "h2"):
         super().__init__(convert_charrefs=True)
         self.rows: list[tuple[str, list[str]]] = []
+        self._heading_tag = heading
         self._section = ""
         self._heading: list[str] | None = None
         self._row: list[str] | None = None
         self._cell: list[str] | None = None
 
     def handle_starttag(self, tag, attrs):
-        if tag == "h2":
+        if tag == self._heading_tag:
             self._heading = []
         elif tag == "tr":
             self._row = []
@@ -308,7 +347,7 @@ class _TableRows(HTMLParser):
             self._cell = []
 
     def handle_endtag(self, tag):
-        if tag == "h2" and self._heading is not None:
+        if tag == self._heading_tag and self._heading is not None:
             self._section = " ".join("".join(self._heading).split())
             self._heading = None
         elif tag in ("td", "th") and self._cell is not None and self._row is not None:
@@ -499,33 +538,32 @@ def report_unreadable(reason: str, dry_run: bool) -> None:
         "Check by hand: `python -m digest.model_pricing --dry-run "
         "--deprecations-only`. Close once a weekly run reads the page again."
     )
+    _report_unreadable(UNREADABLE_ISSUE_TITLE, reason, body, dry_run)
+
+
+def _report_unreadable(title: str, reason: str, body: str, dry_run: bool) -> None:
     if dry_run:
-        print(f"[dry-run] would file or comment: {UNREADABLE_ISSUE_TITLE}\n  {reason}")
+        print(f"[dry-run] would file or comment: {title}\n  {reason}")
         return
     found = _gh("issue", "list", "--repo", REPO, "--state", "open", "--search",
-                f'"{UNREADABLE_ISSUE_TITLE}" in:title', "--json", "number,title")
+                f'"{title}" in:title', "--json", "number,title")
     existing = []
     if found.returncode == 0:
         existing = [i["number"] for i in json.loads(found.stdout or "[]")
-                    if i["title"] == UNREADABLE_ISSUE_TITLE]
+                    if i["title"] == title]
     if existing:
         result = _gh("issue", "comment", str(existing[0]), "--repo", REPO, "--body", body)
     else:
-        result = _gh("issue", "create", "--repo", REPO, "--title", UNREADABLE_ISSUE_TITLE,
-                     "--body", body)
+        result = _gh("issue", "create", "--repo", REPO, "--title", title, "--body", body)
     if result.returncode != 0:
-        log.error("deprecations_unreadable_unreported", reason=reason,
+        log.error("unreadable_unreported", title=title, reason=reason,
                   stderr=result.stderr[:200])
 
 
 def check_deprecations(dry_run: bool) -> bool:
     """True when the page was read, whether or not anything changed."""
     try:
-        req = urllib.request.Request(DEPRECATIONS_URL,
-                                     headers={"User-Agent": "best-practices-digest"})
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-            page = resp.read().decode("utf-8", errors="replace")
-        rows = parse_deprecations(page)
+        rows = parse_deprecations(_get(DEPRECATIONS_URL))
     except Exception as e:  # network, HTTP status, or PageUnreadable
         reason = f"{type(e).__name__}: {e}"
         log.error("deprecations_unreadable", reason=reason)
@@ -564,6 +602,241 @@ def check_deprecations(dry_run: bool) -> bool:
     }
     DEPRECATIONS_SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
     DEPRECATIONS_SNAPSHOT.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
+    return True
+
+
+def parse_vertex_versions(page: str) -> dict[str, dict]:
+    """Model id -> {section, retirement, replacement} for every row of every
+    table on Vertex's model-versions page, the retired-models table included.
+
+    The section is the h3 a table sits under ("Gemini models", "Models
+    available for shorter availability periods", "Retired models"). Columns are
+    found by header, as in parse_deprecations, and a page that does not look
+    like this one raises PageUnreadable instead of reading as a page with no
+    dates on it.
+    """
+    parser = _TableRows(heading="h3")
+    parser.feed(page)
+
+    out: dict[str, dict] = {}
+    cols: tuple[int, int | None] | None = None
+    headers_seen = 0
+    for section, cells in parser.rows:
+        lowered = [c.lower() for c in cells]
+        if lowered and lowered[0] == "model id":
+            retirement = next((i for i, c in enumerate(lowered) if "retirement" in c), None)
+            replacement = next((i for i, c in enumerate(lowered)
+                                if "replacement" in c or "upgrade" in c), None)
+            cols = (retirement, replacement) if retirement is not None else None
+            headers_seen += cols is not None
+            continue
+        if cols is None or len(cells) <= cols[0] or not cells[0]:
+            continue
+        retirement_i, replacement_i = cols
+        out.setdefault(cells[0], {
+            "section": section,
+            "retirement": cells[retirement_i],
+            "replacement": (cells[replacement_i]
+                            if replacement_i is not None and len(cells) > replacement_i else ""),
+        })
+
+    if headers_seen == 0:
+        raise PageUnreadable("no table with a Model ID / Retirement date header")
+    if len(out) < MIN_VERTEX_ROWS:
+        raise PageUnreadable(f"only {len(out)} model rows parsed (expected >= {MIN_VERTEX_ROWS})")
+    return out
+
+
+_UNDATED = re.compile(r"(?i)(?:|.*\bor later|no sooner than\b.*|no retirement date announced)")
+
+
+def retirement_date(cell: str) -> str | None:
+    """None when the cell sets no fixed date: empty, "No retirement date
+    announced", or a floor ("May 19, 2027 or later", "No sooner than May 20,
+    2028"). Otherwise the date as YYYY-MM-DD, or the cell as written when it is
+    in a shape this does not parse, so an unexpected format files an issue
+    instead of being skipped."""
+    cell = cell.strip()
+    if _UNDATED.fullmatch(cell):
+        return None
+    try:
+        return datetime.strptime(cell, "%B %d, %Y").strftime("%Y-%m-%d")
+    except ValueError:
+        return cell
+
+
+def pinned_gemini_ids(repo: str, path: str) -> list[str]:
+    """The gemini-* ids in EXPECTED_MODEL_STRINGS in `path` on `repo`'s
+    default branch. Raises when the file cannot be read or holds no such
+    literal: an empty answer would read as "this repo calls no Gemini model"."""
+    r = _gh("api", f"repos/{repo}/contents/{path}", "-H", "Accept: application/vnd.github.raw")
+    if r.returncode != 0:
+        raise RuntimeError(f"gh api {repo} {path}: {r.stderr.strip()[:200]}")
+    for node in ast.walk(ast.parse(r.stdout)):
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            targets = [node.target]
+        else:
+            continue
+        if any(isinstance(t, ast.Name) and t.id == "EXPECTED_MODEL_STRINGS" for t in targets):
+            return sorted(m for m in ast.literal_eval(node.value) if m.startswith("gemini-"))
+    raise RuntimeError(f"{repo} {path}: no EXPECTED_MODEL_STRINGS literal")
+
+
+def diff_vertex(old: dict, rows: dict[str, dict],
+                callers: dict[str, list[str]]) -> list[dict]:
+    """One finding per (repo, model) to file in that repo.
+
+    Reported: a called model whose retirement cell changes to a fixed date or
+    to a different one, a called model that leaves the page, and a model a repo
+    starts calling that already has a fixed date or is not on the page.
+    Not reported: a floor moving ("... or later" only moves later), a model no
+    watched repo calls, or anything on a baseline run.
+    """
+    old_rows, old_callers = old.get("models"), old.get("callers")
+    if not old_rows or old_callers is None:
+        return []
+    findings = []
+    for repo, models in sorted(callers.items()):
+        before = set(old_callers.get(repo, []))
+        for model in models:
+            cur = rows.get(model)
+            cell = cur["retirement"] if cur else NOT_LISTED
+            date = retirement_date(cell) if cur else None
+            if cur and date is None:
+                continue
+            if model in before:
+                prev_cell = old_rows[model]["retirement"] if model in old_rows else NOT_LISTED
+                if prev_cell == cell:
+                    continue
+                context = f'The previous weekly check read "{prev_cell}".'
+            else:
+                context = "This repo pinned it after the previous weekly check."
+            if cur:
+                repl = f" Replacement: {cur['replacement']}." if cur["replacement"] else ""
+                findings.append({
+                    "repo": repo, "model": model, "key": date,
+                    "title": f"Vertex retires {model} on {date}",
+                    "detail": (f"Vertex's model-versions page lists `{model}` for retirement "
+                               f"on {cell}, under \"{cur['section']}\".{repl} {context}"),
+                })
+            else:
+                findings.append({
+                    "repo": repo, "model": model, "key": "does not list",
+                    "title": f"Vertex model-versions page does not list {model}",
+                    "detail": (f"`{model}` is in none of the tables on Vertex's model-versions "
+                               f"page, so the weekly watch cannot see a retirement date for "
+                               f"it. {context}"),
+                })
+    return findings
+
+
+def _filed_as(repo: str, model: str, key: str) -> int | None:
+    """The number of an issue in `repo`, open or closed, whose title names
+    `model` and `key`, so a hand-filed carrier counts ("Vertex retires <model>
+    (GEMINI_FLASH) on <date>"). Raises when gh fails."""
+    r = _gh("issue", "list", "--repo", repo, "--state", "all", "--limit", "100",
+            "--search", f'"{model}" in:title', "--json", "number,title")
+    if r.returncode != 0:
+        raise RuntimeError(f"gh issue list {repo}: {r.stderr.strip()[:200]}")
+    exact = re.compile(rf"(?<![\w.-]){re.escape(model)}(?![\w-]|\.\w)")
+    return next((i["number"] for i in json.loads(r.stdout or "[]")
+                 if exact.search(i["title"]) and key in i["title"]), None)
+
+
+def file_vertex_finding(f: dict, dry_run: bool) -> bool:
+    try:
+        existing = _filed_as(f["repo"], f["model"], f["key"])
+    except Exception as e:
+        log.error("vertex_dedup_failed", repo=f["repo"], error=str(e))
+        return False
+    if existing:
+        log.info("vertex_finding_already_filed", repo=f["repo"], issue=existing)
+        if dry_run:
+            print(f"  already filed in {f['repo']} as #{existing}: {f['title']}")
+        return True
+    path = VERTEX_CALLERS[f["repo"]]
+    body = (
+        f"{f['detail']}\n\n"
+        f"Source: {VERTEX_VERSIONS_URL}. This repo calls `{f['model']}` through Vertex: it "
+        f"is in `EXPECTED_MODEL_STRINGS` in `{path}`. The page says a listed retirement "
+        "date can move later but not earlier, and that a model in its shorter-availability "
+        "table gets at least 45 days' notice.\n\n"
+        f"To migrate, follow the bump steps in `{path}`.\n\n"
+        "Filed by best-practices `digest/model_pricing.py` in the weekly digest run. An "
+        "issue in this repo whose title names this model and date, open or closed, stops "
+        "it being filed again."
+    )
+    if dry_run:
+        print(f"[dry-run] would file in {f['repo']}: {f['title']}\n  {f['detail']}")
+        return True
+    result = _gh("issue", "create", "--repo", f["repo"], "--title", f["title"], "--body", body)
+    if result.returncode != 0:
+        log.error("vertex_issue_failed", repo=f["repo"], stderr=result.stderr[:200])
+        return False
+    log.info("vertex_issue_filed", url=result.stdout.strip())
+    return True
+
+
+def report_vertex_unreadable(reason: str, dry_run: bool) -> None:
+    body = (
+        f"The weekly Vertex retirement check failed: {reason}\n\n"
+        f"Until a run reads {VERTEX_VERSIONS_URL} and the pinned model ids in "
+        f"{', '.join(VERTEX_CALLERS)} again, nothing watches Vertex's retirement dates "
+        "for the Gemini models those repos call. `data/vertex_model_versions.json` was "
+        "left as it was, so the next good read diffs against the last good one.\n\n"
+        "Check by hand: `python -m digest.model_pricing --dry-run --deprecations-only`. "
+        "Close once a weekly run reads both again."
+    )
+    _report_unreadable(VERTEX_UNREADABLE_TITLE, reason, body, dry_run)
+
+
+def check_vertex_retirements(dry_run: bool) -> bool:
+    """True when the page and every pin file were read and every finding filed."""
+    try:
+        rows = parse_vertex_versions(_get(VERTEX_VERSIONS_URL))
+        callers = {repo: pinned_gemini_ids(repo, path) for repo, path in VERTEX_CALLERS.items()}
+    except Exception as e:  # network, HTTP status, gh, or PageUnreadable
+        reason = f"{type(e).__name__}: {e}"
+        log.error("vertex_unreadable", reason=reason)
+        report_vertex_unreadable(reason, dry_run)
+        return False
+
+    old = {}
+    if VERTEX_SNAPSHOT.exists():
+        old = json.loads(VERTEX_SNAPSHOT.read_text(encoding="utf-8"))
+    findings = diff_vertex(old, rows, callers)
+    log.info("vertex_checked", page_rows=len(rows),
+             called=sum(len(m) for m in callers.values()), findings=len(findings))
+
+    if dry_run:
+        print(f"\nVertex model versions ({VERTEX_VERSIONS_URL}): {len(rows)} model rows parsed")
+        for repo, models in sorted(callers.items()):
+            for m in models:
+                print(f"  {repo:30} {m:26} {rows[m]['retirement'] if m in rows else NOT_LISTED}")
+        if not old:
+            print("No previous snapshot: baseline run, nothing can be detected as "
+                  "changed yet.")
+        elif findings:
+            for f in findings:
+                file_vertex_finding(f, dry_run=True)
+        else:
+            print(f"No change since {old.get('fetched_at', 'the previous snapshot')}.")
+        return True
+
+    filed = [file_vertex_finding(f, dry_run=False) for f in findings]
+    if not all(filed):
+        return False  # old snapshot kept: next week re-diffs, and _filed_as skips what went
+    snapshot = {
+        "fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "source": VERTEX_VERSIONS_URL,
+        "page_rows": len(rows),
+        "callers": callers,
+        "models": rows,
+    }
+    VERTEX_SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
+    VERTEX_SNAPSHOT.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
     return True
 
 
@@ -614,9 +887,9 @@ def check_pricing(dry_run: bool) -> None:
 @click.option("--dry-run", is_flag=True,
               help="Fetch and diff; file no issue, write no snapshot or report")
 @click.option("--deprecations-only", is_flag=True,
-              help="Skip the price check; run only the deprecations-page watch")
+              help="Skip the price check; run only the AI Studio and Vertex retirement watches")
 def main(dry_run: bool, deprecations_only: bool):
-    # Each check runs whatever the other did. Either failing exits 1, so the
+    # Each check runs whatever the others did. Any failing exits 1, so the
     # wrapper's WARNING line names this step.
     ok = True
     if not deprecations_only:
@@ -626,6 +899,8 @@ def main(dry_run: bool, deprecations_only: bool):
             log.error("pricing_check_failed", error=f"{type(e).__name__}: {e}")
             ok = False
     if not check_deprecations(dry_run):
+        ok = False
+    if not check_vertex_retirements(dry_run):
         ok = False
     if not ok:
         sys.exit(1)

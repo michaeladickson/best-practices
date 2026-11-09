@@ -316,9 +316,12 @@ python3 scripts/check_gh_usage.py || echo "WARNING: GH usage tripwire fired or c
 # watched row's shutdown date changes (prefixes in DEPRECATION_WATCH_PREFIXES,
 # which follow the model the digest calls), and a separate "page unreadable"
 # issue (exit 1, WARNING below) when the page cannot be fetched or parsed.
-python3 -m digest.model_pricing || echo "WARNING: model pricing or Gemini deprecations check failed" >&2
+# And Vertex's model-versions page, for the Gemini ids pinned by the repos that
+# call Gemini through Vertex (VERTEX_CALLERS): files in that repo when one is
+# dated, and "unreadable" here (exit 1) when the page or a pin file fails.
+python3 -m digest.model_pricing || echo "WARNING: model pricing or Gemini retirement watch failed" >&2
 
-git add data/feed_report.md data/feed_candidates.json data/model_pricing.md data/model_pricing.json data/model_deprecations.json 2>/dev/null
+git add data/feed_report.md data/feed_candidates.json data/model_pricing.md data/model_pricing.json data/model_deprecations.json data/vertex_model_versions.json 2>/dev/null
 if ! git diff --cached --quiet; then
   git commit -q -m "Weekly telemetry: feed report + citation ledger + model pricing + Gemini deprecations [automated]"
   git push -q origin main || echo "WARNING: push of telemetry failed" >&2

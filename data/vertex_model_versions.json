@@ -1,0 +1,301 @@
+{
+  "fetched_at": "2026-11-09 11:41 UTC",
+  "source": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-versions",
+  "page_rows": 57,
+  "callers": {
+    "michaeladickson/crumbl-ops": [
+      "gemini-3.6-flash",
+      "gemini-3.8-flash"
+    ],
+    "michaeladickson/wealth-mgmt": [
+      "gemini-2.5-flash"
+    ]
+  },
+  "models": {
+    "gemini-4-argon": {
+      "section": "Gemini models",
+      "retirement": "October 13, 2027 or later",
+      "replacement": ""
+    },
+    "gemini-3.8-live": {
+      "section": "Gemini models",
+      "retirement": "September 25, 2027 or later",
+      "replacement": ""
+    },
+    "gemini-3.8-flash": {
+      "section": "Gemini models",
+      "retirement": "September 2, 2027 or later",
+      "replacement": ""
+    },
+    "gemini-3.5-flash-lite": {
+      "section": "Gemini models",
+      "retirement": "July 21, 2027 or later",
+      "replacement": ""
+    },
+    "gemini-3.5-flash": {
+      "section": "Gemini models",
+      "retirement": "May 19, 2027 or later",
+      "replacement": ""
+    },
+    "gemini-3.1-flash-lite": {
+      "section": "Gemini models",
+      "retirement": "May 7, 2027 or later",
+      "replacement": ""
+    },
+    "gemini-2.5-pro": {
+      "section": "Gemini models",
+      "retirement": "October 20, 2026",
+      "replacement": "gemini-3.8-flash or gemini-3.5-flash"
+    },
+    "gemini-2.5-flash": {
+      "section": "Gemini models",
+      "retirement": "October 20, 2026",
+      "replacement": "gemini-3.8-flash or gemini-3.5-flash-lite"
+    },
+    "gemini-2.5-flash-lite": {
+      "section": "Gemini models",
+      "retirement": "October 20, 2026",
+      "replacement": "gemini-3.8-flash or gemini-3.5-flash-lite or Gemma 4"
+    },
+    "gemini-live-2.5-flash-native-audio": {
+      "section": "Gemini models",
+      "retirement": "December 13, 2026",
+      "replacement": "gemini-3.8-live"
+    },
+    "gemini-3.1-flash-lite-image": {
+      "section": "Gemini image models",
+      "retirement": "June 28, 2027 or later",
+      "replacement": ""
+    },
+    "gemini-3-pro-image": {
+      "section": "Gemini image models",
+      "retirement": "May 28, 2027 or later",
+      "replacement": ""
+    },
+    "gemini-3.1-flash-image": {
+      "section": "Gemini image models",
+      "retirement": "May 28, 2027 or later",
+      "replacement": ""
+    },
+    "gemini-2.5-flash-image": {
+      "section": "Gemini image models",
+      "retirement": "March 15, 2027",
+      "replacement": "gemini-3.1-flash-lite-image"
+    },
+    "gemini-omni-1.2-flash": {
+      "section": "Gemini Omni models",
+      "retirement": "November 5, 2027 or later",
+      "replacement": ""
+    },
+    "veo-3.1-generate-001": {
+      "section": "Veo models",
+      "retirement": "May 4, 2027 or later",
+      "replacement": "gemini-omni-1.2-flash"
+    },
+    "veo-3.1-fast-generate-001": {
+      "section": "Veo models",
+      "retirement": "May 4, 2027 or later",
+      "replacement": "gemini-omni-1.2-flash"
+    },
+    "gemini-embedding-2": {
+      "section": "Embeddings models",
+      "retirement": "",
+      "replacement": ""
+    },
+    "gemini-embedding-001": {
+      "section": "Embeddings models",
+      "retirement": "No sooner than May 20, 2028",
+      "replacement": ""
+    },
+    "text-embedding-005": {
+      "section": "Embeddings models",
+      "retirement": "April 1, 2027",
+      "replacement": ""
+    },
+    "text-embedding-004": {
+      "section": "Embeddings models",
+      "retirement": "April 1, 2027",
+      "replacement": ""
+    },
+    "text-multilingual-embedding-002": {
+      "section": "Embeddings models",
+      "retirement": "April 1, 2027",
+      "replacement": ""
+    },
+    "multimodalembedding@001": {
+      "section": "Embeddings models",
+      "retirement": "April 1, 2027",
+      "replacement": ""
+    },
+    "gemini-4-argon-cyber-permissive": {
+      "section": "Models available for shorter availability periods",
+      "retirement": "No retirement date announced",
+      "replacement": ""
+    },
+    "gemini-3.8-flash-cyber": {
+      "section": "Models available for shorter availability periods",
+      "retirement": "No retirement date announced",
+      "replacement": ""
+    },
+    "gemini-3.7-flash": {
+      "section": "Models available for shorter availability periods",
+      "retirement": "January 28, 2027",
+      "replacement": "gemini-3.8-flash"
+    },
+    "gemini-3.6-flash": {
+      "section": "Models available for shorter availability periods",
+      "retirement": "November 19, 2026",
+      "replacement": "gemini-3.8-flash"
+    },
+    "gemini-nano-banana-2.1": {
+      "section": "Models available for shorter availability periods",
+      "retirement": "No retirement date announced",
+      "replacement": ""
+    },
+    "veo-3.0-generate-001": {
+      "section": "Retired models",
+      "retirement": "June 30, 2026",
+      "replacement": "veo-3.1-generate-001"
+    },
+    "veo-3.0-fast-generate-001": {
+      "section": "Retired models",
+      "retirement": "June 30, 2026",
+      "replacement": "veo-3.1-fast-generate-001"
+    },
+    "veo-2.0-generate-001": {
+      "section": "Retired models",
+      "retirement": "June 30, 2026",
+      "replacement": "veo-3.1-generate-001"
+    },
+    "imagen-4.0-generate-001": {
+      "section": "Retired models",
+      "retirement": "June 30, 2026",
+      "replacement": "gemini-2.5-flash-image"
+    },
+    "imagen-4.0-ultra-generate-001": {
+      "section": "Retired models",
+      "retirement": "June 30, 2026",
+      "replacement": "gemini-2.5-flash-image"
+    },
+    "imagen-3.0-generate-002": {
+      "section": "Retired models",
+      "retirement": "June 30, 2026",
+      "replacement": "gemini-2.5-flash-image"
+    },
+    "imagen-3.0-generate-001": {
+      "section": "Retired models",
+      "retirement": "June 30, 2026",
+      "replacement": "gemini-2.5-flash-image"
+    },
+    "imagegeneration@006": {
+      "section": "Retired models",
+      "retirement": "June 30, 2026",
+      "replacement": "gemini-2.5-flash-image"
+    },
+    "imagegeneration@005": {
+      "section": "Retired models",
+      "retirement": "June 30, 2026",
+      "replacement": "gemini-2.5-flash-image"
+    },
+    "imagegeneration@004": {
+      "section": "Retired models",
+      "retirement": "June 30, 2026",
+      "replacement": "gemini-2.5-flash-image"
+    },
+    "imagegeneration@003": {
+      "section": "Retired models",
+      "retirement": "June 30, 2026",
+      "replacement": "gemini-2.5-flash-image"
+    },
+    "imagegeneration@002": {
+      "section": "Retired models",
+      "retirement": "June 30, 2026",
+      "replacement": "gemini-2.5-flash-image"
+    },
+    "gemini-2.0-flash": {
+      "section": "Retired models",
+      "retirement": "June 1, 2026",
+      "replacement": "gemini-3.5-flash-lite"
+    },
+    "gemini-2.0-flash-lite": {
+      "section": "Retired models",
+      "retirement": "June 1, 2026",
+      "replacement": "gemini-3.5-flash-lite"
+    },
+    "gemini-1.5-pro-001": {
+      "section": "Retired models",
+      "retirement": "May 24, 2025",
+      "replacement": "gemini-2.5-flash"
+    },
+    "gemini-1.5-pro-002": {
+      "section": "Retired models",
+      "retirement": "September 24, 2025",
+      "replacement": "gemini-2.5-flash"
+    },
+    "gemini-1.5-flash-001": {
+      "section": "Retired models",
+      "retirement": "May 24, 2025",
+      "replacement": "gemini-2.5-flash-lite"
+    },
+    "gemini-1.5-flash-002": {
+      "section": "Retired models",
+      "retirement": "September 24, 2025",
+      "replacement": "gemini-2.5-flash-lite"
+    },
+    "textembedding-gecko@003*": {
+      "section": "Retired models",
+      "retirement": "May 24, 2025",
+      "replacement": "gemini-embedding-001"
+    },
+    "textembedding-gecko-multilingual@001": {
+      "section": "Retired models",
+      "retirement": "May 24, 2025",
+      "replacement": "gemini-embedding-001"
+    },
+    "gemini-1.0-pro-001": {
+      "section": "Retired models",
+      "retirement": "April 21, 2025",
+      "replacement": "gemini-2.5-flash"
+    },
+    "gemini-1.0-pro-002": {
+      "section": "Retired models",
+      "retirement": "April 21, 2025",
+      "replacement": "gemini-2.5-flash"
+    },
+    "gemini-1.0-pro-vision-001": {
+      "section": "Retired models",
+      "retirement": "April 21, 2025",
+      "replacement": "gemini-2.5-flash"
+    },
+    "text-bison": {
+      "section": "Retired models",
+      "retirement": "April 21, 2025",
+      "replacement": "gemini-2.5-flash-lite"
+    },
+    "chat-bison": {
+      "section": "Retired models",
+      "retirement": "April 21, 2025",
+      "replacement": "gemini-2.5-flash-lite"
+    },
+    "code-gecko": {
+      "section": "Retired models",
+      "retirement": "April 21, 2025",
+      "replacement": "gemini-2.5-flash-lite"
+    },
+    "textembedding-gecko@002": {
+      "section": "Retired models",
+      "retirement": "April 21, 2025",
+      "replacement": "gemini-embedding-001"
+    },
+    "textembedding-gecko@001": {
+      "section": "Retired models",
+      "retirement": "April 21, 2025",
+      "replacement": "gemini-embedding-001"
+    },
+    "imagetext": {
+      "section": "Retired models",
+      "retirement": "September 24, 2025",
+      "replacement": "gemini-2.5-flash-image"
+    }
+  }
+}
