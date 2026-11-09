@@ -10,10 +10,17 @@ Each check reads a freshness signal and compares against a max age:
                     newest across a glob of them)
 
 Statuses: OK / STALE / PENDING (state has never existed — a job that hasn't
-had its first run yet, e.g. monthly-backward-pass before Sep 1).
+had its first run yet, e.g. monthly-backward-pass before Sep 1) / UNREADABLE
+(a state file exists but holds no readable last_run).
 
-When anything is STALE, opens a GitHub issue in this repo (skipped if an open
-heartbeat issue already exists — no weekly duplicates) and exits 1.
+UNREADABLE is not PENDING. The 2026-11-09 skills-sync run wrote state.json with
+a UTF-8 byte order mark, json.load rejected it, and the job read "no state yet
+(never run?)": a tell that could never go STALE. State files are read with
+utf-8-sig, and one that still cannot be read alerts like a stale job.
+
+When anything is STALE or UNREADABLE, opens a GitHub issue in this repo
+(skipped if an open heartbeat issue already exists — no weekly duplicates) and
+exits 1.
 
 Run from repo root: python scripts/check_heartbeats.py [--no-issue]
 Wired into scripts/run_weekly_digest.sh; safe to run manually anytime.
@@ -86,29 +93,38 @@ def _newest_mtime(pattern: str):
 
 
 def _newest_last_run(pattern: str):
-    newest = None
+    """(newest last_run as a timestamp or None, [(path, why) for each file that
+    exists but gives no readable last_run])."""
+    newest, unreadable = None, []
     for p in glob.glob(pattern):
         try:
-            with open(p, encoding="utf-8") as f:
+            # utf-8-sig: PowerShell 5.1 writes UTF-8 with a byte order mark.
+            with open(p, encoding="utf-8-sig") as f:
                 raw = json.load(f).get("last_run")
             if not raw:
-                continue
+                raise ValueError("no last_run")
             ts = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
             if ts.tzinfo is None:
                 ts = ts.replace(tzinfo=timezone.utc)
             if newest is None or ts > newest:
                 newest = ts
-        except (json.JSONDecodeError, ValueError, OSError):
-            continue
-    return newest.timestamp() if newest else None
+        except (json.JSONDecodeError, ValueError, OSError, AttributeError) as e:
+            unreadable.append((p, f"{type(e).__name__}: {e}"[:120]))
+    return (newest.timestamp() if newest else None), unreadable
 
 
 def run_checks():
     now = datetime.now(timezone.utc).timestamp()
     results = []
     for check in CHECKS:
-        ts = (_newest_mtime(check["path"]) if check["type"] == "file_mtime"
-              else _newest_last_run(check["path"]))
+        if check["type"] == "file_mtime":
+            ts, unreadable = _newest_mtime(check["path"]), []
+        else:
+            ts, unreadable = _newest_last_run(check["path"])
+        if unreadable:
+            path, why = unreadable[0]
+            results.append((check["name"], "UNREADABLE", f"{path}: {why}"))
+            continue
         if ts is None:
             results.append((check["name"], "PENDING", "no state yet (never run?)"))
             continue
@@ -130,8 +146,9 @@ def file_issue(stale_rows):
     body = ("Detected by scripts/check_heartbeats.py during the weekly run.\n\n"
             + "\n".join(f"- **{n}** — {d}" for n, _, d in stale_rows)
             + "\n\nA stale heartbeat means the job has silently stopped firing "
-              "(the WM-WeeklyDigest failure mode). Check the job's own logs/state, "
-              "fix, then close this issue.")
+              "(the WM-WeeklyDigest failure mode). An unreadable one means its state "
+              "file exists but this check cannot read it, so it could not go stale "
+              "either. Check the job's own logs/state, fix, then close this issue.")
     subprocess.run(["gh", "issue", "create", "--repo", REPO,
                     "--title", ISSUE_TITLE, "--body", body],
                    capture_output=True, text=True, encoding="utf-8", errors="replace")
@@ -142,8 +159,8 @@ def main():
     results = run_checks()
     width = max(len(n) for n, _, _ in results)
     for name, status, detail in results:
-        print(f"{name:<{width}}  {status:<8} {detail}")
-    stale = [r for r in results if r[1] == "STALE"]
+        print(f"{name:<{width}}  {status:<10} {detail}")
+    stale = [r for r in results if r[1] in ("STALE", "UNREADABLE")]
     if stale:
         if "--no-issue" not in sys.argv:
             file_issue(stale)

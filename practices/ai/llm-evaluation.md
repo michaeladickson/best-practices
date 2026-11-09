@@ -223,11 +223,7 @@ measure provisioning latency, concurrent capacity, and dependency fidelity.
 
 - **Test whether agents can escape the eval environment.** Include scenarios that probe for side channels, unintended communication paths and isolation flaws.
 - **Simulate users, not just tasks.** Digital twins of human behavior, built from interviews, observation and transactions and checked with causal methods such as RCTs, surface emergent behavior before deployment.
-
-### Reconstruct production environments for simulation
-To evaluate how changes affect agent behavior, reconstruct the agent’s production environment, including its tools, APIs, and databases. This approach helps catch unanticipated failures caused by complex, non-deterministic interactions in the real environment.
-
-- Build evaluation pipelines that reconstruct the agent's full production environment to test changes and simulate complex, non-deterministic behaviors.
+- **Rebuild the production environment for the simulation.** Reconstruct the agent's tools, APIs and databases, so a prompt, model or tool change meets the interactions it will meet in production before it ships.
 
 ### Test safety multi-turn and in-environment
 Single-turn safety checks miss most real attacks. Evaluate across multi-turn
