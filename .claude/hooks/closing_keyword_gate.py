@@ -130,20 +130,6 @@ def _expand(value: str, shell_vars: dict[str, str]) -> str:
                         value)
 
 
-def _flag(args: list[str], *names: str) -> str | None:
-    for i, a in enumerate(args):
-        for name in names:
-            if a == name and i + 1 < len(args):
-                return args[i + 1]
-            if a.startswith(name + "="):
-                return a.split("=", 1)[1]
-            # A one-letter flag takes its value attached: `-Rowner/repo`. Unread,
-            # the repo was dropped and the merge checked against this one.
-            if len(name) == 2 and len(a) > 2 and a.startswith(name):
-                return a[2:]
-    return None
-
-
 # gh pr's one-letter flags that take no value, and its long flags that take one,
 # per verb (gh 2.90.0 `--help`). pflag reads a group such as `-sR c/d` letter by
 # letter, and the first letter that takes a value takes the rest of the word
@@ -255,13 +241,14 @@ _GH_WORD = re.compile(r"(?:^|[\s\\/;&|(`${}!'\"])gh(?:\.exe)?$", re.IGNORECASE)
 
 # `gh pr new` is gh's alias for create (`gh pr create --help`, gh 2.90.0).
 _VERBS = {"create": "create", "new": "create", "edit": "edit", "merge": "merge"}
-# The same as text, for the shell, substitution, xargs and stdin checks. Each
-# word before the verb is read as _verb_at reads it, one way only: `--x v` and
-# `-x v` take the next word whatever it is (`-F -`, `-t -x`); `--x=v`, `-xv` and
-# a lone `-` stand alone. A lone `-` once read as no value hid `bash -c 'gh pr
-# -t - merge 46'` from every check (wealth-mgmt PR 311 review). A value is a
-# quoted run, `\"` included, then the rest of its word; or a bare word.
-_VALUE = r"""(?:(?:"(?:[^"\\]|\\.)*"|'[^']*')\S*|[^\s"']\S*)"""
+# The same as text, for the stdin check alone, where a miss fails closed: the
+# shell, substitution and xargs checks hand their text to the parser instead,
+# since a pattern that could not shape a value (`-ta" b"`) hid the merge from
+# it (command-center PR 847 review). Each word before the verb is read as
+# _verb_at reads it, one way only: `--x v` and `-x v` take the next word
+# whatever it is (`-F -`, `-t -x`); `--x=v`, `-xv` and a lone `-` stand alone.
+# A value is a run of bare characters, escapes and quoted runs (`a" b"`).
+_VALUE = r"""(?:[^\s"'\\]|\\.|"(?:[^"\\]|\\.)*"|'[^']*')+"""
 _PRE_VERB_WORD = (r"(?:(?:--[^\s=]+|-[^\s-])\s+" + _VALUE   # --x v, -x v
                   + r"|--[^\s=]*=" + _VALUE + r"?"          # --x=v
                   + r"|-[^\s-]" + _VALUE                    # -xv, -sRo/r
@@ -534,12 +521,13 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
 
 
 def _substitutions(token: str, shell: str) -> list[str]:
-    """The text of each unescaped `$(...)` in a token that names a `gh pr`
-    verb and closes within it; an open one is a pattern (`grep -F '$(gh pr
-    merge'`). Not backticks: once shlex drops the quotes, a Markdown code span
-    in a PR body or a single-quoted sed pattern reads the same as a backtick
-    substitution. In 90 days of commands, backticks and escaped `\\$(` gave 5
-    false finds; the 2 real ones, merges looped inside `"$(...)"`, were not."""
+    """The text of each unescaped `$(...)` in a token that closes within it;
+    an open one is a pattern (`grep -F '$(gh pr merge'`). The caller parses
+    each, so one that only names a verb finds nothing. Not backticks: once
+    shlex drops the quotes, a Markdown code span in a PR body or a
+    single-quoted sed pattern reads the same as a backtick substitution. In
+    90 days of commands, backticks and escaped `\\$(` gave 5 false finds; the
+    2 real ones, merges looped inside `"$(...)"`, were not."""
     out = []
     for m in re.finditer(r"(?<!\\)\$\(", token):
         depth, rest = 1, token[m.end():]
@@ -548,7 +536,7 @@ def _substitutions(token: str, shell: str) -> list[str]:
             if depth == 0:
                 out.append(rest[:i])
                 break
-    return [s for s in out if _PR_VERB.search(s)]
+    return out
 
 
 _PR_URL = re.compile(r"https?://github\.com/([\w.-]+/[\w.-]+)/pull/\d+")
@@ -603,7 +591,11 @@ _STDIN_BODY = re.compile(
     r"\b" + _PR_VERB_TEXT + r"[^\n;&|]*?(?<![^\s|;&(])<<(?!<)"
     r"|(?<![^\s|;&(])<<(?!<)-?\s*['\"]?\w+['\"]?[^\n;&|]*\|\s*gh\s+pr\b"
     r"|^\s*['\"]@\s*\|\s*gh\s+pr\b", re.MULTILINE)
-_READS_STDIN = re.compile(r"(?:--body-file|-[A-Za-z]*F)(?:\s+|=)-(?!\S)")
+# `-F -`, `-F-`, or F after letters that take no value on some verb (`-dF -`);
+# not `-tF -`, where F is the title and `-` a stray argument.
+_ANY_NO_VALUE = "".join(sorted(set("".join(_NO_VALUE_SHORT.values()))))
+_READS_STDIN = re.compile(
+    r"(?:--body-file(?:\s+|=)|-[" + _ANY_NO_VALUE + r"]*F(?:\s+|=)?)-(?!\S)")
 
 
 def _stdin_visible(stripped: str) -> bool:
@@ -617,7 +609,23 @@ def _stdin_visible(stripped: str) -> bool:
     return False
 
 
-_XARGS = re.compile(r"\bxargs\b[^;&|\n]*\b" + _PR_VERB_TEXT)
+def _fed_by_xargs(words: list[str]) -> bool:
+    """A `gh pr` verb that xargs runs (`... | xargs -n1 gh pr merge`): gh takes
+    its PR from stdin, so the gate would read the current branch's PR instead.
+    Read from the words, where the parser finds the verb: a pattern over the
+    text missed a value it could not shape (`xargs gh pr -ta" b" merge`), and
+    blocked a body that only mentioned `xargs gh pr merge`."""
+    for i in range(len(words)):
+        if _verb_at(words, i) is None:
+            continue
+        j = i - 1
+        while j >= 0 and _kind(words[j]) in ("word", "redirect"):
+            if _command_name(words[j]) == "xargs":
+                return True
+            j -= 1
+    return False
+
+
 _GH_HOST = re.compile(r"\bGH_HOST=|\$env:GH_HOST\s*=", re.IGNORECASE)
 
 # A `gh pr` command written inside one argument to a shell (`bash -c '...'`,
@@ -626,7 +634,6 @@ _GH_HOST = re.compile(r"\bGH_HOST=|\$env:GH_HOST\s*=", re.IGNORECASE)
 # fine: a title, body or commit message, a grep pattern, a heredoc written to a
 # file or fed to gh as its body. Python is not counted as a shell: the live gate
 # blocked a patch script whose comment mentioned a merge (2026-10-26).
-_PR_VERB = re.compile(r"\b" + _PR_VERB_TEXT)
 _SHELL = re.compile(r"(?:(?:ba|z|da|k|fi|s)?sh|wsl|pwsh|powershell|cmd|iex"
                     r"|invoke-expression|eval|source)(?:\.exe)?", re.IGNORECASE)
 _PROSE_FLAGS = {"-t", "--title", "-b", "--body", "--subject", "-m", "--message"}
@@ -767,9 +774,10 @@ def _fed_by_pipe(words: list[str], c: int) -> int | None:
 
 def _runs_pr(text: str, shell: str, depth: int) -> bool:
     """`text`, run as a command, runs `gh pr create/edit/merge`: directly, or
-    through one more shell inside it (`bash -c "bash -c '...'"`)."""
-    if not _PR_VERB.search(text):
-        return False
+    through one more shell inside it (`bash -c "bash -c '...'"`). The parser
+    decides, with no pattern in front of it: a pattern that missed a value's
+    shape (`bash -c 'gh pr -ta" b" merge 46'`) kept the merge from ever
+    reaching the parser (command-center PR 847 review)."""
     if _pr_commands(text, shell):
         return True
     if depth <= 0:
@@ -922,7 +930,7 @@ def main() -> int:
         print("closing_keyword_gate: GH_HOST points gh at another host, whose issues "
               "the gate does not read. Run the `gh pr` command without it.", file=sys.stderr)
         return 2
-    if _XARGS.search(stripped):
+    if _fed_by_xargs(words):
         # `... | xargs -n1 gh pr merge` gives gh its PR on stdin, so the gate
         # would read the current branch's PR instead of the ones being merged.
         print("closing_keyword_gate: a `gh pr` command fed by xargs names PRs the "
