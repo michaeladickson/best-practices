@@ -17,7 +17,8 @@ step). Safeguards, since this also edits the very doc about preventing AI slop:
      each doc's candidates into that doc.
   3. Structural validation before any write: H1 preserved, required anchors present,
      length within sane bounds. On failure the doc is left untouched and the articles
-     are NOT marked incorporated (so it retries next week). Git history is the backstop.
+     are NOT marked incorporated and are NOT retried: the --days 7 window slides past
+     them by next Friday, so re-run the same week. Git history is the backstop.
 
 Usage:
     python -m digest.practice_updater --days 7
@@ -607,7 +608,7 @@ def _process_doc(doc: dict, required_anchors: list[str], doc_text: str,
         new_text = _integrate(client, doc_text, doc["topic"], candidates, fix_note=reason)
         ok, reason = _validate(doc_text, new_text or "", required_anchors)
     if not ok:
-        # Leave the doc untouched and do NOT mark articles seen — retry next week.
+        # Leave the doc untouched and do NOT mark articles seen. Not retried next week (the window slides past them).
         log.error("practice_update_rejected", doc=rel_path, reason=reason)
         result["status"] = f"rejected:{reason}"
         return result
