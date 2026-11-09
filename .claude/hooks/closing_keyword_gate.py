@@ -517,7 +517,8 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
             args.append(t)
         # shlex drops newlines, so `GH_REPO=o/r` alone on the line before looked
         # like a prefix; and gh lets an explicit -R win over the variable.
-        if prefix and not _repos(_VERBS[tokens[verb]], args) and _prefix_on_gh_line(command, prefix):
+        if (prefix and not _repos(_VERBS[tokens[verb]], args)
+                and _prefix_on_gh_line(command, prefix)):
             args += ["-R", prefix]
         found.append((_VERBS[tokens[verb]], args, cd))
     prose = _prose(tokens)
