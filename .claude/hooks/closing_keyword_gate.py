@@ -34,6 +34,13 @@ re-closing them is a no-op. A deliberate close is a line of its own:
 Blocking is exit 2 with the reason on stderr. A gate that cannot read the PR
 also blocks: an error that let the merge through would be a gate that fails
 open on exactly the run it exists for.
+
+What it does not model, it blocks rather than parses. Four review rounds on
+2026-10-26 each found another shell construct the parsing misread (#69), so
+these fail closed with the reason: a `gh pr` command handed to another shell
+(`bash -c`, `eval`, `ssh`, a heredoc fed to a shell, `Invoke-Expression`);
+GH_REPO in any form but a `GH_REPO=o/r cmd` prefix; and more than one `gh pr`
+command reading `--body-file -`.
 """
 from __future__ import annotations
 
@@ -216,34 +223,73 @@ _HEREDOC_OPEN = re.compile(r"(?<![^\s|;&(])<<(?!<)-?\s*(['\"]?)([A-Za-z_]\w*)\1"
 _HERESTRING_OPEN = re.compile(r"(?:^|[\s=(])@(['\"])\s*$")
 
 
-def _strip_heredocs(command: str) -> str:
-    """The command with heredoc and here-string BODIES removed.
+_STATEMENT_END = re.compile(r"&&|\|\||;")
+
+
+def _owner(line: str, start: int, end: int) -> str:
+    """The statement in `line` around [start, end): from the last `&&`, `||` or
+    `;` before it to the next one after it. A pipe stays in, since a heredoc
+    piped into a shell (`cat <<EOF | bash`) is run by that shell."""
+    left = 0
+    for m in _STATEMENT_END.finditer(line, 0, start):
+        left = m.end()
+    m = _STATEMENT_END.search(line, end)
+    return line[left:m.start() if m else len(line)]
+
+
+def _heredocs(command: str) -> tuple[str, list[tuple[str, str]]]:
+    """The command with heredoc and here-string BODIES removed, and each
+    removed body as (the statement that opens it + the one on its terminator
+    line, the body). The statement, not the line: in `wsl -- bash -c "pytest"
+    && cat > b.md <<'EOF'` the body is cat's, and reading the line as one
+    statement had `bash` run a PR body that mentioned `gh pr create`.
 
     Prose in a body written earlier in the command ("then gh pr merge -R
     owner/app 264") was parsed as a command, checked against the wrong PR,
-    and failed closed (2026-10-26). Only command finding uses this; the raw
-    text, bodies included, is still what gets scanned for closing words.
+    and failed closed (2026-10-26). Only command finding uses the stripped
+    text; the raw text, bodies included, is still what gets scanned for
+    closing words. The bodies are returned so main() can tell a body that is
+    prose from one fed to a shell, which runs.
 
     A body whose terminator never comes is kept, not dropped: an opener read
     by mistake (`$((n<<1))`, `"a << b"`) hid every later line, so a merge
     after it passed with nothing checked (re-review, 2026-10-26).
     """
-    out, ends, held = [], [], []
+    out, ends, owners, held, bodies = [], [], [], [], []
     for line in command.split("\n"):
         if ends:
             end = ends[0]
             if line.strip() == end or (end.endswith("@") and line.lstrip().startswith(end)):
                 ends.pop(0)
                 out.append(line)
+                bodies.append((f"{owners.pop(0)}\n{_owner(line, 0, 0)}", "\n".join(held)))
                 held = []
             else:
                 held.append(line)
             continue
         out.append(line)
-        ends = [m.group(2) or m.group(4) for m in _HEREDOC_OPEN.finditer(line)]
+        ends, owners = [], []
+        for m in _HEREDOC_OPEN.finditer(line):
+            ends.append(m.group(2) or m.group(4))
+            owners.append(_owner(line, m.start(), m.end()))
         if m := _HERESTRING_OPEN.search(line):
             ends.append(m.group(1) + "@")
-    return "\n".join(out + held)
+            owners.append(_owner(line, m.start(), m.end()))
+    return "\n".join(out + held), bodies
+
+
+def _strip_heredocs(command: str) -> str:
+    return _heredocs(command)[0]
+
+
+def _tokens(command: str, shell: str) -> list[str]:
+    try:
+        return _split(command, shell)
+    except ValueError:
+        # An odd apostrophe or quote outside a heredoc makes shlex raise. Plain
+        # split kept the quotes on "$SP/body.md", and a correct create failed
+        # closed on a path with quotes in it.
+        return [_unquote(t) for t in command.split()]
 
 
 def _prefix_on_gh_line(command: str, value: str) -> bool:
@@ -262,13 +308,7 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
     PR #46 and open issues, found nothing, and passed.
     """
     command = _strip_heredocs(command)
-    try:
-        tokens = _split(command, shell)
-    except ValueError:
-        # An odd apostrophe or quote outside a heredoc makes shlex raise. Plain
-        # split kept the quotes on "$SP/body.md", and a correct create failed
-        # closed on a path with quotes in it.
-        tokens = [_unquote(t) for t in command.split()]
+    tokens = _tokens(command, shell)
     found = []
     cd = None
     for i in range(len(tokens)):
@@ -352,18 +392,116 @@ _STDIN_BODY = re.compile(
     r"\bgh\s+pr\s+(?:create|edit|merge)\b[^\n;&|]*?(?<![^\s|;&(])<<(?!<)"
     r"|(?<![^\s|;&(])<<(?!<)-?\s*['\"]?\w+['\"]?[^\n;&|]*\|\s*gh\s+pr\b"
     r"|^\s*['\"]@\s*\|\s*gh\s+pr\b", re.MULTILINE)
+_READS_STDIN = re.compile(r"(?:--body-file|-F)(?:\s+|=)-(?!\S)")
+
+
+def _stdin_visible(stripped: str) -> bool:
+    """A heredoc or here-string reaches the command that reads `--body-file -`:
+    the flag is in the match or in the rest of that command, so a heredoc on
+    another `gh pr` command does not vouch for a body piped from a file (#69)."""
+    for m in _STDIN_BODY.finditer(stripped):
+        rest = re.match(r"[^\n;&|]*", stripped[m.end():]).group(0)
+        if _READS_STDIN.search(m.group(0) + rest):
+            return True
+    return False
+
+
 _XARGS = re.compile(r"\bxargs\b[^;&|\n]*\bgh\s+pr\s+(?:create|edit|merge)\b")
-# `export GH_REPO=o/r` and PowerShell's `$env:GH_REPO = "o/r"` point every later
-# gh at another repo, and the gate read this one's PR and open issues. A bare
-# `GH_REPO=o/r gh ...` prefix binds one command: _pr_commands turns it into -R.
-_GH_REPO = re.compile(r"""(?:\bexport\s+GH_REPO=|\$env:GH_REPO\s*=\s*)["']?([^"'\s;]+)""",
-                      re.IGNORECASE)
 _GH_HOST = re.compile(r"\bGH_HOST=|\$env:GH_HOST\s*=", re.IGNORECASE)
 
+# A `gh pr` command written inside one argument to a shell (`bash -c '...'`,
+# `eval "..."`, `ssh host '...'`, `Invoke-Expression "..."`) or in a heredoc fed
+# to one runs, and the gate never sees its args. Text that only mentions one is
+# fine: a title, body or commit message, a grep pattern, a heredoc written to a
+# file or fed to gh as its body. Python is not counted as a shell: the live gate
+# blocked a patch script whose comment mentioned a merge (2026-10-26).
+_PR_VERB = re.compile(r"\bgh(?:\.exe)?\s+pr\s+(?:create|edit|merge)\b")
+_SHELL = re.compile(r"(?:(?:ba|z|da|k|fi|s)?sh|wsl|pwsh|powershell|cmd|iex"
+                    r"|invoke-expression|eval|source)(?:\.exe)?", re.IGNORECASE)
+_PROSE_FLAGS = {"-t", "--title", "-b", "--body", "--subject", "-m", "--message"}
 
-def _gh_repo(command: str) -> str | None:
-    m = _GH_REPO.search(command)
-    return m.group(1) if m else None
+
+def _is_shell_word(token: str) -> bool:
+    return _SHELL.fullmatch(re.split(r"[\\/]", token)[-1]) is not None
+
+
+def _prose(tokens: list[str]) -> set[int]:
+    """Indices of tokens that are a title, body, subject or message value."""
+    out = set()
+    for i, t in enumerate(tokens):
+        if t in _PROSE_FLAGS:
+            out.add(i + 1)
+        elif "=" in t and t.split("=", 1)[0] in _PROSE_FLAGS:
+            out.add(i)
+    return out
+
+
+def _run_by_another_shell(tokens: list[str], prose: set[int],
+                          bodies: list[tuple[str, str]], shell: str) -> str | None:
+    """The first `gh pr` command another shell would run, or None.
+
+    An argument counts when a shell word is in the same statement (a pipe does
+    not end one: `echo '...' | bash`) and the argument parses as a `gh pr`
+    command, not just text that names one (`bash -c 'grep "gh pr create" f'`).
+    A heredoc body counts when the statement that opens it, or the one on its
+    terminator line, has a shell word as a command word, not as text in a
+    title, and does not itself run `gh pr` (then the body is its stdin).
+    """
+    statements, current = [], []
+    for i, t in enumerate(tokens):
+        if t in ("&&", "||", ";", "&"):
+            statements.append(current)
+            current = []
+            continue
+        current.append(i)
+        if t.endswith(";"):
+            statements.append(current)
+            current = []
+    statements.append(current)
+    for statement in statements:
+        words = [tokens[i] for i in statement if i not in prose]
+        if any(_is_shell_word(w) for w in words):
+            for w in words:
+                if _PR_VERB.search(w) and _pr_commands(w, shell):
+                    return w
+    for around, body in bodies:
+        if not _PR_VERB.search(body) or _PR_VERB.search(around) or not _pr_commands(body, shell):
+            continue
+        words = _tokens(around, shell)
+        prose_here = _prose(words)
+        if any(_is_shell_word(w) for i, w in enumerate(words) if i not in prose_here):
+            return around.split("\n")[0]
+    return None
+
+
+_ASSIGNMENT = re.compile(r"^[A-Za-z_]\w*=")
+
+
+def _unmodelled_gh_repo(command: str, tokens: list[str], prose: set[int]) -> bool:
+    """True when GH_REPO appears in any form but a `GH_REPO=o/r cmd` prefix.
+
+    The prefix binds the one command it precedes, and _pr_commands turns it
+    into -R. Every other form (`export`, `declare -x`, `set -a`, `unset`,
+    `$env:GH_REPO`, an assignment on its own line that updates an already
+    exported GH_REPO) depends on order and on state the gate cannot see. Each
+    was modelled or missed in turn, and each model had a gap (#69).
+    """
+    for k, t in enumerate(tokens):
+        if "gh_repo" not in t.lower() or k in prose:
+            continue
+        if not t.startswith("GH_REPO="):
+            return True
+        j = k
+        while j < len(tokens) and _ASSIGNMENT.match(tokens[j]) and not tokens[j].endswith(";"):
+            j += 1
+        value = t.split("=", 1)[1]
+        on_its_line = re.search(r"(?<![^\s;&|(])GH_REPO=['\"]?" + re.escape(value)
+                                + r"['\"]?(?:[ \t]+[A-Za-z_]\w*=[^\s;&|]*)*[ \t]+[^\s;&|]",
+                                command)
+        if (j >= len(tokens) or _ASSIGNMENT.match(tokens[j]) or tokens[j] in _SEPARATORS
+                or not on_its_line):
+            return True
+    return False
 
 
 # PowerShell is the primary shell in these sessions, and `gh` is on its PATH. A
@@ -376,12 +514,33 @@ def main() -> int:
     if payload.get("tool_name") not in _SHELL_TOOLS:
         return 0
     command = (payload.get("tool_input") or {}).get("command") or ""
-    found = _pr_commands(command, payload.get("tool_name"))
-    if not found:
-        return 0
+    shell = payload.get("tool_name")
     # Whole-command signals are read with heredoc bodies removed: a PR body that
     # says "GH_REPO=..." or "xargs gh pr merge" is prose, not a setting.
-    stripped = _strip_heredocs(command)
+    stripped, bodies = _heredocs(command)
+    tokens = _tokens(stripped, shell)
+    prose = _prose(tokens)
+    if hidden := _run_by_another_shell(tokens, prose, bodies, shell):
+        # Checked before `found`: a merge run this way is never found at all.
+        print("closing_keyword_gate: a `gh pr create/edit/merge` is handed to another "
+              f"shell (\"{' '.join(hidden.split())[:80]}\"), so the gate cannot read the "
+              "command it runs. Run the `gh pr` command directly.", file=sys.stderr)
+        return 2
+    found = _pr_commands(command, shell)
+    if not found:
+        return 0
+    if _unmodelled_gh_repo(stripped, tokens, prose):
+        print("closing_keyword_gate: GH_REPO is set other than as a `GH_REPO=owner/repo "
+              "gh pr ...` prefix, so the gate cannot tell which repo each `gh pr` command "
+              "reaches. Pass -R owner/repo to the `gh pr` command instead.", file=sys.stderr)
+        return 2
+    if sum(_flag(a, "--body-file", "-F") == "-" for _, a, _ in found) > 1:
+        # Whether stdin is visible was decided for the whole command, so one
+        # command's heredoc vouched for another's piped body (#69).
+        print("closing_keyword_gate: more than one `gh pr` command reads `--body-file -`; "
+              "the gate cannot tell which body feeds which. Run each on its own.",
+              file=sys.stderr)
+        return 2
     if _GH_HOST.search(stripped):
         print("closing_keyword_gate: GH_HOST points gh at another host, whose issues "
               "the gate does not read. Run the `gh pr` command without it.", file=sys.stderr)
@@ -401,10 +560,10 @@ def main() -> int:
             target_dir = _local_path(_expand(cd, shell_vars)) if cd else None
             cwd = (os.path.normpath(os.path.join(base, os.path.expanduser(target_dir)))
                    if target_dir else base)
-            repo_flag = _flag(args, "--repo", "-R") or _gh_repo(stripped)
+            repo_flag = _flag(args, "--repo", "-R")
             repo = ("-R", _expand(repo_flag, shell_vars)) if repo_flag else ()
             target = _target(v, args)
-            if _flag(args, "--body-file", "-F") == "-" and not _STDIN_BODY.search(stripped):
+            if _flag(args, "--body-file", "-F") == "-" and not _stdin_visible(stripped):
                 raise RuntimeError("--body-file - reads stdin, which the gate cannot see; "
                                    "write the body to a file or pass it as a heredoc")
             if not repo and (m := _PR_URL.match(target)):
