@@ -589,7 +589,7 @@ def test_a_pr_command_written_as_prose_passes(monkeypatch, capsys, command):
 
 # ── #82: the reviews of the #69 copies (2026-11-09) ───────────────────────
 # A shell counts only as a command word, found in words that keep the
-# operators, newlines and quotes shlex.split drops. 29 of the 53 cases added
+# operators, newlines and quotes shlex.split drops. 30 of the 56 cases added
 # for #82 have the wrong result on 79acb4ca; the rest passed there and guard
 # what reading command words must keep, among them forms the first such
 # reading lost (a pipe ending a line, a shell after an unlisted wrapper, a
@@ -628,6 +628,10 @@ def test_a_pr_command_written_as_prose_passes(monkeypatch, capsys, command):
     "echo 'gh pr merge 264 --squash' | ( bash )",
     "echo 'gh pr merge 264 --squash' |(bash)",
     "echo 'gh pr merge 264 --squash' | { bash; }",
+    # A command kept in a variable and run by a shell (command-center PR 843).
+    "CMD='gh pr merge 264 --squash'\neval \"$CMD\"",
+    "CMD='gh pr merge 264 --squash' bash -c 'eval \"$CMD\"'",
+    "cmd=\"gh pr merge 264 --squash\"; eval \"$cmd\"",
 ])
 def test_a_shell_glued_to_punctuation_or_behind_a_quote_fails_closed(monkeypatch, capsys,
                                                                      command):

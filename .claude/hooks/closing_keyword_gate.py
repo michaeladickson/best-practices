@@ -702,7 +702,17 @@ def _run_by_another_shell(words: list[str], prose: set[int], bodies: list[tuple[
     `gh pr` command, not just text that names one (`bash -c 'grep "gh pr
     create" f'`). A heredoc body counts when any word in what reads it (_owner)
     is a shell, except a title or body.
+
+    A `gh pr` command kept in a variable (`CMD='gh pr merge 5'`) runs wherever
+    a shell expands it (`eval "$CMD"`, on the next line or after `;`). The gate
+    cannot trace the variable, so such an assignment beside any shell word in
+    the command fails closed. 79acb4ca blocked the newline and prefix forms by
+    accident, and the first command-word reading lost them (#82).
     """
+    held = [w for i, w in enumerate(words) if i not in prose and _kind(w) == "word"
+            and _ASSIGNMENT.match(w) and _runs_pr(w.split("=", 1)[1], shell, depth)]
+    if held and any(_kind(w) == "word" and _is_shell_word(w) for w in words):
+        return held[0]
     for c in _command_words(words):
         end = c + 1
         while end < len(words) and _kind(words[end]) in ("word", "redirect"):
