@@ -144,6 +144,37 @@ def _flag(args: list[str], *names: str) -> str | None:
     return None
 
 
+# Flags whose value is free text: a title or body that starts "-R..." is not a
+# repo flag.
+_TEXT_VALUE_FLAGS = {"-t", "--title", "-b", "--body", "--subject", "-F", "--body-file"}
+
+
+def _repos(args: list[str]) -> list[str]:
+    """Every -R/--repo value in a command's args, in order, in each form gh takes
+    (`-R o/r`, `--repo o/r`, `--repo=o/r`, `-Ro/r`, `-R=o/r`).
+
+    gh keeps the LAST of a repeated flag (pflag; `gh pr -R a/b view 80 -R c/d`
+    reads c/d, 2026-11-09), and `_flag` returns the first, so `gh pr merge 46
+    -R a/b -R c/d` was checked against a/b while gh merged c/d. main() blocks a
+    command that names two different repos.
+    """
+    out, skip = [], False
+    for i, a in enumerate(args):
+        if skip:
+            skip = False
+        elif a in ("-R", "--repo"):
+            if i + 1 < len(args):
+                out.append(args[i + 1])
+            skip = True
+        elif a.startswith("--repo="):
+            out.append(a.split("=", 1)[1])
+        elif a.startswith("-R") and len(a) > 2:
+            out.append(a[2:].removeprefix("="))
+        elif a in _TEXT_VALUE_FLAGS:
+            skip = True
+    return out
+
+
 def _gh(args: list[str], cwd: str | None = None) -> str:
     # Each call under 20s. One merge is two gh calls (the PR, the open issues)
     # plus a 5s `git remote` per command in _repo_slug, so an edit chained to a
@@ -450,7 +481,7 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
             args.append(t)
         # shlex drops newlines, so `GH_REPO=o/r` alone on the line before looked
         # like a prefix; and gh lets an explicit -R win over the variable.
-        if prefix and _flag(args, "--repo", "-R") is None and _prefix_on_gh_line(command, prefix):
+        if prefix and not _repos(args) and _prefix_on_gh_line(command, prefix):
             args += ["-R", prefix]
         found.append((_VERBS[tokens[verb]], args, cd))
     prose = _prose(tokens)
@@ -834,6 +865,13 @@ def main() -> int:
               "gh pr ...` prefix, so the gate cannot tell which repo each `gh pr` command "
               "reaches. Pass -R owner/repo to the `gh pr` command instead.", file=sys.stderr)
         return 2
+    named = next((r for r in (_repos(a) for _, a, _ in found) if len(set(r)) > 1), None)
+    if named:
+        print("closing_keyword_gate: one `gh pr` command names more than one repo "
+              f"({', '.join(dict.fromkeys(named))}); gh uses the last, so the gate cannot "
+              "tell which repo to check. Run it as a plain one-line command with one: "
+              "gh pr <verb> <n> -R owner/repo", file=sys.stderr)
+        return 2
     if sum(_flag(a, "--body-file", "-F") == "-" for _, a, _ in found) > 1:
         # Whether stdin is visible was decided for the whole command, so one
         # command's heredoc vouched for another's piped body (#69).
@@ -860,7 +898,7 @@ def main() -> int:
             target_dir = _local_path(_expand(cd, shell_vars)) if cd else None
             cwd = (os.path.normpath(os.path.join(base, os.path.expanduser(target_dir)))
                    if target_dir else base)
-            repo_flag = _flag(args, "--repo", "-R")
+            repo_flag = (_repos(args) or [None])[-1]       # the one gh uses: the last
             repo = ("-R", _expand(repo_flag, shell_vars)) if repo_flag else ()
             target = _target(v, args)
             if _flag(args, "--body-file", "-F") == "-" and not _stdin_visible(stripped):

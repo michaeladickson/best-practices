@@ -765,3 +765,49 @@ def test_a_command_that_only_mentions_gh_or_pr_is_not_blocked(monkeypatch, capsy
     calls = []
     code, err = _run(monkeypatch, capsys, command, calls=calls, tool=tool)
     assert code == 0 and err == "" and calls == []
+
+
+# ── a repeated -R (wealth-mgmt #307 post-merge review, 2026-11-09) ─────────
+# gh keeps the last of a repeated flag; the gate read the first, so it checked
+# one repo's PR and open issues while gh merged another's.
+
+@pytest.mark.parametrize("command", [
+    "gh pr merge 46 -R a/b -R c/d --squash",
+    "gh pr merge 46 --repo a/b --repo c/d",
+    "gh pr merge 46 --repo=a/b -R c/d",
+    "gh pr merge 46 -Ra/b -R c/d",
+    "gh pr merge 46 -R=a/b --repo=c/d",
+    "gh pr -R a/b merge 46 -R c/d",                     # the review's form
+    "gh pr -R a/b --repo c/d merge 46",
+    "gh pr edit 46 -R a/b --title t -R c/d",
+    "gh pr create -R a/b --title t --body x -R c/d",
+])
+def test_a_command_naming_two_repos_fails_closed(monkeypatch, capsys, command):
+    calls = []
+    code, err = _run(monkeypatch, capsys, command, body="clean", calls=calls)
+    assert code == 2 and calls == [] and "more than one repo" in err and "a/b, c/d" in err
+
+
+@pytest.mark.parametrize("command", [
+    "gh pr merge 46 -R a/b -R a/b --squash",
+    "gh pr -R a/b merge 46 --repo=a/b",
+])
+def test_the_same_repo_named_twice_is_checked_there(monkeypatch, capsys, command):
+    calls = []
+    code, err = _run(monkeypatch, capsys, command, body="clean", calls=calls)
+    assert code == 0 and _issue_list(calls)[2:4] == ["-R", "a/b"], err
+
+
+@pytest.mark.parametrize("command,repo", [
+    ("gh pr create --title '-Rework the parser' --body x", None),
+    ("gh pr create -R a/b --title t --body '-Rc/d is not a flag here'", "a/b"),
+])
+def test_a_title_or_body_starting_with_dash_r_is_not_a_repo(monkeypatch, capsys,
+                                                            command, repo):
+    """`_flag` reads an attached `-R...` anywhere, a body value included, and
+    checked the repo `ework the parser`."""
+    calls = []
+    code, err = _run(monkeypatch, capsys, command, open_issues=(), calls=calls)
+    issue_list = _issue_list(calls)
+    assert code == 0, err
+    assert (issue_list[2:4] == ["-R", repo]) if repo else "-R" not in issue_list
