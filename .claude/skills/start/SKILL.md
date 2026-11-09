@@ -95,6 +95,9 @@ owns that.
 
 Report only non-OK rows. `PENDING` from the main checkout is real (a job before its first run);
 `PENDING` from a worktree is an artifact — re-run at the correct path rather than reporting it.
+`UNREADABLE` means a state file exists but holds no readable `last_run`, and it alerts like
+`STALE`. Until 2026-11-09 it read as `PENDING`: a skills-sync state file written with a byte
+order mark looked like a job that never ran, so its tell could not go stale.
 
 **b. Unreviewed `[automated]` commits** — the debt this skill exists to surface:
 
