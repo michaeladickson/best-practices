@@ -144,35 +144,58 @@ def _flag(args: list[str], *names: str) -> str | None:
     return None
 
 
-# Flags whose value is free text: a title or body that starts "-R..." is not a
-# repo flag.
-_TEXT_VALUE_FLAGS = {"-t", "--title", "-b", "--body", "--subject", "-F", "--body-file"}
+# gh pr's one-letter flags that take no value, per verb (gh 2.90.0 `--help`).
+# pflag reads a group such as `-sR c/d` letter by letter, and the first letter
+# that takes a value takes the rest of the word (`-sRc/d`) or the next word: so
+# `-dR o/r` names a repo while `-tRework` is a title (checked 2026-11-09).
+_NO_VALUE_SHORT = {"create": "defw", "edit": "", "merge": "dmrs"}
+# Long flags whose value is free text, passed over when reading another flag:
+# a title "-Rework the parser" is not `-R`.
+_TEXT_LONG_FLAGS = {"--title", "--body", "--subject", "--body-file"}
 
 
-def _repos(args: list[str]) -> list[str]:
-    """Every -R/--repo value in a command's args, in order, in each form gh takes
-    (`-R o/r`, `--repo o/r`, `--repo=o/r`, `-Ro/r`, `-R=o/r`).
+def _values(verb: str, args: list[str], long: str, short: str | None = None) -> list[str]:
+    """Every value one flag is given in a command's args, in order, in each form
+    gh takes: `--repo x`, `--repo=x`, `-R x`, `-Rx`, `-R=x`, and after other
+    one-letter flags in a group (`-sR x`, `-dRx`).
 
-    gh keeps the LAST of a repeated flag (pflag; `gh pr -R a/b view 80 -R c/d`
-    reads c/d, 2026-11-09), and `_flag` returns the first, so `gh pr merge 46
-    -R a/b -R c/d` was checked against a/b while gh merged c/d. main() blocks a
-    command that names two different repos.
+    gh keeps the LAST of a repeated flag, and a reader that returned the first,
+    or knew no groups, checked the wrong thing: `gh pr merge 46 -R a/b -R c/d`
+    and `-R a/b -sR c/d` against a/b while gh merged c/d (the post-merge reviews
+    of wealth-mgmt PRs 307 and 309), and `-sF b.md` never read b.md.
     """
     out, skip = [], False
+    no_value = _NO_VALUE_SHORT.get(verb, "")
     for i, a in enumerate(args):
+        nxt = args[i + 1] if i + 1 < len(args) else None
         if skip:
             skip = False
-        elif a in ("-R", "--repo"):
-            if i + 1 < len(args):
-                out.append(args[i + 1])
+        elif a == long or a.startswith(long + "="):
+            if "=" in a:
+                out.append(a.split("=", 1)[1])
+            elif nxt is not None:
+                out.append(nxt)
+                skip = True
+        elif a in _TEXT_LONG_FLAGS:
             skip = True
-        elif a.startswith("--repo="):
-            out.append(a.split("=", 1)[1])
-        elif a.startswith("-R") and len(a) > 2:
-            out.append(a[2:].removeprefix("="))
-        elif a in _TEXT_VALUE_FLAGS:
-            skip = True
+        elif a.startswith("-") and not a.startswith("--") and len(a) > 1:
+            letters = a[1:].lstrip(no_value)
+            if not letters:
+                continue                        # only flags that take no value
+            value = letters[1:].removeprefix("=")
+            if letters[0] == short:
+                if value:
+                    out.append(value)
+                elif nxt is not None:
+                    out.append(nxt)
+            skip = not value                    # its value is the next word
     return out
+
+
+def _repos(verb: str, args: list[str]) -> list[str]:
+    """Every -R/--repo value, in order. main() blocks a command that names two
+    different repos, and checks the last, the one gh uses."""
+    return _values(verb, args, "--repo", "R")
 
 
 def _gh(args: list[str], cwd: str | None = None) -> str:
@@ -230,28 +253,31 @@ _GH_WORD = re.compile(r"(?:^|[\s\\/;&|(`${}!'\"])gh(?:\.exe)?$", re.IGNORECASE)
 
 # `gh pr new` is gh's alias for create (`gh pr create --help`, gh 2.90.0).
 _VERBS = {"create": "create", "new": "create", "edit": "edit", "merge": "merge"}
-# The same as text, for the regexes that look for one. `-R/--repo` is a flag of
-# `gh pr` itself, so it may sit between `pr` and the verb.
-_PR_VERB_TEXT = (r"gh(?:\.exe)?\s+pr\s+(?:(?:-R|--repo)(?:=|\s+)?\S+\s+)*"
+# The same as text, for the regexes that look for one: flags, each with its
+# value if it has one, may sit between `pr` and the verb (see _verb_at).
+_FLAG_VALUE = r"""(?:"[^"]*"|'[^']*'|[^-\s]\S*)"""
+_PR_VERB_TEXT = (r"gh(?:\.exe)?\s+pr\s+(?:-\S+(?:\s+" + _FLAG_VALUE + r")?\s+)*"
                  r"(?:create|new|edit|merge)\b")
 
 
 def _verb_at(tokens: list[str], i: int) -> tuple[int, list[str]] | None:
-    """(the verb's index, any -R given before it) when tokens[i:] is
-    `gh pr [-R o/r] <verb>`. Read only right after `pr`, the verb was missed in
-    `gh pr -R owner/other merge 46`, which then ran unchecked (#284 M1)."""
+    """(the verb's index, the flags before it) when tokens[i:] is
+    `gh pr [flags] <verb>`.
+
+    gh finds the verb as cobra does: before it, `--x v` and `-x v` are pairs and
+    `--x=v` and `-xv` single words; the verb then reads them all as its own
+    flags. So `gh pr -R o/r merge 46` (#284 M1), `gh pr --subject s merge 46`
+    and `gh pr -sRo/r merge 46` all merge, and each was a command the gate never
+    found. Checked 2026-11-09: `gh pr --jq .url view 80` and `gh pr -cRo/r view
+    80` work; `gh pr --comments view 80` and `gh pr -cR o/r view 80` fail.
+    """
     if _GH_WORD.search(tokens[i]) is None or tokens[i + 1:i + 2] != ["pr"]:
         return None
-    k, repo = i + 2, []
-    while k < len(tokens):
+    k = i + 2
+    while k < len(tokens) and tokens[k].startswith("-") and tokens[k] != "--":
         t = tokens[k]
-        if t in ("-R", "--repo") and k + 1 < len(tokens):
-            repo, k = repo + [t, tokens[k + 1]], k + 2
-        elif t.startswith(("--repo=", "-R")) and t != "-R":
-            repo, k = repo + [t], k + 1
-        else:
-            break
-    return (k, repo) if k < len(tokens) and tokens[k] in _VERBS else None
+        k += 2 if "=" not in t and (t.startswith("--") or len(t) == 2) else 1
+    return (k, tokens[i + 2:k]) if k < len(tokens) and tokens[k] in _VERBS else None
 
 
 def _is_pr_verb(tokens: list[str], i: int) -> bool:
@@ -481,7 +507,7 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
             args.append(t)
         # shlex drops newlines, so `GH_REPO=o/r` alone on the line before looked
         # like a prefix; and gh lets an explicit -R win over the variable.
-        if prefix and not _repos(args) and _prefix_on_gh_line(command, prefix):
+        if prefix and not _repos(_VERBS[tokens[verb]], args) and _prefix_on_gh_line(command, prefix):
             args += ["-R", prefix]
         found.append((_VERBS[tokens[verb]], args, cd))
     prose = _prose(tokens)
@@ -533,12 +559,14 @@ def _repo_slug(repo: tuple, cwd: str | None) -> str | None:
 
 def text_to_scan(verb: str, args: list[str], repo: list[str],
                  shell_vars: dict[str, str] | None = None, cwd: str | None = None) -> str:
-    parts = [_flag(args, "--title", "-t") or "", _flag(args, "--body", "-b") or "",
-             _flag(args, "--subject") or ""]
-    body_file = _flag(args, "--body-file", "-F")
-    if body_file and body_file != "-":     # stdin: main() checks the heredoc
-        with open(_local_path(_expand(body_file, shell_vars or {})), encoding="utf-8") as f:
-            parts.append(f.read())
+    parts = (_values(verb, args, "--title", "t") + _values(verb, args, "--body", "b")
+             + _values(verb, args, "--subject"))
+    # Every body file, not the first: gh reads the last of a repeated -F, and
+    # one in a group (`-sF b.md`) was never read at all.
+    for body_file in _values(verb, args, "--body-file", "F"):
+        if body_file != "-":               # stdin: main() checks the heredoc
+            with open(_local_path(_expand(body_file, shell_vars or {})), encoding="utf-8") as f:
+                parts.append(f.read())
     if verb == "merge":
         target = [t] if (t := _target(verb, args)) else []
         pr = json.loads(_gh(["pr", "view", *target, *repo,
@@ -564,7 +592,7 @@ _STDIN_BODY = re.compile(
     r"\b" + _PR_VERB_TEXT + r"[^\n;&|]*?(?<![^\s|;&(])<<(?!<)"
     r"|(?<![^\s|;&(])<<(?!<)-?\s*['\"]?\w+['\"]?[^\n;&|]*\|\s*gh\s+pr\b"
     r"|^\s*['\"]@\s*\|\s*gh\s+pr\b", re.MULTILINE)
-_READS_STDIN = re.compile(r"(?:--body-file|-F)(?:\s+|=)-(?!\S)")
+_READS_STDIN = re.compile(r"(?:--body-file|-[A-Za-z]*F)(?:\s+|=)-(?!\S)")
 
 
 def _stdin_visible(stripped: str) -> bool:
@@ -865,14 +893,14 @@ def main() -> int:
               "gh pr ...` prefix, so the gate cannot tell which repo each `gh pr` command "
               "reaches. Pass -R owner/repo to the `gh pr` command instead.", file=sys.stderr)
         return 2
-    named = next((r for r in (_repos(a) for _, a, _ in found) if len(set(r)) > 1), None)
+    named = next((r for r in (_repos(v, a) for v, a, _ in found) if len(set(r)) > 1), None)
     if named:
         print("closing_keyword_gate: one `gh pr` command names more than one repo "
               f"({', '.join(dict.fromkeys(named))}); gh uses the last, so the gate cannot "
               "tell which repo to check. Run it as a plain one-line command with one: "
               "gh pr <verb> <n> -R owner/repo", file=sys.stderr)
         return 2
-    if sum(_flag(a, "--body-file", "-F") == "-" for _, a, _ in found) > 1:
+    if sum("-" in _values(v, a, "--body-file", "F") for v, a, _ in found) > 1:
         # Whether stdin is visible was decided for the whole command, so one
         # command's heredoc vouched for another's piped body (#69).
         print("closing_keyword_gate: more than one `gh pr` command reads `--body-file -`; "
@@ -898,10 +926,10 @@ def main() -> int:
             target_dir = _local_path(_expand(cd, shell_vars)) if cd else None
             cwd = (os.path.normpath(os.path.join(base, os.path.expanduser(target_dir)))
                    if target_dir else base)
-            repo_flag = (_repos(args) or [None])[-1]       # the one gh uses: the last
+            repo_flag = (_repos(v, args) or [None])[-1]    # the one gh uses: the last
             repo = ("-R", _expand(repo_flag, shell_vars)) if repo_flag else ()
             target = _target(v, args)
-            if _flag(args, "--body-file", "-F") == "-" and not _stdin_visible(stripped):
+            if "-" in _values(v, args, "--body-file", "F") and not _stdin_visible(stripped):
                 raise RuntimeError("--body-file - reads stdin, which the gate cannot see; "
                                    "write the body to a file or pass it as a heredoc")
             if not repo and (m := _PR_URL.match(target)):

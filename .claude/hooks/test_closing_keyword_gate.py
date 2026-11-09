@@ -811,3 +811,90 @@ def test_a_title_or_body_starting_with_dash_r_is_not_a_repo(monkeypatch, capsys,
     issue_list = _issue_list(calls)
     assert code == 0, err
     assert (issue_list[2:4] == ["-R", repo]) if repo else "-R" not in issue_list
+
+
+# ── one-letter flags in a group (wealth-mgmt #309 post-merge review) ───────
+# pflag reads `-sR c/d` as -s then -R c/d. The gate read only a word that began
+# with the flag, so the repo and the body file in a group went unread.
+
+@pytest.mark.parametrize("command", [
+    "gh pr merge 46 -sR c/d",                   # the review's form
+    "gh pr merge 46 -dRc/d",
+    "gh pr merge 46 -sdR=c/d",
+    "gh pr merge 46 -mR c/d",                   # -m is --merge here, no value
+    "gh pr -sRc/d merge 46",                    # before the verb, attached
+])
+def test_a_repo_flag_in_a_group_is_read(monkeypatch, capsys, command):
+    calls = []
+    code, err = _run(monkeypatch, capsys, command, body="clean", calls=calls)
+    view = next(a for a, _ in calls if a[:2] == ["pr", "view"])
+    assert code == 0 and gate._flag(view, "-R") == "c/d", err
+    assert _issue_list(calls)[2:4] == ["-R", "c/d"]
+
+
+def test_a_repo_flag_in_a_group_counts_toward_two_repos(monkeypatch, capsys):
+    calls = []
+    code, err = _run(monkeypatch, capsys, "gh pr merge 46 -R a/b -sR c/d", calls=calls)
+    assert code == 2 and calls == [] and "a/b, c/d" in err
+
+
+@pytest.mark.parametrize("command", [
+    "gh pr edit 46 -tRework --body x",          # -t takes the rest: a title
+    "gh pr create -lRelease --title t --body x",  # -l is --label on create
+    "gh pr create -mR --title t --body x",      # -m is --milestone on create
+])
+def test_an_r_after_a_flag_that_takes_a_value_is_that_value(monkeypatch, capsys, command):
+    calls = []
+    code, err = _run(monkeypatch, capsys, command, open_issues=(), calls=calls)
+    assert code == 0 and "-R" not in _issue_list(calls), err
+
+
+@pytest.mark.parametrize("flags", ["-sF {f}", "-dF{f}", "-F {clean} -F {f}", "-F {f} -F {clean}",
+                                   "--body-file={clean} -F {f}"])
+def test_every_body_file_is_read_in_a_group_or_repeated(monkeypatch, capsys, tmp_path, flags):
+    """`-sF b.md` never read b.md, and of `-F a.md -F b.md` only a.md was read
+    while gh used b.md."""
+    (tmp_path / "dirty.md").write_text("Small fixes from #261.", encoding="utf-8")
+    (tmp_path / "clean.md").write_text("Clean body.", encoding="utf-8")
+    command = "gh pr merge 46 " + flags.format(f=(tmp_path / "dirty.md").as_posix(),
+                                                clean=(tmp_path / "clean.md").as_posix())
+    code, err = _run(monkeypatch, capsys, command, body="clean")
+    assert code == 2 and "#261" in err, err
+
+
+@pytest.mark.parametrize("text,code", [("Small fixes from #261.", 2), ("Clean body.", 0)])
+def test_a_grouped_stdin_body_with_its_heredoc_is_scanned(monkeypatch, capsys, text, code):
+    command = f"gh pr create --title t -dF - <<'EOF'\n{text}\nEOF"
+    got, err = _run(monkeypatch, capsys, command)
+    assert "stdin" not in err and got == code, err
+
+
+# ── any flag with a value before the verb (2026-11-09) ────────────────────
+# gh finds the verb past `--x v`, `-x v`, `--x=v` and `-xv`, and the verb reads
+# them as its own; the gate looked past `-R` alone, so these merged unread.
+
+@pytest.mark.parametrize("command", [
+    "gh pr --subject 'Small fixes from #261.' merge 46",
+    "gh pr -t 'Small fixes from #261.' merge 46",
+    "gh pr --body='Small fixes from #261.' merge 46",
+    "gh pr --title t --body 'Small fixes from #261.' create",
+    "gh pr -sRo/r --subject 'Small fixes from #261.' merge 46",
+])
+def test_a_command_with_flags_before_the_verb_is_found_and_checked(monkeypatch, capsys,
+                                                                  command):
+    calls = []
+    code, err = _run(monkeypatch, capsys, command, body="clean", calls=calls)
+    assert code == 2 and "#261" in err and calls, err
+
+
+def test_a_body_file_before_the_verb_is_read(monkeypatch, capsys, tmp_path):
+    (tmp_path / "b.md").write_text("Small fixes from #261.", encoding="utf-8")
+    code, err = _run(monkeypatch, capsys,
+                     f"gh pr --body-file {(tmp_path / 'b.md').as_posix()} merge 46",
+                     body="clean")
+    assert code == 2 and "#261" in err, err
+
+
+def test_flags_before_the_verb_inside_a_shell_still_block(monkeypatch, capsys):
+    code, err = _run(monkeypatch, capsys, "bash -c 'gh pr --subject \"a b\" merge 46'")
+    assert code == 2 and "cannot read" in err, err
