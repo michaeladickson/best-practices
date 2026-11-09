@@ -974,3 +974,12 @@ def test_the_verb_pattern_finds_what_the_parser_finds(command):
     handed to the parser at all."""
     found = gate._verb_at(shlex.split(command), 0) is not None
     assert (gate._PR_VERB.search(command) is not None) == found
+
+
+@pytest.mark.parametrize("path", [_PATH, Path(__file__)], ids=["hook", "test"])
+def test_every_line_fits_the_strictest_consumer_lint(path):
+    """command-center lints these two files at 100 columns. best-practices does
+    not check line length, so a 101-column line merged here and failed there
+    (2026-11-09). This test travels with the copies and fails first."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    assert [n for n, line in enumerate(lines, 1) if len(line) > 100] == []
