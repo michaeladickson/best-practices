@@ -749,8 +749,8 @@ def test_gh_pr_new_is_checked_as_a_create(monkeypatch, capsys):
     ("gh pr new --title t --body-file - <<'EOF'\nClean body.\nEOF", 0, ""),
 ])
 def test_every_check_reads_the_verb_the_parser_reads(monkeypatch, capsys, command, code, why):
-    """The shell, xargs and stdin checks match the verb by pattern; each must
-    know `-R` before it and `new` as well as the parser does."""
+    """The shell and xargs checks read the verb with the parser and the stdin
+    check by pattern; each must know `-R` before it and `new`."""
     got, err = _run(monkeypatch, capsys, command, open_issues=())
     assert got == code and why in err, err
 
@@ -933,8 +933,8 @@ def test_a_grouped_repo_before_the_pr_checks_that_pr_there(monkeypatch, capsys):
 
 # ── a dash or quoted value before the verb (wealth-mgmt PR 311 review) ────
 # _verb_at pairs `-x v` whatever v is, but the pattern the shell, substitution,
-# xargs and stdin checks share took a lone `-` for no value and stopped at an
-# escaped or attached quote, so `bash -c 'gh pr -t - merge 46'` merged unread.
+# xargs and stdin checks then shared took a lone `-` for no value and stopped at
+# an escaped or attached quote, so `bash -c 'gh pr -t - merge 46'` merged unread.
 
 @pytest.mark.parametrize("command,why", [
     ("bash -c 'gh pr -t - merge 46'", "cannot read"),           # the review's form
@@ -1004,6 +1004,11 @@ def test_every_line_fits_the_strictest_consumer_lint(path):
     ("""bash -c 'gh "pr" merge 46'""", "cannot read"),
     ('CMD=\'gh "pr" merge 5\'\neval "$CMD"', "cannot read"),
     ("""echo 46 | xargs gh pr -ta" b" merge""", "xargs"),
+    # in a quoted `$(...)`: one word at the top (wealth-mgmt PR 317 review)
+    ('out="$(echo 46 | xargs gh pr merge --squash)"', "xargs"),
+    ('echo "$(echo 46 | xargs -n1 gh pr -R o/r merge)"', "xargs"),
+    ("out=$(echo 46 | xargs gh pr merge --squash)", "xargs"),
+    ("out=`echo 46 | xargs gh pr merge --squash`", "xargs"),
 ])
 def test_a_command_only_the_parser_reads_still_blocks(monkeypatch, capsys, command, why):
     code, err = _run(monkeypatch, capsys, command)

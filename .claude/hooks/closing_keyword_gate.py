@@ -609,12 +609,14 @@ def _stdin_visible(stripped: str) -> bool:
     return False
 
 
-def _fed_by_xargs(words: list[str]) -> bool:
+def _fed_by_xargs(words: list[str], shell: str) -> bool:
     """A `gh pr` verb that xargs runs (`... | xargs -n1 gh pr merge`): gh takes
     its PR from stdin, so the gate would read the current branch's PR instead.
     Read from the words, where the parser finds the verb: a pattern over the
     text missed a value it could not shape (`xargs gh pr -ta" b" merge`), and
-    blocked a body that only mentioned `xargs gh pr merge`."""
+    blocked a body that only mentioned `xargs gh pr merge`. Inside each
+    `$(...)` too, as _pr_commands reads one: quoted, `out="$(echo 46 | xargs
+    gh pr merge)"` is one word, and its merge was found with no PR named."""
     for i in range(len(words)):
         if _verb_at(words, i) is None:
             continue
@@ -623,7 +625,10 @@ def _fed_by_xargs(words: list[str]) -> bool:
             if _command_name(words[j]) == "xargs":
                 return True
             j -= 1
-    return False
+    prose = _prose(words)
+    return any(_fed_by_xargs(_words(inner, shell), shell)
+               for k, w in enumerate(words) if k not in prose and _kind(w) == "word"
+               for inner in _substitutions(w, shell))
 
 
 _GH_HOST = re.compile(r"\bGH_HOST=|\$env:GH_HOST\s*=", re.IGNORECASE)
@@ -930,7 +935,7 @@ def main() -> int:
         print("closing_keyword_gate: GH_HOST points gh at another host, whose issues "
               "the gate does not read. Run the `gh pr` command without it.", file=sys.stderr)
         return 2
-    if _fed_by_xargs(words):
+    if _fed_by_xargs(words, shell):
         # `... | xargs -n1 gh pr merge` gives gh its PR on stdin, so the gate
         # would read the current branch's PR instead of the ones being merged.
         print("closing_keyword_gate: a `gh pr` command fed by xargs names PRs the "
