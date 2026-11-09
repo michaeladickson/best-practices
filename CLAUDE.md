@@ -213,7 +213,9 @@ the turn that wrote it. `.claude/hooks/lint_on_write.py` is the canonical copy, 
   construct the parsing misread): a `gh pr` command handed to another shell (`bash -c`,
   `eval`, `ssh`, `wsl -- bash -c`, a heredoc fed to a shell, `Invoke-Expression`);
   `GH_REPO` in any form but a `GH_REPO=o/r cmd` prefix (use `-R`); two `gh pr` commands
-  reading `--body-file -`. Add a parser rule only for a form sessions actually type.
+  reading `--body-file -`. A shell counts only as the command a statement or pipeline
+  stage runs, so `wsl -- grep "gh pr merge"` passes and `echo '...' |bash` blocks (#82).
+  Add a parser rule only for a form sessions actually type.
 - **Installed in:** best-practices, crumbl-ops, command-center and wealth-mgmt, each
   wired in `.claude/settings.json` by its own `Bash|PowerShell` PreToolUse entry; the
   other repos keep the test under `tests/`. In crumbl-ops it runs beside
