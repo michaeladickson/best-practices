@@ -40,7 +40,11 @@ What it does not model, it blocks rather than parses. Four review rounds on
 these fail closed with the reason: a `gh pr` command handed to another shell
 (`bash -c`, `eval`, `ssh`, a heredoc fed to a shell, `Invoke-Expression`);
 GH_REPO in any form but a `GH_REPO=o/r cmd` prefix; and more than one `gh pr`
-command reading `--body-file -`.
+command reading `--body-file -`. A shell counts only where it runs: as the
+command a statement or pipeline stage runs, read from words that keep the
+operators, newlines and quotes shlex.split drops. A shell word anywhere in the
+statement blocked a read-only `wsl -- grep "gh pr merge"`, and `|bash` was not
+a shell at all (#82).
 """
 from __future__ import annotations
 
@@ -181,8 +185,16 @@ def _target(verb: str, args: list[str]) -> str:
     return ""
 
 
+# `gh` as a command word: alone, at the end of a path, or right after what
+# shlex.split leaves attached: shell punctuation (`x&&gh`, `$(gh`), the newline
+# of a `\` line continuation (`\ngh`, two sessions' commands in 90 days), or a
+# quote the fallback split kept (`'gh` after a stray apostrophe). Not after
+# `=`: `--grep=gh pr create` is a search, and a bare endswith("gh") ran it (#82).
+_GH_WORD = re.compile(r"(?:^|[\s\\/;&|(`${}!'\"])gh(?:\.exe)?$", re.IGNORECASE)
+
+
 def _is_pr_verb(tokens: list[str], i: int) -> bool:
-    return (tokens[i].endswith("gh") and tokens[i + 1:i + 2] == ["pr"]
+    return (_GH_WORD.search(tokens[i]) is not None and tokens[i + 1:i + 2] == ["pr"]
             and tokens[i + 2:i + 3] in (["create"], ["edit"], ["merge"]))
 
 
@@ -223,26 +235,55 @@ _HEREDOC_OPEN = re.compile(r"(?<![^\s|;&(])<<(?!<)-?\s*(['\"]?)([A-Za-z_]\w*)\1"
 _HERESTRING_OPEN = re.compile(r"(?:^|[\s=(])@(['\"])\s*$")
 
 
-_STATEMENT_END = re.compile(r"&&|\|\||;")
+def _top_level_ops(line: str, shell: str) -> list[tuple[int, int, str]]:
+    """(start, end, kind) of each `&&`, `||`, `;` and `&` ("stmt") and each `|`
+    ("pipe") in `line` outside quotes. A quote left open runs to the line's end,
+    as in `bash -c "$(cat <<'EOF'`."""
+    esc = "`" if shell == "PowerShell" else "\\"
+    out, i, quote = [], 0, None
+    while i < len(line):
+        c = line[i]
+        if quote:
+            if c == esc and quote == '"':
+                i += 1
+            elif c == quote:
+                quote = None
+        elif c == esc:
+            i += 1
+        elif c in "'\"":
+            quote = c
+        elif line.startswith(("&&", "||"), i):
+            out.append((i, i + 2, "stmt"))
+            i += 1
+        elif c == "|":
+            out.append((i, i + 1, "pipe"))
+        elif c == ";" or (c == "&" and line[i - 1:i] not in ("<", ">", "|")
+                          and line[i + 1:i + 2] != ">"):
+            out.append((i, i + 1, "stmt"))
+        i += 1
+    return out
 
 
-def _owner(line: str, start: int, end: int) -> str:
-    """The statement in `line` around [start, end): from the last `&&`, `||` or
-    `;` before it to the next one after it. A pipe stays in, since a heredoc
-    piped into a shell (`cat <<EOF | bash`) is run by that shell."""
-    left = 0
-    for m in _STATEMENT_END.finditer(line, 0, start):
-        left = m.end()
-    m = _STATEMENT_END.search(line, end)
-    return line[left:m.start() if m else len(line)]
+def _owner(line: str, start: int, end: int, shell: str = "Bash") -> str:
+    """What reads a heredoc opened at [start, end) of `line`: from the pipeline
+    stage that holds the operator to the end of its statement. Later stages stay
+    in, since a heredoc piped into a shell (`cat <<EOF | bash`) is run by that
+    shell; earlier ones go, since `gh pr edit 5 | bash <<EOF` feeds bash, not
+    the edit. Separators inside quotes do not count: `ssh host 'cd app && sh'
+    <<EOF` runs sh (#82)."""
+    ops = _top_level_ops(line, shell)
+    left = max((e for s, e, _ in ops if s < start), default=0)
+    right = min((s for s, _, k in ops if s >= end and k == "stmt"), default=len(line))
+    return line[left:right]
 
 
-def _heredocs(command: str) -> tuple[str, list[tuple[str, str]]]:
+def _heredocs(command: str, shell: str = "Bash") -> tuple[str, list[tuple[str, str]]]:
     """The command with heredoc and here-string BODIES removed, and each
-    removed body as (the statement that opens it + the one on its terminator
-    line, the body). The statement, not the line: in `wsl -- bash -c "pytest"
+    removed body as (what reads it on its opening line + the statement after
+    its terminator, the body). Not the whole line: in `wsl -- bash -c "pytest"
     && cat > b.md <<'EOF'` the body is cat's, and reading the line as one
-    statement had `bash` run a PR body that mentioned `gh pr create`.
+    statement had `bash` run a PR body that mentioned `gh pr create`. After the
+    terminator because a PowerShell here-string's reader follows it: `'@ | iex`.
 
     Prose in a body written earlier in the command ("then gh pr merge -R
     owner/app 264") was parsed as a command, checked against the wrong PR,
@@ -262,7 +303,9 @@ def _heredocs(command: str) -> tuple[str, list[tuple[str, str]]]:
             if line.strip() == end or (end.endswith("@") and line.lstrip().startswith(end)):
                 ends.pop(0)
                 out.append(line)
-                bodies.append((f"{owners.pop(0)}\n{_owner(line, 0, 0)}", "\n".join(held)))
+                after = "" if line.strip() == end else line.lstrip()[len(end):]
+                bodies.append((f"{owners.pop(0)}\n{_owner(after, 0, 0, shell)}",
+                               "\n".join(held)))
                 held = []
             else:
                 held.append(line)
@@ -271,10 +314,10 @@ def _heredocs(command: str) -> tuple[str, list[tuple[str, str]]]:
         ends, owners = [], []
         for m in _HEREDOC_OPEN.finditer(line):
             ends.append(m.group(2) or m.group(4))
-            owners.append(_owner(line, m.start(), m.end()))
+            owners.append(_owner(line, m.start(), m.end(), shell))
         if m := _HERESTRING_OPEN.search(line):
             ends.append(m.group(1) + "@")
-            owners.append(_owner(line, m.start(), m.end()))
+            owners.append(_owner(line, m.start(), m.end(), shell))
     return "\n".join(out + held), bodies
 
 
@@ -290,6 +333,44 @@ def _tokens(command: str, shell: str) -> list[str]:
         # split kept the quotes on "$SP/body.md", and a correct create failed
         # closed on a path with quotes in it.
         return [_unquote(t) for t in command.split()]
+
+
+_OPERATOR_CHARS = "();<>|&\n"
+
+
+def _words(text: str, shell: str) -> list[str]:
+    """`text` as words plus operator tokens (`|`, `&&`, `;`, `(`, a newline,
+    `>&`), quotes respected. shlex.split drops newlines and leaves `|bash`,
+    `x&&bash` and `(bash` as one word, so a shell there was no shell and two
+    lines read as one statement (#82). Bash backticks are operators too. A
+    newline after `|`, `&&` or `||` continues the statement, as in the shell:
+    read as an end, it cut `echo '...' |` from the `bash` on the next line."""
+    text = text.replace("`\n" if shell == "PowerShell" else "\\\n", " ")
+    text = re.sub(r"(\|\||&&|\|&?)[ \t]*\n", r"\1 ", text)
+    punct = _OPERATOR_CHARS + ("" if shell == "PowerShell" else "`")
+    try:
+        lex = shlex.shlex(text, posix=True, punctuation_chars=punct)
+        lex.whitespace, lex.whitespace_split, lex.commenters = " \t\r", True, ""
+        if shell == "PowerShell":
+            lex.escape = ""
+        return list(lex)
+    except ValueError:
+        # An open quote: operators still come apart, so a stray apostrophe
+        # cannot glue a shell to the word before it.
+        cls = re.escape(punct)
+        return [_unquote(t) for t in re.findall(rf"[{cls}]+|[^\s{cls}]+", text)]
+
+
+def _kind(token: str) -> str:
+    """"word"; "redirect" (`>`, `<<`, `>&`); "pipe" (`|`, `|&`, `)|`); "stmt"
+    (`&&`, `||`, `;`, `&`, a newline); or "group" (`(`, `)`, a backtick)."""
+    if not token or token.strip(_OPERATOR_CHARS + "`"):
+        return "word"
+    if "<" in token or ">" in token:
+        return "redirect"
+    if "|" in token.replace("||", ""):
+        return "pipe"
+    return "stmt" if token.strip("()`") else "group"
 
 
 def _prefix_on_gh_line(command: str, value: str) -> bool:
@@ -339,7 +420,34 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
         if prefix and _flag(args, "--repo", "-R") is None and _prefix_on_gh_line(command, prefix):
             args += ["-R", prefix]
         found.append((tokens[i + 2], args, cd))
+    prose = _prose(tokens)
+    for k, t in enumerate(tokens):
+        # `out="$(gh pr merge 264 2>&1)"`: quoted, the substitution is one
+        # token, and the merge in it ran with nothing found (#82). A title,
+        # body or commit message is text, not a substitution the gate reads.
+        if k in prose:
+            continue
+        for inner in _substitutions(t, shell):
+            found += [(v, a, c or cd) for v, a, c in _pr_commands(inner, shell)]
     return found
+
+
+def _substitutions(token: str, shell: str) -> list[str]:
+    """The text of each unescaped `$(...)` in a token that names a `gh pr`
+    verb and closes within it; an open one is a pattern (`grep -F '$(gh pr
+    merge'`). Not backticks: once shlex drops the quotes, a Markdown code span
+    in a PR body or a single-quoted sed pattern reads the same as a backtick
+    substitution. In 90 days of commands, backticks and escaped `\\$(` gave 5
+    false finds; the 2 real ones, merges looped inside `"$(...)"`, were not."""
+    out = []
+    for m in re.finditer(r"(?<!\\)\$\(", token):
+        depth, rest = 1, token[m.end():]
+        for i, ch in enumerate(rest):
+            depth += (ch == "(") - (ch == ")")
+            if depth == 0:
+                out.append(rest[:i])
+                break
+    return [s for s in out if _PR_VERB.search(s)]
 
 
 _PR_URL = re.compile(r"https?://github\.com/([\w.-]+/[\w.-]+)/pull/\d+")
@@ -425,6 +533,149 @@ def _is_shell_word(token: str) -> bool:
     return _SHELL.fullmatch(re.split(r"[\\/]", token)[-1]) is not None
 
 
+# Words that run the command after them (`env bash -c`, `wsl -- bash -c`,
+# `timeout 60 sh -c`), each with its options that take a value. `timeout` also
+# takes a duration. `wsl` with nothing after it runs the default shell.
+_WRAPPERS = {
+    "env": {"-u", "--unset", "-C", "--chdir"},
+    "sudo": {"-u", "-g", "-h", "-p", "-C", "-D", "-r", "-t", "-U", "-T"},
+    "doas": {"-u", "-C"},
+    "nice": {"-n", "--adjustment"},
+    "timeout": {"-s", "--signal", "-k", "--kill-after"},
+    "stdbuf": {"-i", "-o", "-e"},
+    "xargs": {"-I", "-n", "-P", "-L", "-d", "-E", "-s", "-a"},
+    "time": {"-f", "-o"},
+    "exec": {"-a"},
+    "wsl": {"-d", "--distribution", "-u", "--user", "--cd", "--shell-type"},
+    **{w: set() for w in ("nohup", "command", "builtin", "!", "{", "then", "do",
+                          "else", "elif", "if", "while", "until")},
+}
+
+
+def _command_word(words: list[str], i: int) -> int | None:
+    """The index of the command a simple command starting at i runs: past
+    assignments, keywords and wrappers with their options. None when it runs
+    nothing, except a bare `wsl`, which is its own shell."""
+    while i < len(words) and _kind(words[i]) == "word":
+        w = words[i]
+        name = _command_name(w)
+        if _ASSIGNMENT.match(w):
+            i += 1
+            continue
+        if name not in _WRAPPERS:
+            return i
+        start, i, positional = i, i + 1, int(name == "timeout")
+        while i < len(words) and _kind(words[i]) == "word":
+            a = words[i]
+            if a == "--" or (name == "wsl" and a in ("-e", "--exec")):
+                i += 1
+                break
+            if a.startswith("-") and a != "-":
+                i += 2 if a in _WRAPPERS[name] else 1
+            elif name == "env" and _ASSIGNMENT.match(a):
+                i += 1
+            elif positional:
+                positional, i = 0, i + 1
+            else:
+                break
+        if name == "wsl" and (i >= len(words) or _kind(words[i]) != "word"):
+            return start
+    return None
+
+
+def _command_words(words: list[str]) -> list[int]:
+    """The index of every command word: the first word of each statement,
+    pipeline stage and group, read through _command_word."""
+    out, i, at = [], 0, True
+    while i < len(words):
+        k = _kind(words[i])
+        if k == "redirect":
+            i += 2                      # the operator and its target
+        elif k != "word":
+            at, i = True, i + 1
+        elif not at:
+            i += 1
+        elif (c := _command_word(words, i)) is None:
+            while i < len(words) and _kind(words[i]) == "word":
+                i += 1
+        else:
+            out.append(c)
+            at, i = False, c + 1
+    return out
+
+
+def _statement_start(words: list[str], c: int) -> int:
+    """Where the statement holding words[c] begins: after the last `&&`, `||`,
+    `;`, `&` or newline before it that is outside any `( )` or `{ }` group, or
+    at the group that encloses it."""
+    depth = 0
+    for i in range(c - 1, -1, -1):
+        t = words[i]
+        if t == "}":
+            depth += 1
+        elif t == "{":
+            if depth == 0:
+                return i + 1
+            depth -= 1
+        elif _kind(t) in ("stmt", "pipe", "group"):
+            # Right to left within the token: in `\n)` the newline is inside
+            # the group the `)` closes; in `);` the `;` is outside it.
+            for j in range(len(t) - 1, -1, -1):
+                ch = t[j]
+                if ch == ")":
+                    depth += 1
+                elif ch == "(":
+                    if depth == 0:
+                        return i + 1
+                    depth -= 1
+                elif depth == 0 and (ch in ";\n" or (ch == "&" and t[j - 1:j] != "|")
+                                     or (ch == "|" and "||" in t[max(j - 1, 0):j + 2])):
+                    return i + 1
+    return 0
+
+
+def _command_name(word: str) -> str:
+    """`/usr/bin/env` -> `env`, `C:\\...\\WSL.EXE` -> `wsl`."""
+    return re.sub(r"\.exe$", "", re.split(r"[\\/]", word)[-1].lower())
+
+
+# Commands whose arguments are patterns, files or text, never a command to run.
+# A shell word after one is data (`grep ... | grep -v bash`). After any other
+# command it may be run (`setsid bash`, `find -exec sh -c`), so it counts.
+_TEXT_TOOLS = {"grep", "egrep", "fgrep", "rg", "ag", "ack", "findstr", "select-string",
+               "sls", "sed", "awk", "gawk", "head", "tail", "sort", "uniq", "wc", "cut",
+               "tr", "cat", "tee", "less", "more", "echo", "printf", "jq", "ls", "dir",
+               "diff", "write-output", "write-host"}
+
+
+def _fed_by_pipe(words: list[str], c: int) -> int | None:
+    """The index of the pipe that feeds the stage holding command word c, or
+    None. It looks out through a group that opens the stage: in `echo '...' |
+    ( bash )` and `| { bash; }` the pipe feeds the group's shell (#82)."""
+    i = c - 1
+    while i >= 0:
+        t, k = words[i], _kind(words[i])
+        if k == "word" or (k == "group" and set(t) <= {"("}):
+            i -= 1                      # wrappers, assignments, `{`, `(`
+        else:
+            return i if k == "pipe" else None
+    return None
+
+
+def _runs_pr(text: str, shell: str, depth: int) -> bool:
+    """`text`, run as a command, runs `gh pr create/edit/merge`: directly, or
+    through one more shell inside it (`bash -c "bash -c '...'"`)."""
+    if not _PR_VERB.search(text):
+        return False
+    if _pr_commands(text, shell):
+        return True
+    if depth <= 0:
+        return False
+    stripped, bodies = _heredocs(text, shell)
+    words = _words(stripped, shell)
+    return _run_by_another_shell(words, _prose(words), bodies, shell, depth - 1) is not None
+
+
 def _prose(tokens: list[str]) -> set[int]:
     """Indices of tokens that are a title, body, subject or message value."""
     out = set()
@@ -436,70 +687,86 @@ def _prose(tokens: list[str]) -> set[int]:
     return out
 
 
-def _run_by_another_shell(tokens: list[str], prose: set[int],
-                          bodies: list[tuple[str, str]], shell: str) -> str | None:
+def _run_by_another_shell(words: list[str], prose: set[int], bodies: list[tuple[str, str]],
+                          shell: str, depth: int = 2) -> str | None:
     """The first `gh pr` command another shell would run, or None.
 
-    An argument counts when a shell word is in the same statement (a pipe does
-    not end one: `echo '...' | bash`) and the argument parses as a `gh pr`
-    command, not just text that names one (`bash -c 'grep "gh pr create" f'`).
-    A heredoc body counts when the statement that opens it, or the one on its
-    terminator line, has a shell word as a command word, not as text in a
-    title, and does not itself run `gh pr` (then the body is its stdin).
+    A shell counts in its own simple command, never across a pipe or `&&`:
+    `grep "gh pr merge" f | grep -v bash` runs nothing. In a simple command it
+    counts as the command word (_command_words) or as any later word, since a
+    wrapper the gate does not list still runs it (`setsid bash -c`, `find
+    -exec sh -c`), unless the command is a text tool (_TEXT_TOOLS). It runs the
+    arguments after it (`bash -c '...'`, `ssh host '...'`, `eval`) and, when a
+    pipe feeds its stage, every word before that pipe in its statement (`echo
+    '...' | bash`, `| setsid bash`, `| ( bash )`). An argument counts when it parses as a
+    `gh pr` command, not just text that names one (`bash -c 'grep "gh pr
+    create" f'`). A heredoc body counts when any word in what reads it (_owner)
+    is a shell, except a title or body.
+
+    A `gh pr` command kept in a variable (`CMD='gh pr merge 5'`) runs wherever
+    a shell expands it (`eval "$CMD"`, on the next line or after `;`). The gate
+    cannot trace the variable, so such an assignment beside any shell word in
+    the command fails closed. 79acb4ca blocked the newline and prefix forms by
+    accident, and the first command-word reading lost them (#82).
     """
-    statements, current = [], []
-    for i, t in enumerate(tokens):
-        if t in ("&&", "||", ";", "&"):
-            statements.append(current)
-            current = []
+    held = [w for i, w in enumerate(words) if i not in prose and _kind(w) == "word"
+            and _ASSIGNMENT.match(w) and _runs_pr(w.split("=", 1)[1], shell, depth)]
+    if held and any(_kind(w) == "word" and _is_shell_word(w) for w in words):
+        return held[0]
+    for c in _command_words(words):
+        end = c + 1
+        while end < len(words) and _kind(words[end]) in ("word", "redirect"):
+            end += 1
+        later = _command_name(words[c]) not in _TEXT_TOOLS
+        shells = [s for s in range(c, end) if s not in prose and (s == c or later)
+                  and _kind(words[s]) == "word" and _is_shell_word(words[s])]
+        if not shells:
             continue
-        current.append(i)
-        if t.endswith(";"):
-            statements.append(current)
-            current = []
-    statements.append(current)
-    for statement in statements:
-        words = [tokens[i] for i in statement if i not in prose]
-        if any(_is_shell_word(w) for w in words):
-            for w in words:
-                if _PR_VERB.search(w) and _pr_commands(w, shell):
-                    return w
+        given = list(range(shells[0] + 1, end))
+        if (pipe := _fed_by_pipe(words, c)) is not None:
+            given += range(_statement_start(words, pipe), pipe)
+        for i in given:
+            if i not in prose and _kind(words[i]) == "word" and _runs_pr(words[i], shell, depth):
+                return words[i]
     for around, body in bodies:
-        if not _PR_VERB.search(body) or _PR_VERB.search(around) or not _pr_commands(body, shell):
-            continue
-        words = _tokens(around, shell)
-        prose_here = _prose(words)
-        if any(_is_shell_word(w) for i, w in enumerate(words) if i not in prose_here):
-            return around.split("\n")[0]
+        if _runs_pr(body, shell, depth):
+            reads = _words(around, shell)
+            prose_here = _prose(reads)
+            if any(_kind(w) == "word" and _is_shell_word(w) and i not in prose_here
+                   and (i == 0 or _kind(reads[i - 1]) != "redirect")    # `<<SH`, `> sh.log`
+                   for i, w in enumerate(reads)):
+                return around.split("\n")[0]
     return None
 
 
 _ASSIGNMENT = re.compile(r"^[A-Za-z_]\w*=")
+# The variable, in any form a shell names it (`GH_REPO=`, `$GH_REPO`,
+# `${GH_REPO}`, `$env:GH_REPO`, `unset GH_REPO`), not a path that contains the
+# letters: `cd ~/gh_repos/x` and `notes/gh_repo.md` blocked as GH_REPO (#82).
+_GH_REPO_NAME = re.compile(r"(?<![\w./\\-])GH_REPO(?![\w./\\-])", re.IGNORECASE)
 
 
-def _unmodelled_gh_repo(command: str, tokens: list[str], prose: set[int]) -> bool:
+def _unmodelled_gh_repo(words: list[str], prose: set[int]) -> bool:
     """True when GH_REPO appears in any form but a `GH_REPO=o/r cmd` prefix.
 
     The prefix binds the one command it precedes, and _pr_commands turns it
     into -R. Every other form (`export`, `declare -x`, `set -a`, `unset`,
     `$env:GH_REPO`, an assignment on its own line that updates an already
     exported GH_REPO) depends on order and on state the gate cannot see. Each
-    was modelled or missed in turn, and each model had a gap (#69).
+    was modelled or missed in turn, and each model had a gap (#69). The words
+    keep newlines, so each assignment is judged where it stands: a regex over
+    the whole command let a bare `GH_REPO=o/r` line pass when the same value
+    was a real prefix elsewhere (#82).
     """
-    for k, t in enumerate(tokens):
-        if "gh_repo" not in t.lower() or k in prose:
+    for k, t in enumerate(words):
+        if k in prose or _kind(t) != "word" or not _GH_REPO_NAME.search(t):
             continue
         if not t.startswith("GH_REPO="):
             return True
-        j = k
-        while j < len(tokens) and _ASSIGNMENT.match(tokens[j]) and not tokens[j].endswith(";"):
+        j = k + 1
+        while j < len(words) and _ASSIGNMENT.match(words[j]):
             j += 1
-        value = t.split("=", 1)[1]
-        on_its_line = re.search(r"(?<![^\s;&|(])GH_REPO=['\"]?" + re.escape(value)
-                                + r"['\"]?(?:[ \t]+[A-Za-z_]\w*=[^\s;&|]*)*[ \t]+[^\s;&|]",
-                                command)
-        if (j >= len(tokens) or _ASSIGNMENT.match(tokens[j]) or tokens[j] in _SEPARATORS
-                or not on_its_line):
+        if j >= len(words) or _kind(words[j]) != "word":
             return True
     return False
 
@@ -517,10 +784,10 @@ def main() -> int:
     shell = payload.get("tool_name")
     # Whole-command signals are read with heredoc bodies removed: a PR body that
     # says "GH_REPO=..." or "xargs gh pr merge" is prose, not a setting.
-    stripped, bodies = _heredocs(command)
-    tokens = _tokens(stripped, shell)
-    prose = _prose(tokens)
-    if hidden := _run_by_another_shell(tokens, prose, bodies, shell):
+    stripped, bodies = _heredocs(command, shell)
+    words = _words(stripped, shell)
+    prose = _prose(words)
+    if hidden := _run_by_another_shell(words, prose, bodies, shell):
         # Checked before `found`: a merge run this way is never found at all.
         print("closing_keyword_gate: a `gh pr create/edit/merge` is handed to another "
               f"shell (\"{' '.join(hidden.split())[:80]}\"), so the gate cannot read the "
@@ -529,7 +796,7 @@ def main() -> int:
     found = _pr_commands(command, shell)
     if not found:
         return 0
-    if _unmodelled_gh_repo(stripped, tokens, prose):
+    if _unmodelled_gh_repo(words, prose):
         print("closing_keyword_gate: GH_REPO is set other than as a `GH_REPO=owner/repo "
               "gh pr ...` prefix, so the gate cannot tell which repo each `gh pr` command "
               "reaches. Pass -R owner/repo to the `gh pr` command instead.", file=sys.stderr)
