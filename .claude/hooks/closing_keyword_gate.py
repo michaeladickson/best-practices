@@ -255,10 +255,18 @@ _GH_WORD = re.compile(r"(?:^|[\s\\/;&|(`${}!'\"])gh(?:\.exe)?$", re.IGNORECASE)
 
 # `gh pr new` is gh's alias for create (`gh pr create --help`, gh 2.90.0).
 _VERBS = {"create": "create", "new": "create", "edit": "edit", "merge": "merge"}
-# The same as text, for the regexes that look for one: flags, each with its
-# value if it has one, may sit between `pr` and the verb (see _verb_at).
-_FLAG_VALUE = r"""(?:"[^"]*"|'[^']*'|[^-\s]\S*)"""
-_PR_VERB_TEXT = (r"gh(?:\.exe)?\s+pr\s+(?:-\S+(?:\s+" + _FLAG_VALUE + r")?\s+)*"
+# The same as text, for the shell, substitution, xargs and stdin checks. Each
+# word before the verb is read as _verb_at reads it, one way only: `--x v` and
+# `-x v` take the next word whatever it is (`-F -`, `-t -x`); `--x=v`, `-xv` and
+# a lone `-` stand alone. A lone `-` once read as no value hid `bash -c 'gh pr
+# -t - merge 46'` from every check (wealth-mgmt PR 311 review). A value is a
+# quoted run, `\"` included, then the rest of its word; or a bare word.
+_VALUE = r"""(?:(?:"(?:[^"\\]|\\.)*"|'[^']*')\S*|[^\s"']\S*)"""
+_PRE_VERB_WORD = (r"(?:(?:--[^\s=]+|-[^\s-])\s+" + _VALUE   # --x v, -x v
+                  + r"|--[^\s=]*=" + _VALUE + r"?"          # --x=v
+                  + r"|-[^\s-]" + _VALUE                    # -xv, -sRo/r
+                  + r"|-)")                                 # a lone -
+_PR_VERB_TEXT = (r"gh(?:\.exe)?\s+pr\s+(?:" + _PRE_VERB_WORD + r"\s+)*"
                  r"(?:create|new|edit|merge)\b")
 
 

@@ -14,6 +14,7 @@ import importlib.util
 import io
 import json
 import os
+import shlex
 from pathlib import Path
 
 import pytest
@@ -922,3 +923,54 @@ def test_a_grouped_repo_before_the_pr_checks_that_pr_there(monkeypatch, capsys):
     code, err = _run(monkeypatch, capsys, "gh pr merge -sR c/d 46", body="clean", calls=calls)
     view = next(a for a, _ in calls if a[:2] == ["pr", "view"])
     assert code == 0 and view[2] == "46" and gate._flag(view, "-R") == "c/d", err
+
+
+# ── a dash or quoted value before the verb (wealth-mgmt PR 311 review) ────
+# _verb_at pairs `-x v` whatever v is, but the pattern the shell, substitution,
+# xargs and stdin checks share took a lone `-` for no value and stopped at an
+# escaped or attached quote, so `bash -c 'gh pr -t - merge 46'` merged unread.
+
+@pytest.mark.parametrize("command,why", [
+    ("bash -c 'gh pr -t - merge 46'", "cannot read"),           # the review's form
+    ("bash -c 'gh pr -F - merge 46'", "cannot read"),
+    ("""bash -c 'gh pr --subject "a \\"b\\"" merge 46'""", "cannot read"),
+    ("""bash -c 'gh pr --subject="a b" merge 46'""", "cannot read"),
+    ("""bash -c 'gh pr -t"a b" merge 46'""", "cannot read"),
+    ("echo 46 | xargs gh pr -t - merge", "xargs"),
+])
+def test_a_dash_or_quoted_value_before_the_verb_still_blocks(monkeypatch, capsys,
+                                                             command, why):
+    code, err = _run(monkeypatch, capsys, command)
+    assert code == 2 and why in err, err
+
+
+def test_a_quoted_substitution_past_a_dash_value_is_read(monkeypatch, capsys):
+    code, err = _run(monkeypatch, capsys, 'out="$(gh pr -t - merge 46)"',
+                     body="Small fixes from #261.")
+    assert code == 2 and "#261" in err, err
+
+
+@pytest.mark.parametrize("text,code", [("Small fixes from #261.", 2), ("Clean body.", 0)])
+def test_a_stdin_body_before_the_verb_with_its_heredoc_is_scanned(monkeypatch, capsys,
+                                                                  text, code):
+    got, err = _run(monkeypatch, capsys, f"gh pr -F - merge 46 <<'EOF'\n{text}\nEOF",
+                    body="clean")
+    assert "stdin" not in err and got == code, err
+
+
+@pytest.mark.parametrize("command", [
+    "gh pr merge 46", "gh pr -R o/r merge 46", "gh pr --repo=o/r merge 46",
+    "gh pr -sRo/r merge 46", "gh pr -t - merge 46", "gh pr -F - merge 46",
+    "gh pr --subject -x merge 46", "gh pr --subject 'a b' merge 46",
+    'gh pr --subject "a \\"b\\"" merge 46', 'gh pr --subject="a b" merge 46',
+    "gh pr -t'a b' merge 46", "gh pr - merge 46",
+    # cobra pairs the flag with `merge`, so there is no verb; `--` ends the flags
+    "gh pr --squash merge 46", "gh pr -s merge 46", "gh pr -- merge 46",
+    "gh pr view 46", "gh pr -R o/r view 46", "gh pr list --search merge",
+])
+def test_the_verb_pattern_finds_what_the_parser_finds(command):
+    """The shell, substitution, xargs and stdin checks find a `gh pr` verb by
+    pattern and the parser by _verb_at; a command the pattern missed was never
+    handed to the parser at all."""
+    found = gate._verb_at(shlex.split(command), 0) is not None
+    assert (gate._PR_VERB.search(command) is not None) == found
