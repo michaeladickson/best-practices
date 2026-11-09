@@ -126,6 +126,14 @@ Fri 6pm ET digest → Mon 8am skills-sync → Tue 9am heartbeats → 1st backwar
 thesis-check → 15th and 22nd review types. A Friday-afternoon session should hear "digest fires
 tonight"; a weekend session should hear "last night's run is unreviewed."
 
+**e. Backward-pass proposals (this repo only, never a glob over the other repos' files):
+
+```bash
+ls -l ~/.claude/backward-pass/proposals-best-practices.md 2>/dev/null
+```
+
+If it exists, print one line: "Backward-pass proposals for best-practices unreviewed (written <file date>; last review <last_review from ~/.claude/backward-pass/best-practices.json>)." and offer "review the backward-pass proposals" (backward-pass step 5). The review deletes the file, so a file that exists means unreviewed. No file: say nothing.
+
 ## Step 3 — Concurrent-session scan (non-blocking)
 
 Five or more sessions run in parallel here and cross-repo findings go stale in minutes. Two
