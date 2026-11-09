@@ -898,3 +898,27 @@ def test_a_body_file_before_the_verb_is_read(monkeypatch, capsys, tmp_path):
 def test_flags_before_the_verb_inside_a_shell_still_block(monkeypatch, capsys):
     code, err = _run(monkeypatch, capsys, "bash -c 'gh pr --subject \"a b\" merge 46'")
     assert code == 2 and "cannot read" in err, err
+
+
+@pytest.mark.parametrize("command,target", [
+    ("gh pr merge -sR c/d 46", "46"),           # the review of wealth-mgmt PR 311
+    ("gh pr merge -dt release 46", "46"),       # -t is --subject: `release` is its value
+    ("gh pr merge -dtrelease 46", "46"),
+    ("gh pr merge -s 46", "46"),
+    ("gh pr merge --match-head-commit abc123 46", "46"),
+    ("gh pr edit --add-label bug 12 --title t", "12"),
+    ("gh pr edit -mv1 12", "12"),
+])
+def test_the_pr_is_found_past_flag_groups_and_long_values(command, target):
+    """The PR reader split flags its own way: in `gh pr merge -sR c/d 46` it
+    passed over `-sR` and took `c/d` as the PR, where the repo reader took
+    `c/d` as the repo."""
+    verb, args, _ = gate._pr_commands(command)[0]
+    assert gate._target(verb, args) == target
+
+
+def test_a_grouped_repo_before_the_pr_checks_that_pr_there(monkeypatch, capsys):
+    calls = []
+    code, err = _run(monkeypatch, capsys, "gh pr merge -sR c/d 46", body="clean", calls=calls)
+    view = next(a for a, _ in calls if a[:2] == ["pr", "view"])
+    assert code == 0 and view[2] == "46" and gate._flag(view, "-R") == "c/d", err

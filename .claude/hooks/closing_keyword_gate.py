@@ -144,14 +144,33 @@ def _flag(args: list[str], *names: str) -> str | None:
     return None
 
 
-# gh pr's one-letter flags that take no value, per verb (gh 2.90.0 `--help`).
-# pflag reads a group such as `-sR c/d` letter by letter, and the first letter
-# that takes a value takes the rest of the word (`-sRc/d`) or the next word: so
-# `-dR o/r` names a repo while `-tRework` is a title (checked 2026-11-09).
+# gh pr's one-letter flags that take no value, and its long flags that take one,
+# per verb (gh 2.90.0 `--help`). pflag reads a group such as `-sR c/d` letter by
+# letter, and the first letter that takes a value takes the rest of the word
+# (`-sRc/d`) or the next word: so `-dR o/r` names a repo while `-tRework` is a
+# title (checked 2026-11-09). Per verb because `-m` is `--merge` (no value) on
+# merge and `--milestone` on create and edit.
 _NO_VALUE_SHORT = {"create": "defw", "edit": "", "merge": "dmrs"}
-# Long flags whose value is free text, passed over when reading another flag:
-# a title "-Rework the parser" is not `-R`.
-_TEXT_LONG_FLAGS = {"--title", "--body", "--subject", "--body-file"}
+_LONG_WITH_VALUE = {
+    "create": {"--assignee", "--base", "--body", "--body-file", "--head", "--label",
+               "--milestone", "--project", "--recover", "--reviewer", "--template",
+               "--title", "--repo"},
+    "edit": {"--add-assignee", "--add-label", "--add-project", "--add-reviewer", "--base",
+             "--body", "--body-file", "--milestone", "--remove-assignee", "--remove-label",
+             "--remove-project", "--remove-reviewer", "--title", "--repo"},
+    "merge": {"--author-email", "--body", "--body-file", "--match-head-commit",
+              "--subject", "--repo"},
+}
+
+
+def _takes_next(verb: str, word: str) -> bool:
+    """Whether `word` is a flag whose value is the next word: a long flag that
+    takes one, written without `=`, or a one-letter group whose first letter that
+    takes a value ends the word (`-R`, `-sR`, `-dt`). Every reader of the args
+    splits them with this, so they agree on which word is which."""
+    if word.startswith("--"):
+        return "=" not in word and word in _LONG_WITH_VALUE.get(verb, ())
+    return word.startswith("-") and len(word[1:].lstrip(_NO_VALUE_SHORT.get(verb, ""))) == 1
 
 
 def _values(verb: str, args: list[str], long: str, short: str | None = None) -> list[str]:
@@ -176,19 +195,14 @@ def _values(verb: str, args: list[str], long: str, short: str | None = None) -> 
             elif nxt is not None:
                 out.append(nxt)
                 skip = True
-        elif a in _TEXT_LONG_FLAGS:
-            skip = True
-        elif a.startswith("-") and not a.startswith("--") and len(a) > 1:
+        else:
             letters = a[1:].lstrip(no_value)
-            if not letters:
-                continue                        # only flags that take no value
-            value = letters[1:].removeprefix("=")
-            if letters[0] == short:
-                if value:
+            if short and a.startswith("-") and not a.startswith("--") and letters[:1] == short:
+                if value := letters[1:].removeprefix("="):
                     out.append(value)
                 elif nxt is not None:
                     out.append(nxt)
-            skip = not value                    # its value is the next word
+            skip = _takes_next(verb, a)         # its value, or another flag's, is next
     return out
 
 
@@ -213,32 +227,20 @@ def _gh(args: list[str], cwd: str | None = None) -> str:
 
 _SEPARATORS = {"&&", "||", ";", "|", "&"}
 
-# Flags that take a value, per verb. The PR is the first argument that is
-# neither a flag nor such a value: `gh pr merge -R owner/app 264` read
-# `owner/app` as the PR and blocked a correct merge. Per verb because `-m` is
-# `--merge` (no value) on merge and `--milestone` on edit.
-_VALUE_FLAGS = {
-    "merge": {"-t", "--subject", "-b", "--body", "-F", "--body-file", "-A",
-              "--author-email", "--match-head-commit", "-R", "--repo"},
-    "edit": {"-t", "--title", "-b", "--body", "-F", "--body-file", "-B", "--base",
-             "-m", "--milestone", "--add-assignee", "--remove-assignee", "--add-label",
-             "--remove-label", "--add-project", "--remove-project", "--add-reviewer",
-             "--remove-reviewer", "-R", "--repo"},
-}
-
-
 def _target(verb: str, args: list[str]) -> str:
-    """The PR a merge or edit names, or "" (create has none; "" is the branch's)."""
-    takes_value = _VALUE_FLAGS.get(verb)
-    if takes_value is None:
+    """The PR a merge or edit names, or "" (create has none; "" is the branch's):
+    the first word that is neither a flag nor a flag's value, split as _values
+    splits them. `gh pr merge -R owner/app 264` once read `owner/app` as the PR,
+    and `gh pr merge -sR c/d 46` read `c/d` (the review of wealth-mgmt PR 311)."""
+    if verb not in ("merge", "edit"):
         return ""
     skip = False
     for a in args:
         if skip:
             skip = False
-        elif a in takes_value:
-            skip = True
-        elif not a.startswith("-"):
+        elif a.startswith("-"):
+            skip = _takes_next(verb, a)
+        else:
             return a
     return ""
 
