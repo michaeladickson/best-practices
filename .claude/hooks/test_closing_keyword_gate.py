@@ -357,13 +357,9 @@ def test_an_open_issue_list_at_the_limit_fails_closed(monkeypatch, capsys):
     assert code == 2 and "incomplete" in err
 
 
-@pytest.mark.parametrize("command,tool", [
-    ("GH_REPO=o/r gh pr merge 46 --squash", "Bash"),
-    ('$env:GH_REPO = "o/r"; gh pr merge 46 --squash', "PowerShell"),
-])
-def test_gh_repo_points_the_check_at_that_repo(monkeypatch, capsys, command, tool):
+def test_a_gh_repo_prefix_points_the_check_at_that_repo(monkeypatch, capsys):
     calls = []
-    _run(monkeypatch, capsys, command, body="clean", calls=calls, tool=tool)
+    _run(monkeypatch, capsys, "GH_REPO=o/r gh pr merge 46 --squash", body="clean", calls=calls)
     issue_list = next(a for a, _ in calls if a[:2] == ["issue", "list"])
     assert issue_list[2:4] == ["-R", "o/r"]
 
@@ -417,14 +413,6 @@ def test_a_gh_repo_prefix_binds_only_its_own_command(monkeypatch, capsys):
          body="clean", calls=calls)
     issue_list = next(a for a, _ in calls if a[:2] == ["issue", "list"])
     assert "-R" not in issue_list
-
-
-def test_export_gh_repo_applies_to_later_commands(monkeypatch, capsys):
-    calls = []
-    _run(monkeypatch, capsys, "export GH_REPO=o/r && gh pr merge 46 --squash",
-         body="clean", calls=calls)
-    issue_list = next(a for a, _ in calls if a[:2] == ["issue", "list"])
-    assert issue_list[2:4] == ["-R", "o/r"]
 
 
 def test_gh_repo_in_a_body_is_prose_not_a_setting(monkeypatch, capsys):
@@ -481,14 +469,6 @@ def test_a_heredoc_piped_into_create_is_scanned(monkeypatch, capsys, text, code)
     assert "could not check" not in err and got == code
 
 
-def test_gh_repo_on_the_line_before_is_not_a_prefix(monkeypatch, capsys):
-    """Not exported, so gh merges in the cwd repo; shlex had dropped the newline."""
-    calls = []
-    _run(monkeypatch, capsys, "GH_REPO=o/r\ngh pr merge 46 --squash", body="clean", calls=calls)
-    issue_list = next(a for a, _ in calls if a[:2] == ["issue", "list"])
-    assert "-R" not in issue_list
-
-
 def test_an_explicit_repo_flag_wins_over_a_gh_repo_prefix(monkeypatch, capsys):
     calls = []
     _run(monkeypatch, capsys, "GH_REPO=a/b gh pr merge 46 -R c/d", body="clean", calls=calls)
@@ -499,3 +479,98 @@ def test_an_explicit_repo_flag_wins_over_a_gh_repo_prefix(monkeypatch, capsys):
 def test_a_heredoc_with_no_space_is_still_a_heredoc():
     command = "cat<<EOF > b.md\nthen gh pr merge 1 here\nEOF\ngh pr merge 264 --squash"
     assert [(v, a) for v, a, _ in gate._pr_commands(command)] == [("merge", ["264", "--squash"])]
+
+
+# ── #69: fail closed on what the gate does not model (2026-11-08) ─────────
+# Four review rounds on 2026-10-26 each found a construct the hand-written
+# parsing misread. These block with the reason instead of modelling one more
+# form, and each case passed unchecked on 384a24d.
+
+@pytest.mark.parametrize("command", [
+    # The create's heredoc vouched for the edit's piped body (command-center PR 760).
+    "cat b.md | gh pr edit 5 --body-file - && gh pr create --title t --body-file - <<'EOF'\n"
+    "clean\nEOF",
+    # One reader, but the heredoc belongs to a command that does not read stdin.
+    "cat b.md | gh pr edit 5 --body-file - && gh pr merge 6 <<'EOF'\nclean\nEOF",
+])
+def test_a_stdin_body_the_gate_cannot_attribute_fails_closed(monkeypatch, capsys, command):
+    code, err = _run(monkeypatch, capsys, command, body="clean")
+    assert code == 2 and "--body-file -" in err
+
+
+def test_one_stdin_reader_with_its_own_heredoc_beside_other_edits_passes(monkeypatch, capsys):
+    """A crumbl-ops session's real form: two label edits, then a body edit."""
+    command = ("gh pr edit 5 --add-label x; gh pr edit 5 --remove-label y; "
+               "gh pr edit 6 --body-file - <<'EOF' >/dev/null\nClean body.\nEOF")
+    code, err = _run(monkeypatch, capsys, command)
+    assert code == 0, err
+
+
+@pytest.mark.parametrize("command,tool", [
+    ("GH_REPO=o/r; export GH_REPO && gh pr merge 46 --squash", "Bash"),   # CC PR 760
+    ("declare -x GH_REPO=o/r && gh pr merge 46 --squash", "Bash"),
+    ("set -a; GH_REPO=o/r; gh pr merge 46 --squash", "Bash"),
+    ("GH_REPO=o/r A=1; gh pr merge 46 --squash", "Bash"),
+    ("gh pr merge 46 --squash && export GH_REPO=o/r", "Bash"),            # WM PR 289
+    ("unset GH_REPO && gh pr merge 46 --squash", "Bash"),
+    ("export GH_REPO=o/r && gh pr merge 46 --squash", "Bash"),
+    ("GH_REPO=o/r\ngh pr merge 46 --squash", "Bash"),   # updates GH_REPO if already exported
+    ('$env:GH_REPO = "o/r"; gh pr merge 46 --squash', "PowerShell"),
+])
+def test_gh_repo_other_than_a_prefix_fails_closed(monkeypatch, capsys, command, tool):
+    calls = []
+    code, err = _run(monkeypatch, capsys, command, body="clean", calls=calls, tool=tool)
+    assert code == 2 and "GH_REPO" in err and calls == []
+
+
+@pytest.mark.parametrize("command", [
+    "gh pr create --title t --body 'set GH_REPO=o/r first'",
+    "git commit -m 'GH_REPO notes' && gh pr create --title t --body x",
+    "GH_REPO=o/r gh pr view 5 && gh pr create --title t --body x",
+])
+def test_gh_repo_as_prose_or_a_one_command_prefix_passes(monkeypatch, capsys, command):
+    code, err = _run(monkeypatch, capsys, command, open_issues=())
+    assert code == 0, err
+
+
+@pytest.mark.parametrize("command,tool", [
+    ("bash <<'EOF'\ngh pr merge 264 --squash\nEOF", "Bash"),              # WM PR 289
+    ("sh -s <<EOF\ngh pr merge 264 --squash\nEOF", "Bash"),
+    ("ssh host <<EOF\ncd app && gh pr merge 264\nEOF", "Bash"),
+    ("cat <<'EOF' | bash\ngh pr merge 264 --squash\nEOF", "Bash"),
+    ("bash -c \"$(cat <<'EOF'\ngh pr merge 264 --squash\nEOF\n)\"", "Bash"),
+    ("bash -c 'gh pr merge 264 --squash'", "Bash"),
+    # A crumbl-ops session merged this way 7 times in 90 days, every one unchecked.
+    ('wsl -- bash -c "cd /mnt/c/x && gh pr merge 2552 --squash 2>&1 | tail -5"', "Bash"),
+    ("/usr/bin/env bash -c 'gh pr merge 264 --squash'", "Bash"),
+    ("echo 'gh pr merge 264 --squash' | sh", "Bash"),
+    ('eval "gh pr merge 264 --squash"', "Bash"),
+    ("Invoke-Expression @'\ngh pr merge 264 --squash\n'@", "PowerShell"),
+    ("@'\ngh pr merge 264 --squash\n'@ | iex", "PowerShell"),
+    ('Invoke-Expression "gh pr merge 264 --squash"', "PowerShell"),
+])
+def test_a_pr_command_run_by_another_shell_fails_closed(monkeypatch, capsys, command, tool):
+    calls = []
+    code, err = _run(monkeypatch, capsys, command, body="clean", calls=calls, tool=tool)
+    assert code == 2 and "cannot read" in err and calls == []
+
+
+@pytest.mark.parametrize("command", [
+    "python3 - <<'PY'\n# then gh pr merge -R owner/app 264\nprint(1)\nPY",   # a patch script
+    "cat > b.md <<'EOF'\nthen gh pr merge 264 --squash\nEOF",
+    "cat > deploy.sh <<'EOF'\ngh pr merge 264 --squash\nEOF",
+    "gh pr create --title 'bash note' --body-file - <<'EOF'\nrun gh pr merge 5 after\nEOF",
+    "gh issue create --title 'bash gate' --body-file - <<'EOF'\nrun gh pr merge 5\nEOF",
+    # A crumbl-ops session's real form: the heredoc is cat's, not bash's.
+    "wsl -- bash -c \"cd /mnt/c/x && pytest -q | tail -1\" && cat > b.md <<'EOF'\n"
+    "`gh pr create --label` fires opened and labeled together.\nEOF\n"
+    "gh pr create --title t --body x",
+    "gh pr create --title t --body 'then gh pr merge 5'",
+    'grep -rn "gh pr merge" .claude/skills',
+    "wsl -- bash -c 'grep -o \"gh pr create[^ ]*\" t.jsonl | sort -u | head -20'",
+    'grep -rn "gh pr merge" . | head -5 && bash scripts/check.sh',
+    'Select-String -Pattern "gh pr merge" -Path *.md',
+])
+def test_a_pr_command_written_as_prose_passes(monkeypatch, capsys, command):
+    code, err = _run(monkeypatch, capsys, command, open_issues=())
+    assert code == 0, err
