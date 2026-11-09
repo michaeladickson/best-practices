@@ -41,7 +41,9 @@ Run: python -m digest.model_pricing [--dry-run] [--deprecations-only]
 """
 from __future__ import annotations
 
+import html
 import json
+import re
 import subprocess
 import sys
 import urllib.request
@@ -104,7 +106,9 @@ WATCHLIST = {
 }
 
 
-DEPRECATIONS_URL = "https://ai.google.dev/gemini-api/docs/deprecations"
+# Moved here from ai.google.dev/gemini-api/docs/deprecations (which now redirects)
+# by 2026-11-06, and the content moved from HTML tables to Markdoc (#75).
+DEPRECATIONS_URL = "https://aistudio.google.com/docs/deprecations"
 DEPRECATIONS_SNAPSHOT = ROOT / "data" / "model_deprecations.json"
 # Rows on the deprecations page whose model id starts with one of these are
 # watched. Must cover every Gemini id the code calls:
@@ -323,6 +327,49 @@ class _TableRows(HTMLParser):
             self._heading.append(data)
 
 
+_HTML_TAG = re.compile(r"<[^>]*>")
+_MARKDOC_TAG = re.compile(r"\{%.*?%\}")
+_MD_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+
+
+def _md_text(s: str) -> str:
+    """A Markdoc cell or heading as the plain text a browser would show."""
+    s = _MD_LINK.sub(r"\1", _MARKDOC_TAG.sub("", s))
+    return " ".join(s.replace("`", "").replace("**", "").split())
+
+
+def _markdoc_rows(page: str) -> list[tuple[str, list[str]]]:
+    """Every row of every {% table %} block as a list of cell texts, tagged with
+    the h2 it sits under, like _TableRows.
+
+    The AI Studio page renders client-side and serves its content as Markdoc
+    inside a <pre>, with no <table> at all: one `* cell` line per cell, `---`
+    between rows, and a wrapped cell continued on the next line. Tags become
+    line breaks before unescaping, so a heading right after <pre> still starts
+    a line and an escaped "&lt;" in the content is not taken for a tag.
+    """
+    rows: list[tuple[str, list[str]]] = []
+    section = ""
+    row: list[str] | None = None  # None outside a table
+    for line in html.unescape(_HTML_TAG.sub("\n", page)).splitlines():
+        s = line.strip()
+        if row is None:
+            if line.startswith("## "):
+                section = _md_text(line[3:])
+            elif s.startswith("{% table"):
+                row = []
+            continue
+        if s.startswith("{% /table") or s == "---":
+            if row:
+                rows.append((section, row))
+            row = None if s.startswith("{% /table") else []
+        elif s == "*" or s.startswith("* "):
+            row.append(_md_text(s[1:]))
+        elif s and row:
+            row[-1] = _md_text(f"{row[-1]} {s}")
+    return rows
+
+
 class PageUnreadable(Exception):
     pass
 
@@ -330,11 +377,13 @@ class PageUnreadable(Exception):
 def parse_deprecations(page: str) -> dict[str, dict]:
     """Model id -> {section, shutdown, replacement} for every model row.
 
-    The column is found by its "Shutdown date" header, not by position, so a
-    reordered table still reads right and a renamed one fails loudly. Raises
-    PageUnreadable when the page does not look like the deprecations table:
-    a parse that quietly returned nothing would report every watched model as
-    unannounced, the one wrong answer this check exists to prevent.
+    Reads HTML tables and Markdoc tables alike, so the page switching between
+    the two (as it did by 2026-11-06, #75) is not an outage. The column is
+    found by its "Shutdown date" header, not by position, so a reordered table
+    still reads right and a renamed one fails loudly. Raises PageUnreadable
+    when the page does not look like the deprecations table: a parse that
+    quietly returned nothing would report every watched model as unannounced,
+    the one wrong answer this check exists to prevent.
     """
     parser = _TableRows()
     parser.feed(page)
@@ -342,7 +391,7 @@ def parse_deprecations(page: str) -> dict[str, dict]:
     out: dict[str, dict] = {}
     cols: tuple[int, int | None] | None = None
     headers_seen = 0
-    for section, cells in parser.rows:
+    for section, cells in parser.rows + _markdoc_rows(page):
         lowered = [c.lower() for c in cells]
         if lowered and lowered[0] in ("model", "agent"):
             shutdown = next((i for i, c in enumerate(lowered) if "shutdown" in c), None)

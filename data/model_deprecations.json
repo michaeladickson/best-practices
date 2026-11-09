@@ -1,12 +1,12 @@
 {
-  "fetched_at": "2026-10-30 22:12 UTC",
-  "source": "https://ai.google.dev/gemini-api/docs/deprecations",
-  "page_rows": 86,
+  "fetched_at": "2026-11-09 02:57 UTC",
+  "source": "https://aistudio.google.com/docs/deprecations",
+  "page_rows": 87,
   "models": {
     "gemini-2.5-pro": {
       "section": "Gemini 2.5 Pro models",
-      "shutdown": "No shutdown date announced",
-      "replacement": ""
+      "shutdown": "December 1, 2026",
+      "replacement": "gemini-3.8-flash (gemini-2.5-pro is no longer available in Google AI Studio; effective December 1, 2026, API requests to gemini-2.5-pro will automatically route to gemini-3.8-flash)"
     },
     "gemini-2.5-computer-use-preview-10-2025": {
       "section": "Gemini 2.5 Pro models",
@@ -16,22 +16,22 @@
     "gemini-2.5-pro-preview-03-25": {
       "section": "Gemini 2.5 Pro models",
       "shutdown": "December 2, 2025",
-      "replacement": "gemini-3.1-pro-preview"
+      "replacement": "gemini-3.8-flash"
     },
     "gemini-2.5-pro-preview-05-06": {
       "section": "Gemini 2.5 Pro models",
       "shutdown": "December 2, 2025",
-      "replacement": "gemini-3.1-pro-preview"
+      "replacement": "gemini-3.8-flash"
     },
     "gemini-2.5-pro-preview-06-05": {
       "section": "Gemini 2.5 Pro models",
       "shutdown": "December 2, 2025",
-      "replacement": "gemini-3.1-pro-preview"
+      "replacement": "gemini-3.8-flash"
     },
     "gemini-2.5-flash": {
       "section": "Gemini 2.5 Flash models",
-      "shutdown": "No shutdown date announced",
-      "replacement": ""
+      "shutdown": "December 1, 2026",
+      "replacement": "gemini-3.5-flash-lite (gemini-2.5-flash is no longer available in Google AI Studio; effective December 1, 2026, API requests to gemini-2.5-flash will automatically route to gemini-3.5-flash-lite)"
     },
     "gemini-2.5-flash-lite": {
       "section": "Gemini 2.5 Flash models",
@@ -48,7 +48,7 @@
       "shutdown": "November 18, 2025",
       "replacement": "gemini-3.6-flash"
     },
-    "gemini-2.5-flash-preview-09-25": {
+    "gemini-2.5-flash-preview-09-2025": {
       "section": "Gemini 2.5 Flash models",
       "shutdown": "February 17, 2026",
       "replacement": "gemini-3.6-flash"
