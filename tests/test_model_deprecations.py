@@ -68,6 +68,16 @@ def _small_page_ok(monkeypatch):
     monkeypatch.setattr(mp, "MIN_PAGE_ROWS", 3)
 
 
+@pytest.fixture(autouse=True)
+def _watch_the_fixture_family(monkeypatch):
+    """The fixture rows are the 2.5 family, so these tests watch 2.5 whatever the
+    code calls today. The live watch moves with the pinned model (#78), and
+    tests/test_model_strings_pinned.py checks that it covers it."""
+    monkeypatch.setattr(mp, "DEPRECATION_WATCH_PREFIXES", ("gemini-2.5-",))
+    monkeypatch.setitem(mp.WATCHLIST, "Google (in use)",
+                        ["google/gemini-2.5-flash", "google/gemini-2.5-pro"])
+
+
 def _watched(page_of, rows):
     return mp.watched(mp.parse_deprecations(page_of(rows)))
 

@@ -1,82 +1,32 @@
 {
-  "fetched_at": "2026-11-09 02:57 UTC",
+  "fetched_at": "2026-11-09 03:18 UTC",
   "source": "https://aistudio.google.com/docs/deprecations",
   "page_rows": 87,
   "models": {
-    "gemini-2.5-pro": {
-      "section": "Gemini 2.5 Pro models",
-      "shutdown": "December 1, 2026",
-      "replacement": "gemini-3.8-flash (gemini-2.5-pro is no longer available in Google AI Studio; effective December 1, 2026, API requests to gemini-2.5-pro will automatically route to gemini-3.8-flash)"
-    },
-    "gemini-2.5-computer-use-preview-10-2025": {
-      "section": "Gemini 2.5 Pro models",
-      "shutdown": "July 28, 2026",
-      "replacement": "gemini-3.8-flash"
-    },
-    "gemini-2.5-pro-preview-03-25": {
-      "section": "Gemini 2.5 Pro models",
-      "shutdown": "December 2, 2025",
-      "replacement": "gemini-3.8-flash"
-    },
-    "gemini-2.5-pro-preview-05-06": {
-      "section": "Gemini 2.5 Pro models",
-      "shutdown": "December 2, 2025",
-      "replacement": "gemini-3.8-flash"
-    },
-    "gemini-2.5-pro-preview-06-05": {
-      "section": "Gemini 2.5 Pro models",
-      "shutdown": "December 2, 2025",
-      "replacement": "gemini-3.8-flash"
-    },
-    "gemini-2.5-flash": {
-      "section": "Gemini 2.5 Flash models",
-      "shutdown": "December 1, 2026",
-      "replacement": "gemini-3.5-flash-lite (gemini-2.5-flash is no longer available in Google AI Studio; effective December 1, 2026, API requests to gemini-2.5-flash will automatically route to gemini-3.5-flash-lite)"
-    },
-    "gemini-2.5-flash-lite": {
-      "section": "Gemini 2.5 Flash models",
+    "gemini-3.8-flash-tts": {
+      "section": "Gemini 3 models",
       "shutdown": "No shutdown date announced",
       "replacement": ""
     },
-    "gemini-2.5-flash-lite-preview-09-2025": {
-      "section": "Gemini 2.5 Flash models",
-      "shutdown": "March 31, 2026",
-      "replacement": "gemini-3.1-flash-lite"
+    "gemini-3.8-flash-lite-tts": {
+      "section": "Gemini 3 models",
+      "shutdown": "No shutdown date announced",
+      "replacement": ""
     },
-    "gemini-2.5-flash-preview-05-20": {
-      "section": "Gemini 2.5 Flash models",
-      "shutdown": "November 18, 2025",
-      "replacement": "gemini-3.6-flash"
-    },
-    "gemini-2.5-flash-preview-09-2025": {
-      "section": "Gemini 2.5 Flash models",
-      "shutdown": "February 17, 2026",
-      "replacement": "gemini-3.6-flash"
-    },
-    "gemini-2.5-flash-native-audio-preview-12-2025": {
+    "gemini-3.8-live": {
       "section": "Live API models",
-      "shutdown": "November 17, 2026",
-      "replacement": "gemini-3.8-live"
+      "shutdown": "No shutdown date announced",
+      "replacement": ""
     },
-    "gemini-2.5-flash-preview-tts": {
-      "section": "Audio models",
-      "shutdown": "November 17, 2026",
-      "replacement": "gemini-3.8-flash-tts or gemini-3.8-flash-lite-tts"
+    "gemini-3.8-live-extended-thinking": {
+      "section": "Live API models",
+      "shutdown": "No shutdown date announced",
+      "replacement": ""
     },
-    "gemini-2.5-pro-preview-tts": {
-      "section": "Audio models",
-      "shutdown": "November 17, 2026",
-      "replacement": "gemini-3.8-flash-tts or gemini-3.8-flash-lite-tts"
-    },
-    "gemini-2.5-flash-image": {
-      "section": "Nano Banana models",
-      "shutdown": "March 15, 2027",
-      "replacement": "gemini-3.1-flash-lite-image"
-    },
-    "gemini-2.5-flash-image-preview": {
-      "section": "Nano Banana models",
-      "shutdown": "January 15, 2026",
-      "replacement": "gemini-nano-banana-2.1"
+    "gemini-3.8-flash": {
+      "section": "Gemini 3 models",
+      "shutdown": "No shutdown date announced",
+      "replacement": ""
     }
   }
 }

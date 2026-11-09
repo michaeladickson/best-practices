@@ -50,7 +50,7 @@ log = structlog.get_logger()
 REPO_ROOT = Path(__file__).parent.parent
 CONFIG_DIR = Path(__file__).parent / "config"
 LEDGER_PATH = REPO_ROOT / "data" / "practice_updates" / "incorporated.json"
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-3.8-flash"
 
 # Validation bounds for an auto-edit. A good edit grows the doc a little; these guard
 # against truncation (model dropped content) and runaway (model hallucinated bulk).
