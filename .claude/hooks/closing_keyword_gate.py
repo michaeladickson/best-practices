@@ -420,9 +420,13 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
         if prefix and _flag(args, "--repo", "-R") is None and _prefix_on_gh_line(command, prefix):
             args += ["-R", prefix]
         found.append((tokens[i + 2], args, cd))
-    for t in tokens:
+    prose = _prose(tokens)
+    for k, t in enumerate(tokens):
         # `out="$(gh pr merge 264 2>&1)"`: quoted, the substitution is one
-        # token, and the merge in it ran with nothing found (#82).
+        # token, and the merge in it ran with nothing found (#82). A title,
+        # body or commit message is text, not a substitution the gate reads.
+        if k in prose:
+            continue
         for inner in _substitutions(t, shell):
             found += [(v, a, c or cd) for v, a, c in _pr_commands(inner, shell)]
     return found
@@ -430,8 +434,9 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
 
 def _substitutions(token: str, shell: str) -> list[str]:
     """The text of each unescaped `$(...)` in a token that names a `gh pr`
-    verb. Not backticks: once shlex drops the quotes, a Markdown code span in
-    a PR body or a single-quoted sed pattern reads the same as a backtick
+    verb and closes within it; an open one is a pattern (`grep -F '$(gh pr
+    merge'`). Not backticks: once shlex drops the quotes, a Markdown code span
+    in a PR body or a single-quoted sed pattern reads the same as a backtick
     substitution. In 90 days of commands, backticks and escaped `\\$(` gave 5
     false finds; the 2 real ones, merges looped inside `"$(...)"`, were not."""
     out = []
@@ -440,9 +445,8 @@ def _substitutions(token: str, shell: str) -> list[str]:
         for i, ch in enumerate(rest):
             depth += (ch == "(") - (ch == ")")
             if depth == 0:
-                rest = rest[:i]
+                out.append(rest[:i])
                 break
-        out.append(rest)
     return [s for s in out if _PR_VERB.search(s)]
 
 
@@ -554,7 +558,7 @@ def _command_word(words: list[str], i: int) -> int | None:
     nothing, except a bare `wsl`, which is its own shell."""
     while i < len(words) and _kind(words[i]) == "word":
         w = words[i]
-        name = re.sub(r"\.exe$", "", re.split(r"[\\/]", w)[-1].lower())
+        name = _command_name(w)
         if _ASSIGNMENT.match(w):
             i += 1
             continue
@@ -630,6 +634,34 @@ def _statement_start(words: list[str], c: int) -> int:
     return 0
 
 
+def _command_name(word: str) -> str:
+    """`/usr/bin/env` -> `env`, `C:\\...\\WSL.EXE` -> `wsl`."""
+    return re.sub(r"\.exe$", "", re.split(r"[\\/]", word)[-1].lower())
+
+
+# Commands whose arguments are patterns, files or text, never a command to run.
+# A shell word after one is data (`grep ... | grep -v bash`). After any other
+# command it may be run (`setsid bash`, `find -exec sh -c`), so it counts.
+_TEXT_TOOLS = {"grep", "egrep", "fgrep", "rg", "ag", "ack", "findstr", "select-string",
+               "sls", "sed", "awk", "gawk", "head", "tail", "sort", "uniq", "wc", "cut",
+               "tr", "cat", "tee", "less", "more", "echo", "printf", "jq", "ls", "dir",
+               "diff", "write-output", "write-host"}
+
+
+def _fed_by_pipe(words: list[str], c: int) -> int | None:
+    """The index of the pipe that feeds the stage holding command word c, or
+    None. It looks out through a group that opens the stage: in `echo '...' |
+    ( bash )` and `| { bash; }` the pipe feeds the group's shell (#82)."""
+    i = c - 1
+    while i >= 0:
+        t, k = words[i], _kind(words[i])
+        if k == "word" or (k == "group" and set(t) <= {"("}):
+            i -= 1                      # wrappers, assignments, `{`, `(`
+        else:
+            return i if k == "pipe" else None
+    return None
+
+
 def _runs_pr(text: str, shell: str, depth: int) -> bool:
     """`text`, run as a command, runs `gh pr create/edit/merge`: directly, or
     through one more shell inside it (`bash -c "bash -c '...'"`)."""
@@ -663,9 +695,10 @@ def _run_by_another_shell(words: list[str], prose: set[int], bodies: list[tuple[
     `grep "gh pr merge" f | grep -v bash` runs nothing. In a simple command it
     counts as the command word (_command_words) or as any later word, since a
     wrapper the gate does not list still runs it (`setsid bash -c`, `find
-    -exec sh -c`). It runs the arguments after it (`bash -c '...'`, `ssh host
-    '...'`, `eval`) and, as a command word fed by a pipe, every word earlier in
-    its statement (`echo '...' | bash`). An argument counts when it parses as a
+    -exec sh -c`), unless the command is a text tool (_TEXT_TOOLS). It runs the
+    arguments after it (`bash -c '...'`, `ssh host '...'`, `eval`) and, when a
+    pipe feeds its stage, every word before that pipe in its statement (`echo
+    '...' | bash`, `| setsid bash`, `| ( bash )`). An argument counts when it parses as a
     `gh pr` command, not just text that names one (`bash -c 'grep "gh pr
     create" f'`). A heredoc body counts when any word in what reads it (_owner)
     is a shell, except a title or body.
@@ -674,14 +707,14 @@ def _run_by_another_shell(words: list[str], prose: set[int], bodies: list[tuple[
         end = c + 1
         while end < len(words) and _kind(words[end]) in ("word", "redirect"):
             end += 1
-        shells = [s for s in range(c, end) if s not in prose
+        later = _command_name(words[c]) not in _TEXT_TOOLS
+        shells = [s for s in range(c, end) if s not in prose and (s == c or later)
                   and _kind(words[s]) == "word" and _is_shell_word(words[s])]
         if not shells:
             continue
         given = list(range(shells[0] + 1, end))
-        start = _statement_start(words, c)
-        if shells[0] == c and any(_kind(words[i]) == "pipe" for i in range(start, c)):
-            given += range(start, c)
+        if (pipe := _fed_by_pipe(words, c)) is not None:
+            given += range(_statement_start(words, pipe), pipe)
         for i in given:
             if i not in prose and _kind(words[i]) == "word" and _runs_pr(words[i], shell, depth):
                 return words[i]
