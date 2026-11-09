@@ -146,7 +146,7 @@ regenerates it fresh (stale proposals age poorly) and notes the skipped review.
 The task lives in app storage, not git — to rebuild it on a new machine, recreate a
 monthly scheduled task pointing at this SKILL.md (same dead-man's tell as skills-sync:
 `last_run` in `~/.claude/backward-pass/*.json` much older than a month means it stopped
-firing).
+firing). `last_review` more than 45 days older than `last_run` means the review loop has stopped even though the run fires. Each repo's /start (crumbl-ops: /start-morning) prints the unreviewed file.
 
 ## What this skill never does
 
