@@ -681,3 +681,87 @@ def test_a_heredoc_delimiter_named_like_a_shell_is_not_a_shell(monkeypatch, caps
     code, err = _run(monkeypatch, capsys, "cat > notes.txt <<SH\nthen gh pr merge 5\nSH",
                      open_issues=())
     assert code == 0, err
+
+
+# ── wealth-mgmt #284 M1 and #294: commands the parser misread (2026-11-09) ──
+# Each was reproduced on the #82 copy: the merge ran unchecked, or was checked
+# against this repo while gh merged another.
+
+def _issue_list(calls):
+    return next(a for a, _ in calls if a[:2] == ["issue", "list"])
+
+
+def test_an_ordinary_merge_is_checked_exactly_as_before(monkeypatch, capsys):
+    calls = []
+    code, _ = _run(monkeypatch, capsys, "gh pr merge 46 --squash", body="clean", calls=calls)
+    assert code == 0
+    assert [a for a, _ in calls] == [
+        ["pr", "view", "46", "--json", "number,title,body,commits,headRefName"],
+        ["issue", "list", "--state", "open", "--limit", str(gate._ISSUE_LIMIT),
+         "--json", "number", "--jq", ".[].number"]]
+
+
+@pytest.mark.parametrize("command", [
+    "gh pr -R owner/other merge 46 --squash",           # the #284 M1 reproduction
+    "gh pr --repo owner/other merge 46 --squash",
+    "gh pr --repo=owner/other merge 46 --squash",
+    "gh pr -Rowner/other merge 46 --squash",
+    "gh pr merge 46 -Rowner/other --squash",            # attached value after the verb
+])
+def test_a_repo_flag_before_the_verb_is_parsed_and_checked_there(monkeypatch, capsys, command):
+    """`-R` is a flag of `gh pr` itself, so it may precede the verb. The parser
+    read the verb only right after `pr`, found nothing, and the merge ran
+    unchecked; an attached `-Rowner/other` was dropped, and the merge was
+    checked against this repo."""
+    calls = []
+    code, _ = _run(monkeypatch, capsys, command, body="clean", calls=calls)
+    view = next(a for a, _ in calls if a[:2] == ["pr", "view"])
+    assert code == 0 and view[2] == "46" and gate._flag(view, "-R") == "owner/other"
+    assert _issue_list(calls)[2:4] == ["-R", "owner/other"]
+
+
+def test_a_gh_repo_prefix_continued_onto_the_next_line_binds(monkeypatch, capsys):
+    """`\\` + newline joins the lines, so the prefix is the merge's: the gate
+    checked this repo's #46 while gh merged o/r's (#294)."""
+    calls = []
+    code, err = _run(monkeypatch, capsys, "GH_REPO=o/r \\\n  gh pr merge 46 --squash",
+                     body="clean", calls=calls)
+    assert code == 0 and _issue_list(calls)[2:4] == ["-R", "o/r"], err
+
+
+def test_gh_pr_new_is_checked_as_a_create(monkeypatch, capsys):
+    """`gh pr new` is gh's alias for create, and it was not a verb the gate knew."""
+    code, err = _run(monkeypatch, capsys, "gh pr new --title t --body 'Small fixes from #261.'")
+    assert code == 2 and "#261" in err
+
+
+@pytest.mark.parametrize("command,code,why", [
+    ("bash -c 'gh pr -R o/r merge 46 --squash'", 2, "cannot read"),
+    ("bash -c 'gh pr new --title t --body x'", 2, "cannot read"),
+    ("echo 46 | xargs gh pr -R o/r merge --squash", 2, "xargs"),
+    ("gh pr new --title t --body-file - <<'EOF'\nClean body.\nEOF", 0, ""),
+])
+def test_every_check_reads_the_verb_the_parser_reads(monkeypatch, capsys, command, code, why):
+    """The shell, xargs and stdin checks match the verb by pattern; each must
+    know `-R` before it and `new` as well as the parser does."""
+    got, err = _run(monkeypatch, capsys, command, open_issues=())
+    assert got == code and why in err, err
+
+
+@pytest.mark.parametrize("command,tool", [
+    ("gh pr view 12", "Bash"),
+    ('gh pr list --search "merge"', "Bash"),
+    ('gh pr comment 5 --body "will merge after CI"', "Bash"),
+    ("gh pr -R o/r view 12", "Bash"),
+    ('gh issue create --title "pr merge flow" --body x', "Bash"),
+    ("git log --oneline | grep pr", "Bash"),
+    ("git checkout -b gh-pr-merge-fix", "Bash"),
+    ("echo gh && echo pr", "Bash"),
+    ("gh pr checks 5; git merge main", "Bash"),
+    ("gh pr view 5 --json title | Select-String merge", "PowerShell"),
+])
+def test_a_command_that_only_mentions_gh_or_pr_is_not_blocked(monkeypatch, capsys,
+                                                              command, tool):
+    calls = []
+    code, err = _run(monkeypatch, capsys, command, calls=calls, tool=tool)
+    assert code == 0 and err == "" and calls == []

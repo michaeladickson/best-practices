@@ -137,6 +137,10 @@ def _flag(args: list[str], *names: str) -> str | None:
                 return args[i + 1]
             if a.startswith(name + "="):
                 return a.split("=", 1)[1]
+            # A one-letter flag takes its value attached: `-Rowner/repo`. Unread,
+            # the repo was dropped and the merge checked against this one.
+            if len(name) == 2 and len(a) > 2 and a.startswith(name):
+                return a[2:]
     return None
 
 
@@ -193,9 +197,34 @@ def _target(verb: str, args: list[str]) -> str:
 _GH_WORD = re.compile(r"(?:^|[\s\\/;&|(`${}!'\"])gh(?:\.exe)?$", re.IGNORECASE)
 
 
+# `gh pr new` is gh's alias for create (`gh pr create --help`, gh 2.90.0).
+_VERBS = {"create": "create", "new": "create", "edit": "edit", "merge": "merge"}
+# The same as text, for the regexes that look for one. `-R/--repo` is a flag of
+# `gh pr` itself, so it may sit between `pr` and the verb.
+_PR_VERB_TEXT = (r"gh(?:\.exe)?\s+pr\s+(?:(?:-R|--repo)(?:=|\s+)?\S+\s+)*"
+                 r"(?:create|new|edit|merge)\b")
+
+
+def _verb_at(tokens: list[str], i: int) -> tuple[int, list[str]] | None:
+    """(the verb's index, any -R given before it) when tokens[i:] is
+    `gh pr [-R o/r] <verb>`. Read only right after `pr`, the verb was missed in
+    `gh pr -R owner/other merge 46`, which then ran unchecked (#284 M1)."""
+    if _GH_WORD.search(tokens[i]) is None or tokens[i + 1:i + 2] != ["pr"]:
+        return None
+    k, repo = i + 2, []
+    while k < len(tokens):
+        t = tokens[k]
+        if t in ("-R", "--repo") and k + 1 < len(tokens):
+            repo, k = repo + [t, tokens[k + 1]], k + 2
+        elif t.startswith(("--repo=", "-R")) and t != "-R":
+            repo, k = repo + [t], k + 1
+        else:
+            break
+    return (k, repo) if k < len(tokens) and tokens[k] in _VERBS else None
+
+
 def _is_pr_verb(tokens: list[str], i: int) -> bool:
-    return (_GH_WORD.search(tokens[i]) is not None and tokens[i + 1:i + 2] == ["pr"]
-            and tokens[i + 2:i + 3] in (["create"], ["edit"], ["merge"]))
+    return _verb_at(tokens, i) is not None
 
 
 def _unquote(token: str) -> str:
@@ -389,15 +418,19 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
     PR #46 and open issues, found nothing, and passed.
     """
     command = _strip_heredocs(command)
+    # A line continuation joins two lines into one command. shlex kept its
+    # newline as a token, so `GH_REPO=o/r \` on the line before the merge lost
+    # its prefix, and the gate checked this repo's #46 while gh merged o/r's (#294).
+    command = command.replace("`\n" if shell == "PowerShell" else "\\\n", " ")
     tokens = _tokens(command, shell)
     found = []
     cd = None
     for i in range(len(tokens)):
         if tokens[i] in ("cd", "Set-Location", "sl", "pushd") and i + 1 < len(tokens):
             cd = tokens[i + 1].rstrip(";")
-        if not _is_pr_verb(tokens, i):
+        if (at := _verb_at(tokens, i)) is None:
             continue
-        args = []
+        verb, args = at[0], list(at[1])
         # `GH_REPO=o/r gh pr merge 46` points this one command at o/r. A prefix
         # binds only the command it precedes; read as a whole-command setting,
         # it redirected a later merge in the same chain to the wrong repo.
@@ -407,7 +440,7 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
             if tokens[k].startswith("GH_REPO="):
                 prefix = tokens[k].split("=", 1)[1]
             k -= 1
-        for j in range(i + 3, len(tokens)):
+        for j in range(verb + 1, len(tokens)):
             t = tokens[j]
             if t in _SEPARATORS or _is_pr_verb(tokens, j):
                 break
@@ -419,7 +452,7 @@ def _pr_commands(command: str, shell: str = "Bash") -> list[tuple[str, list[str]
         # like a prefix; and gh lets an explicit -R win over the variable.
         if prefix and _flag(args, "--repo", "-R") is None and _prefix_on_gh_line(command, prefix):
             args += ["-R", prefix]
-        found.append((tokens[i + 2], args, cd))
+        found.append((_VERBS[tokens[verb]], args, cd))
     prose = _prose(tokens)
     for k, t in enumerate(tokens):
         # `out="$(gh pr merge 264 2>&1)"`: quoted, the substitution is one
@@ -497,7 +530,7 @@ _ISSUE_LIMIT = 1000
 # (`cat <<'EOF' | gh pr create --body-file -`), or a PowerShell here-string is.
 # A heredoc for another command later on the line let a piped body through.
 _STDIN_BODY = re.compile(
-    r"\bgh\s+pr\s+(?:create|edit|merge)\b[^\n;&|]*?(?<![^\s|;&(])<<(?!<)"
+    r"\b" + _PR_VERB_TEXT + r"[^\n;&|]*?(?<![^\s|;&(])<<(?!<)"
     r"|(?<![^\s|;&(])<<(?!<)-?\s*['\"]?\w+['\"]?[^\n;&|]*\|\s*gh\s+pr\b"
     r"|^\s*['\"]@\s*\|\s*gh\s+pr\b", re.MULTILINE)
 _READS_STDIN = re.compile(r"(?:--body-file|-F)(?:\s+|=)-(?!\S)")
@@ -514,7 +547,7 @@ def _stdin_visible(stripped: str) -> bool:
     return False
 
 
-_XARGS = re.compile(r"\bxargs\b[^;&|\n]*\bgh\s+pr\s+(?:create|edit|merge)\b")
+_XARGS = re.compile(r"\bxargs\b[^;&|\n]*\b" + _PR_VERB_TEXT)
 _GH_HOST = re.compile(r"\bGH_HOST=|\$env:GH_HOST\s*=", re.IGNORECASE)
 
 # A `gh pr` command written inside one argument to a shell (`bash -c '...'`,
@@ -523,7 +556,7 @@ _GH_HOST = re.compile(r"\bGH_HOST=|\$env:GH_HOST\s*=", re.IGNORECASE)
 # fine: a title, body or commit message, a grep pattern, a heredoc written to a
 # file or fed to gh as its body. Python is not counted as a shell: the live gate
 # blocked a patch script whose comment mentioned a merge (2026-10-26).
-_PR_VERB = re.compile(r"\bgh(?:\.exe)?\s+pr\s+(?:create|edit|merge)\b")
+_PR_VERB = re.compile(r"\b" + _PR_VERB_TEXT)
 _SHELL = re.compile(r"(?:(?:ba|z|da|k|fi|s)?sh|wsl|pwsh|powershell|cmd|iex"
                     r"|invoke-expression|eval|source)(?:\.exe)?", re.IGNORECASE)
 _PROSE_FLAGS = {"-t", "--title", "-b", "--body", "--subject", "-m", "--message"}
