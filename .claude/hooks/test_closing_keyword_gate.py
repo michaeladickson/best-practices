@@ -14,6 +14,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import shlex
 from pathlib import Path
 
@@ -692,6 +693,11 @@ def _issue_list(calls):
     return next(a for a, _ in calls if a[:2] == ["issue", "list"])
 
 
+def _repo_of(gh_args):
+    """The `-R` value in one of the gate's own gh calls."""
+    return gh_args[gh_args.index("-R") + 1] if "-R" in gh_args else None
+
+
 def test_an_ordinary_merge_is_checked_exactly_as_before(monkeypatch, capsys):
     calls = []
     code, _ = _run(monkeypatch, capsys, "gh pr merge 46 --squash", body="clean", calls=calls)
@@ -717,7 +723,7 @@ def test_a_repo_flag_before_the_verb_is_parsed_and_checked_there(monkeypatch, ca
     calls = []
     code, _ = _run(monkeypatch, capsys, command, body="clean", calls=calls)
     view = next(a for a, _ in calls if a[:2] == ["pr", "view"])
-    assert code == 0 and view[2] == "46" and gate._flag(view, "-R") == "owner/other"
+    assert code == 0 and view[2] == "46" and _repo_of(view) == "owner/other"
     assert _issue_list(calls)[2:4] == ["-R", "owner/other"]
 
 
@@ -743,8 +749,8 @@ def test_gh_pr_new_is_checked_as_a_create(monkeypatch, capsys):
     ("gh pr new --title t --body-file - <<'EOF'\nClean body.\nEOF", 0, ""),
 ])
 def test_every_check_reads_the_verb_the_parser_reads(monkeypatch, capsys, command, code, why):
-    """The shell, xargs and stdin checks match the verb by pattern; each must
-    know `-R` before it and `new` as well as the parser does."""
+    """The shell and xargs checks read the verb with the parser and the stdin
+    check by pattern; each must know `-R` before it and `new`."""
     got, err = _run(monkeypatch, capsys, command, open_issues=())
     assert got == code and why in err, err
 
@@ -829,7 +835,7 @@ def test_a_repo_flag_in_a_group_is_read(monkeypatch, capsys, command):
     calls = []
     code, err = _run(monkeypatch, capsys, command, body="clean", calls=calls)
     view = next(a for a, _ in calls if a[:2] == ["pr", "view"])
-    assert code == 0 and gate._flag(view, "-R") == "c/d", err
+    assert code == 0 and _repo_of(view) == "c/d", err
     assert _issue_list(calls)[2:4] == ["-R", "c/d"]
 
 
@@ -922,13 +928,13 @@ def test_a_grouped_repo_before_the_pr_checks_that_pr_there(monkeypatch, capsys):
     calls = []
     code, err = _run(monkeypatch, capsys, "gh pr merge -sR c/d 46", body="clean", calls=calls)
     view = next(a for a, _ in calls if a[:2] == ["pr", "view"])
-    assert code == 0 and view[2] == "46" and gate._flag(view, "-R") == "c/d", err
+    assert code == 0 and view[2] == "46" and _repo_of(view) == "c/d", err
 
 
 # ── a dash or quoted value before the verb (wealth-mgmt PR 311 review) ────
 # _verb_at pairs `-x v` whatever v is, but the pattern the shell, substitution,
-# xargs and stdin checks share took a lone `-` for no value and stopped at an
-# escaped or attached quote, so `bash -c 'gh pr -t - merge 46'` merged unread.
+# xargs and stdin checks then shared took a lone `-` for no value and stopped at
+# an escaped or attached quote, so `bash -c 'gh pr -t - merge 46'` merged unread.
 
 @pytest.mark.parametrize("command,why", [
     ("bash -c 'gh pr -t - merge 46'", "cannot read"),           # the review's form
@@ -964,16 +970,18 @@ def test_a_stdin_body_before_the_verb_with_its_heredoc_is_scanned(monkeypatch, c
     "gh pr --subject -x merge 46", "gh pr --subject 'a b' merge 46",
     'gh pr --subject "a \\"b\\"" merge 46', 'gh pr --subject="a b" merge 46',
     "gh pr -t'a b' merge 46", "gh pr - merge 46",
+    'gh pr -ta" b" merge 46', 'gh pr --subject a" b" merge 46',    # PR 847 review
+    'gh pr --subject=x"a b" merge 46', "gh pr --subject a\\ b merge 46",
     # cobra pairs the flag with `merge`, so there is no verb; `--` ends the flags
     "gh pr --squash merge 46", "gh pr -s merge 46", "gh pr -- merge 46",
     "gh pr view 46", "gh pr -R o/r view 46", "gh pr list --search merge",
 ])
 def test_the_verb_pattern_finds_what_the_parser_finds(command):
-    """The shell, substitution, xargs and stdin checks find a `gh pr` verb by
-    pattern and the parser by _verb_at; a command the pattern missed was never
-    handed to the parser at all."""
+    """The stdin check finds a `gh pr` verb by pattern and the parser by
+    _verb_at. Where the pattern misses, a correct command with its heredoc
+    fails closed; the other checks no longer use it."""
     found = gate._verb_at(shlex.split(command), 0) is not None
-    assert (gate._PR_VERB.search(command) is not None) == found
+    assert (re.search(r"\b" + gate._PR_VERB_TEXT, command) is not None) == found
 
 
 @pytest.mark.parametrize("path", [_PATH, Path(__file__)], ids=["hook", "test"])
@@ -983,3 +991,56 @@ def test_every_line_fits_the_strictest_consumer_lint(path):
     (2026-11-09). This test travels with the copies and fails first."""
     lines = path.read_text(encoding="utf-8").splitlines()
     assert [n for n, line in enumerate(lines, 1) if len(line) > 100] == []
+
+
+# ── the parser decides (command-center PR 847 review) ────────────────────
+# The shell and substitution checks ran a pattern before the parser, and the
+# xargs check ran one alone. A value the pattern could not shape (`-ta" b"`,
+# a quote that starts mid-word) or a quoted `"pr"` hid the merge from all three.
+
+@pytest.mark.parametrize("command,why", [
+    ("""bash -c 'gh pr -ta" b" merge 46'""", "cannot read"),      # the review's form
+    ("""bash -c 'gh pr --subject a" b" merge 46'""", "cannot read"),
+    ("""bash -c 'gh "pr" merge 46'""", "cannot read"),
+    ('CMD=\'gh "pr" merge 5\'\neval "$CMD"', "cannot read"),
+    ("""echo 46 | xargs gh pr -ta" b" merge""", "xargs"),
+    # in a quoted `$(...)`: one word at the top (wealth-mgmt PR 317 review)
+    ('out="$(echo 46 | xargs gh pr merge --squash)"', "xargs"),
+    ('echo "$(echo 46 | xargs -n1 gh pr -R o/r merge)"', "xargs"),
+    ("out=$(echo 46 | xargs gh pr merge --squash)", "xargs"),
+    ("out=`echo 46 | xargs gh pr merge --squash`", "xargs"),
+])
+def test_a_command_only_the_parser_reads_still_blocks(monkeypatch, capsys, command, why):
+    code, err = _run(monkeypatch, capsys, command)
+    assert code == 2 and why in err, err
+
+
+def test_a_substitution_only_the_parser_reads_is_checked(monkeypatch, capsys):
+    code, err = _run(monkeypatch, capsys, 'out="$(gh pr -ta\' b\' merge 46)"',
+                     body="Small fixes from #261.")
+    assert code == 2 and "#261" in err, err
+
+
+def test_a_body_that_mentions_xargs_is_prose(monkeypatch, capsys):
+    """The xargs pattern ran over the whole text and blocked this create."""
+    code, err = _run(monkeypatch, capsys,
+                     'gh pr create --title t --body "run: xargs gh pr merge 5"')
+    assert code == 0, err
+
+
+@pytest.mark.parametrize("command", [
+    "gh pr -ta\" b\" create -F - <<'EOF'\nClean body.\nEOF",
+    "gh pr create --title t -F- <<'EOF'\nClean body.\nEOF",
+])
+def test_a_visible_stdin_body_is_read_not_failed_closed(monkeypatch, capsys, command):
+    code, err = _run(monkeypatch, capsys, command)
+    assert code == 0 and "stdin" not in err, err
+
+
+@pytest.mark.parametrize("text,reads", [
+    ("-F -", True), ("-F-", True), ("--body-file -", True), ("--body-file=-", True),
+    ("-dF -", True), ("-sdF -", True), ("-tF -", False), ("-F -x", False),
+])
+def test_the_stdin_pattern_reads_only_a_real_body_file_dash(text, reads):
+    """In `-tF -`, F is the title and `-` a stray argument: nothing reads stdin."""
+    assert (gate._READS_STDIN.search(text) is not None) == reads
