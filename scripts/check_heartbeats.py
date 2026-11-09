@@ -47,6 +47,12 @@ CHECKS = [
         "max_age_days": 9,
     },
     {
+        "name": "Vertex retirement watch (inside weekly run)",
+        "type": "file_mtime",
+        "path": str(ROOT / "data" / "vertex_model_versions.json"),
+        "max_age_days": 9,
+    },
+    {
         "name": "weekly-skills-sync (Mon 8am)",
         "type": "json_last_run",
         "path": str(HOME / ".claude" / "skills-sync" / "state.json"),
