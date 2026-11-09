@@ -19,8 +19,9 @@ def _get_gemini_client():
 
 ## Model Selection
 
-- **gemini-2.5-flash**: Default for all tasks. Fast, cheap, good enough for classification, summarization, structured output.
-- **Temperature**: `0.1` for classification/structured output, `0.7` for creative drafting.
+- **gemini-3.8-flash**: Default for all tasks. AI Studio shuts `gemini-2.5-flash` down on 2026-12-01 and reroutes it to `gemini-3.5-flash-lite`; run on the same inputs, the lite model returned an empty digest at its default `minimal` thinking and rewrote untouched doc lines at `medium`, so the digest moved to 3.8 Flash instead (#78).
+- **Run the old and new model on the same real input before a bump.** Google's named successor is a routing default, not a quality claim. The pin test's docstring (`tests/test_model_strings_pinned.py`) gives the steps.
+- **No sampling parameters on Gemini 3.x.** From 3.5 Flash-Lite and 3.6 Flash on, the API ignores `temperature`, `top_p` and `top_k` and says later models will reject them with a 400. Steer determinism with the system instruction or a response schema; set depth with `thinking_level`, not `thinking_budget`.
 
 ## Prompt Structure
 

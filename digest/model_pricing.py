@@ -29,12 +29,12 @@ before acting on the number.
 
 The same run watches Google's Gemini API deprecations page (#32). A deprecation
 is not a price change, so the price diff never sees one. This repo's digest
-calls gemini-2.5-flash through AI Studio (GEMINI_API_KEY) at three call sites
-(tests/test_model_strings_pinned.py pins them), and Google announces AI Studio
-shutdown dates on that page, apart from the Vertex calendar and not necessarily
-by email. When a watched row's shutdown cell changes (a date where there was
-"No shutdown date announced", or a new row that arrives dated), it files an
-issue. A page that cannot be fetched or parsed files its own issue and exits
+calls Gemini through AI Studio (GEMINI_API_KEY) at three call sites
+(tests/test_model_strings_pinned.py pins them and the model id), and Google
+announces AI Studio shutdown dates on that page, apart from the Vertex calendar
+and not necessarily by email. When a watched row's shutdown cell changes (a
+date where there was "No shutdown date announced", or a new row that arrives
+dated), it files an issue. A page that cannot be fetched or parsed files its own issue and exits
 non-zero: "fetched and found nothing" is not "nothing announced".
 
 Run: python -m digest.model_pricing [--dry-run] [--deprecations-only]
@@ -84,14 +84,12 @@ WATCHLIST = {
         "anthropic/claude-haiku-4.5",
     ],
     "Google (in use)": [
-        "google/gemini-2.5-flash",
-        "google/gemini-2.5-pro",
+        "google/gemini-3.8-flash",
     ],
     "Google (migration targets)": [
         "google/gemini-3.1-flash-lite",
         "google/gemini-3.5-flash-lite",
         "google/gemini-3.5-flash",
-        "google/gemini-3.8-flash",
     ],
     "OpenAI": [
         "openai/gpt-5.4",
@@ -113,7 +111,7 @@ DEPRECATIONS_SNAPSHOT = ROOT / "data" / "model_deprecations.json"
 # Rows on the deprecations page whose model id starts with one of these are
 # watched. Must cover every Gemini id the code calls:
 # tests/test_model_strings_pinned.py fails when a pinned id falls outside them.
-DEPRECATION_WATCH_PREFIXES = ("gemini-2.5-",)
+DEPRECATION_WATCH_PREFIXES = ("gemini-3.8-",)
 NO_SHUTDOWN_DATE = "No shutdown date announced"
 DEPRECATION_ISSUE_TITLE = "Gemini deprecations page: watched model shutdown date changed"
 UNREADABLE_ISSUE_TITLE = "Gemini deprecations watch: page unreadable"
@@ -463,9 +461,10 @@ def file_deprecation_issue(changes: list[str], dry_run: bool) -> bool:
         f"The weekly check of {DEPRECATIONS_URL} found a change on a watched "
         f"row (prefixes {', '.join(DEPRECATION_WATCH_PREFIXES)}):\n\n"
         + "\n".join(f"- {c}" for c in changes)
-        + "\n\nThis repo's digest calls `gemini-2.5-flash` through AI Studio "
-        "(`GEMINI_API_KEY`); `tests/test_model_strings_pinned.py` lists the call "
-        f"sites. Price-watch \"in use\" ids: {', '.join(in_use)}. Google lists the "
+        + "\n\nThis repo's digest calls "
+        + ", ".join(f"`{m}`" for m in in_use)
+        + " through AI Studio (`GEMINI_API_KEY`); `tests/test_model_strings_pinned.py` "
+        "lists the call sites. Google lists the "
         "earliest possible shutdown date and says the exact date comes with "
         "advance notice. Other repos may call the same model through AI Studio; "
         "check their call sites before closing.\n\n"

@@ -30,8 +30,15 @@ from digest import model_pricing
 # is one model at three call sites: ai_digest.py (analysis),
 # practice_updater.py (GEMINI_MODEL), verdict_feedback.py (verdict extraction),
 # all through AI Studio with GEMINI_API_KEY.
+#
+# gemini-3.8-flash since #78: AI Studio shuts gemini-2.5-flash down on
+# 2026-12-01 and reroutes it to gemini-3.5-flash-lite. The reroute target was
+# run on the same week's articles first and rejected: it rewrote practice-doc
+# lines it was not asked to touch (the structural validator passes that) and
+# recorded verdicts for issues closed with no evaluation. The comparison, with
+# token counts and cost, is on #78.
 EXPECTED_MODEL_STRINGS = {
-    "gemini-2.5-flash",
+    "gemini-3.8-flash",
 }
 
 _ROOT = Path(__file__).resolve().parent.parent

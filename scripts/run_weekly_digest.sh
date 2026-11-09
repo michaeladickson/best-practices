@@ -313,7 +313,8 @@ python3 scripts/check_gh_usage.py || echo "WARNING: GH usage tripwire fired or c
 # tracked model's rate moves >=5% or leaves the feed; otherwise it just
 # refreshes data/model_pricing.md and the weekly commit carries the diff.
 # Same step watches the Gemini API deprecations page: files an issue when a
-# gemini-2.5-* row's shutdown date changes, and a separate "page unreadable"
+# watched row's shutdown date changes (prefixes in DEPRECATION_WATCH_PREFIXES,
+# which follow the model the digest calls), and a separate "page unreadable"
 # issue (exit 1, WARNING below) when the page cannot be fetched or parsed.
 python3 -m digest.model_pricing || echo "WARNING: model pricing or Gemini deprecations check failed" >&2
 
