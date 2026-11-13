@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-11-09 11:41 UTC",
+  "fetched_at": "2026-11-13 23:11 UTC",
   "source": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-versions",
-  "page_rows": 57,
+  "page_rows": 60,
   "callers": {
     "michaeladickson/crumbl-ops": [
-      "gemini-3.6-flash",
+      "gemini-3.5-flash",
       "gemini-3.8-flash"
     ],
     "michaeladickson/wealth-mgmt": [
@@ -125,6 +125,21 @@
     "multimodalembedding@001": {
       "section": "Embeddings models",
       "retirement": "April 1, 2027",
+      "replacement": ""
+    },
+    "gemini-4-hydrogen": {
+      "section": "Models available for shorter availability periods",
+      "retirement": "No retirement date announced",
+      "replacement": ""
+    },
+    "gemini-4-carbon": {
+      "section": "Models available for shorter availability periods",
+      "retirement": "No retirement date announced",
+      "replacement": ""
+    },
+    "gemini-4-carbon-cyber-permissive": {
+      "section": "Models available for shorter availability periods",
+      "retirement": "No retirement date announced",
       "replacement": ""
     },
     "gemini-4-argon-cyber-permissive": {

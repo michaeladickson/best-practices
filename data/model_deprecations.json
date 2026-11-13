@@ -1,7 +1,7 @@
 {
-  "fetched_at": "2026-11-09 03:18 UTC",
+  "fetched_at": "2026-11-13 23:11 UTC",
   "source": "https://aistudio.google.com/docs/deprecations",
-  "page_rows": 87,
+  "page_rows": 91,
   "models": {
     "gemini-3.8-flash-tts": {
       "section": "Gemini 3 models",
