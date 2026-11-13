@@ -289,6 +289,22 @@
           "reason": "`scripts/cron_knowledge_curation.sh` reads `knowledge/`, `CLAUDE.md` and `docs/` directly, so retrieval is not its constraint, and corrections already feed back through the memory capture rule (`/wrap-up`) rather than query monitoring."
         }
       ]
+    },
+    "3801": {
+      "title": "Weekly digest 2026-11-06: ideas to evaluate",
+      "closed_at": "2026-11-09",
+      "verdicts": [
+        {
+          "idea": "Specialized LLM for ad-hoc financial document extraction",
+          "verdict": "already-built",
+          "reason": "Ad-hoc receipts are already handled via Claude Sonnet in `src/ops/store_receipts.py`, while vendor invoices deliberately remain deterministic (`src/invoices/processor.py:997`)."
+        },
+        {
+          "idea": "Simulated production environment for agent evals",
+          "verdict": "false-premise",
+          "reason": "No agents post to QBO as the nightly sync is the sole poster and QBO MCP is read-only (`tests/test_qbo_mcp_readonly.py`), while existing LLM call sites already use golden-set evals."
+        }
+      ]
     }
   }
 }
