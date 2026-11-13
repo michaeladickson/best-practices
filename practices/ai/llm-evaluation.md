@@ -154,6 +154,14 @@ as a change that must pass the eval set first. This is the concrete defense agai
 or long-horizon work, the gain often comes from post-training/RL rather than a new base
 model — evaluate the claim on your tasks instead of assuming a capability jump.
 
+### Preregister evaluation hypotheses and analysis plans
+Document evaluation hypotheses, metrics, sample sizes, and pass/fail thresholds before
+running benchmark suites against new models or prompt revisions. Committing to the
+analysis plan in advance prevents teams from shifting score thresholds or cherry-picking
+favorable runs after seeing the output distribution. Treating model release evaluations
+like preregistered scientific studies ensures regression gates remain objective and
+reproducible.
+
 ### Track production quality over time (drift detection)
 Offline eval is necessary but not sufficient. Sample live outputs and track accuracy
 over time; alert on **drift** — a classifier whose precision is sliding, a forecast
@@ -390,6 +398,7 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **How To Use Decision Models for Evals** (Hamel Husain) — Tune a binary judge's threshold on labeled cases. Digest: 2026-10-20.
 - **Turning Database Grading into RL Rewards: Post-Training Agents with ThinkingBox** (Hugging Face Blog) — Grade agent work by the end state it leaves. Digest: 2026-10-23.
 - **Raindrop simulates your agent’s world to catch what your changes break** (The New Stack) — simulates agent's world to catch what changes break. Digest: 2026-11-05.
+- **Building strong safety evaluations** (Anthropic Engineering) — preregister evaluation hypotheses and analysis plans to ensure objective and reproducible regression gates. Digest: 2026-11-13.
 
 ## Where Used
 

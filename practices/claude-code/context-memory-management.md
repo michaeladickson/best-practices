@@ -53,6 +53,7 @@ Every recurring fact gets **one canonical home**. Read that home; don't re-deriv
 
 -   **Name the winner.** When two files describe the same fact, one is authoritative and the other points to it. Maintain a "sources of truth" table (one per repo) so the canonical home for each fact-scope is unambiguous.
 -   **A per-module `CLAUDE.md` is a retrieval contract.** Read it instead of re-reading the module's code to learn what the module does. Because it stands in for the code, it **must mirror the code** — and when they disagree, *the code is authoritative and the doc is the bug.* A silently drifted doc is worse than no doc, because it is trusted.
+-   **Maintain a home repository for multi-repo agent context.** When a project spans multiple git repositories without a monorepo, create a dedicated home repository to store shared agent skills, global instructions, and navigation pointers to external repos. Start agent sessions in this central repository so the model can inspect, open, or clone target repos on demand without duplicating configuration files across individual codebases. For fleets exceeding dozens of repos, group pointers into domain-specific manifest files using progressive disclosure to protect context budgets.
 -   **Point, don't restate.** A non-canonical mention of a fact should link to the home, not duplicate the content. Duplication is what drifts.
 
 Worked example (from a production hub repo): a `Sources of Truth` table maps *people* → a contacts file, *deal participants* → a domain knowledge file, *agent I/O* → that agent's `CLAUDE.md` (code-authoritative), *layout & conventions* → a file-map doc, *past choices* → the decision journal, *cross-session user facts* → memory.
@@ -417,6 +418,7 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 -   **Your AI agent failed. The model might not be the problem.** (The New Stack) — Record agent internal monologue for debugging. Digest: 2026-09-20.
 -   **Trying the Software factory pattern.** (Will Larson (Irrational Exuberance)) — Agents manage project goals via task system. Digest: 2026-09-20.
 -   **The components of agent memory** (Anthropic Engineering) — Design agent memory systems to include a "dreaming" phase for offline consolidation of experiences into actionable rules and long-term knowledge. Digest: 2026-11-06.
+-   **The Home Repo Pattern** (Matt Pocock (AI Hero)) — Maintain a home repository for multi-repo agent context. Digest: 2026-11-12.
 
 ## Where Used
 
