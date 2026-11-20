@@ -171,6 +171,14 @@ Before a cutover, **shadow-validate**: run the candidate model or prompt passive
 against live traffic — binary CI thresholds miss the gradual eval drift that only shows
 up on messy production inputs.
 
+### Sample nominal production traces to catch silent fallback masking
+Default fallback handlers and error boundaries often return nominal 200 OK responses
+when intent classifiers or agents fail, masking severe accuracy regressions on standard
+dashboards. Routinely sample and manually audit 200 OK production traces against a
+ground-truth rubric rather than monitoring only failed requests. This exposes silent
+false positives and out-of-scope blocks that never trigger traditional application
+performance alerts.
+
 ### Track cost, latency, and the human cost alongside quality
 A prompt that's 3% more accurate but 2× the tokens may be a bad trade. Record token
 count and latency next to the quality score so an "improvement" that blows the budget is
@@ -399,6 +407,7 @@ Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 - **Turning Database Grading into RL Rewards: Post-Training Agents with ThinkingBox** (Hugging Face Blog) — Grade agent work by the end state it leaves. Digest: 2026-10-23.
 - **Raindrop simulates your agent’s world to catch what your changes break** (The New Stack) — simulates agent's world to catch what changes break. Digest: 2026-11-05.
 - **Building strong safety evaluations** (Anthropic Engineering) — preregister evaluation hypotheses and analysis plans to ensure objective and reproducible regression gates. Digest: 2026-11-13.
+- **200 OK is dead as an AI agent health signal. Here’s what comes next.** (The New Stack) — sample nominal production traces to catch silent fallback masking. Digest: 2026-11-18.
 
 ## Where Used
 

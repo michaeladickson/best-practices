@@ -41,6 +41,7 @@ Three places a fact can live, by scope:
 -   **A local/on-device tier is now viable** as small models get good enough to run offline — worth treating as a distinct tier where privacy, data residency or offline operation matter.
 -   **Maintain memory locally, not globally.** Optimize the segments actual usage touches rather than periodically reorganizing the whole store; no single memory architecture dominates, and global reshuffles cost more than they return.
 -   **Make session context durable with event logs.** Log intermediate steps so a long-horizon task can resume, and run it where detached, persistent execution is supported.
+-   **Separate workflow execution state from durable memory.** Isolate workflow checkpoints (graph execution state, paused nodes, and pending approvals) from durable agent memory (cross-session facts, preferences, and decisions) and retrieval knowledge; explicit boundaries and lifecycles ensure paused runs resume cleanly without polluting cross-session recall.
 -   **Per-agent memory is its own scope.** Claude Code subagents accept `memory: project` (or `user`, `local`) in their frontmatter, which gives the agent a persistent directory under `.claude/agent-memory/` that it reads on start and writes as it works — so a code-reviewer stops re-deriving the same codebase patterns every session. The tier test extends: *true for this agent's role, regardless of session?* → agent memory, not the repo `CLAUDE.md` (every session pays for that) and not session context (evaporates). Two rules: tell the agent what to accumulate ("update your agent memory with patterns and recurring issues you discover") — a memory directory with no write instruction accumulates nothing; and treat it as agent-*written* memory for validation purposes (see Retrieval Contracts) — it drifts like any other doc, just without a human editor.
 -   **Provide agents persistent organizational context.** Integrate persistent organizational context into agent identity and state management. This includes structured understanding of company policies, roles, and structure to enable more accurate and aligned agent behavior.
 -   **Test memory fidelity when migrating platforms.** An agent's value is partly its learned routines; check they survive a move, not just the explicit memory files.
@@ -224,6 +225,7 @@ Choices that outlive today's task go in `decisions/YYYY-MM-DD-{topic}.md` (see [
 When surfaced context is **AI-generated** (a model-written summary, a classification), mark it where it's shown, so a reader can tell synthesis from ground truth and knows to verify before acting. Raw data and AI synthesis should stay visually distinguishable. The same applies to *assembled* context: tag each fact with its source (especially for financial or compliance work), so a reviewer can trust or challenge a specific claim instead of the whole answer.
 
 - **Tag context by trust boundary — operator vs. external.** An agent cannot otherwise tell your instructions from instructions embedded in a web page or a GitHub issue it read. This is the context-layer half of prompt-injection defense; the action-layer half is in `../ai-safety/agent-action-safety.md`.
+-   **Downgrade trust tiers whenever agents edit verified knowledge.** When an agent modifies human-reviewed guidance or memory in context stores, automatically reset its trust status to unverified or machine-confirmed until re-audited, preventing unverified modifications from masquerading as human-approved instructions.
 -   **Inspect decrypted context before the agent acts.** Cryptographic context injection hides instructions in an encrypted payload the agent decrypts itself, past filters that only see ciphertext; sandbox and check decryption output before it reaches the main flow.
 - **Require an evidence packet with consequential decisions:** the queries run, completeness of the data, approximations made, and alternatives tested — not just the records retrieved.
 
@@ -419,6 +421,8 @@ Synthesized from saved digest articles (`data/digest_knowledge/`) plus productio
 -   **Trying the Software factory pattern.** (Will Larson (Irrational Exuberance)) — Agents manage project goals via task system. Digest: 2026-09-20.
 -   **The components of agent memory** (Anthropic Engineering) — Design agent memory systems to include a "dreaming" phase for offline consolidation of experiences into actionable rules and long-term knowledge. Digest: 2026-11-06.
 -   **The Home Repo Pattern** (Matt Pocock (AI Hero)) — Maintain a home repository for multi-repo agent context. Digest: 2026-11-12.
+-   **What’s new in OKF v0.3: enterprise-ready knowledge, use cases, and skills** (Google Cloud Blog) — Downgrade trust tiers whenever agents edit verified knowledge. Digest: 2026-11-18.
+-   **Your AI agent’s “memory problem” may be something else** (The New Stack) — Separate workflow execution state from durable memory. Digest: 2026-11-20.
 
 ## Where Used
 
