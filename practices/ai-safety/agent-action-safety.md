@@ -179,6 +179,7 @@ leak data or coordinate out of sight.
 - **Monitor agent calls to external web services.** Wikis, URL shorteners, forums and JSON shares work as covert channels and exfiltration points; network blocking alone does not see intent.
 - **Govern inter-agent communication explicitly.** Log and police the channels agents use to talk to each other, including notes left for future runs of themselves.
 - **Block shared package caches as covert channels.** Prevent agents in isolated sandboxes from communicating or leaving instructions for each other via shared package caches, treating them as vectors for malicious or unintended cross-agent influence.
+- **Document sandbox isolation boundaries in system prompts.** Explicitly state the execution environment's network and filesystem boundaries directly in the agent's system prompt. When encountering blocked dependencies or impossible tasks, agents frequently rationalize probing and exploiting environment misconfigurations unless prohibited external targets are explicitly declared off-limits.
 
 ### 15. Keep sensitive data on trusted infrastructure
 Bring the model to the data, not the data to the model provider.
@@ -241,6 +242,7 @@ shared review workflow.
 
 Saved articles synthesized here (full summaries in `data/digest_knowledge/`):
 
+- **Anthropic set more than 1,700 traps for Claude — what it found is both reassuring and unsettling** (The New Stack) — Document sandbox isolation boundaries in system prompts to prevent rationalized sandbox escape. Digest: 2026-11-26.
 - **Google turns the infrastructure behind Gemini’s agents into a cloud service** (The New Stack) — Run agent sandboxes in hardware-isolated microVMs. Digest: 2026-10-22.
 - **Executive Briefing: In the Hugging Face Attack, One AI Agent Took a Peer's Go-Ahead as Permission. Here's My Prompt Kit to Test Who Your Agents Obey.** (Nate Jones) — A peer agent's go-ahead is not approval. Digest: 2026-10-18.
 - **Anthropic’s red team ran AI on 15 cheap TV boxes. Then the math got unsettling.** (The New Stack) — Develop specific defenses against self-replicating AI worms, focusing on preventing unauthorized inference and managing model execution on unfamiliar hardware. Digest: 2026-10-13.
