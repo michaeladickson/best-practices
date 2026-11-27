@@ -305,6 +305,63 @@
           "reason": "No agents post to QBO as the nightly sync is the sole poster and QBO MCP is read-only (`tests/test_qbo_mcp_readonly.py`), while existing LLM call sites already use golden-set evals."
         }
       ]
+    },
+    "4074": {
+      "title": "Weekly digest 2026-11-20: ideas to evaluate",
+      "closed_at": "2026-11-21",
+      "verdicts": [
+        {
+          "idea": "Active verification and offline sampling for silent AI agent failures",
+          "verdict": "already-built",
+          "reason": "Already covered because `llm_purpose_liveness` alarms when an AI purpose stops producing output and fallbacks route to the human queue."
+        },
+        {
+          "idea": "Agent-generated PR verification via scoped skills and execution gates",
+          "verdict": "already-built",
+          "reason": "The repository already gates agent PRs using `/verify`, `scripts/prepush.sh`, and per-PR reviews."
+        },
+        {
+          "idea": "Agent observability tracking tool-call sequences and state transitions",
+          "verdict": "tracked",
+          "reason": "The autofix redesign's findings ledger (#3904) already records agent reads and verdicts, with a readout due 2026-11-28."
+        },
+        {
+          "idea": "Adopting Gemini 4 Neon",
+          "verdict": "rejected",
+          "reason": "Pinned models `gemini-3.5-flash` and `gemini-3.8-flash` in `tests/test_model_strings_pinned.py` are supported through mid-to-late 2027, and any change must pass the `llm_eval` gate."
+        },
+        {
+          "idea": "Upgrading to PostgreSQL 19",
+          "verdict": "rejected",
+          "reason": "Production runs PostgreSQL 17 on Cloud SQL, and none of the new release features are needed currently."
+        }
+      ]
+    },
+    "3947": {
+      "title": "Weekly digest 2026-11-13: ideas to evaluate",
+      "closed_at": "2026-11-21",
+      "verdicts": [
+        {
+          "idea": "Adopting UUIDv7 instead of UUIDv4 primary keys",
+          "verdict": "false-premise",
+          "reason": "The bcp-inventory schema has 0 uuid-typed primary-key columns of 262 (read from `pg_index` today), relying on identity integers or natural text keys instead."
+        },
+        {
+          "idea": "Defenses against credential leaks from auto-approved agent actions",
+          "verdict": "already-built",
+          "reason": "Existing bash and push hooks (`check_dangerous_bash.py`, `check_push_gate.py`) already gate this, and `.env` is gitignored."
+        },
+        {
+          "idea": "Ownership framing in prompts to improve automated code consolidation",
+          "verdict": "rejected",
+          "reason": "This applies to headless maintenance prompts in best-practices rather than this repository's code and is not tracked here."
+        },
+        {
+          "idea": "Using the Gemini Decisions API for calibrated classification",
+          "verdict": "rejected",
+          "reason": "No call site needs a calibrated classifier today, so no step was taken."
+        }
+      ]
     }
   }
 }
