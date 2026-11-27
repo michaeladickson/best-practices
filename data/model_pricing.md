@@ -1,6 +1,6 @@
 # Model pricing watch
 
-Source: OpenRouter `/api/v1/models` list rates, fetched 2026-11-20 23:08 UTC.
+Source: OpenRouter `/api/v1/models` list rates, fetched 2026-11-27 23:07 UTC.
 
 **These are list rates on OpenRouter's platform, not a bill.** Vertex AI
 and Bedrock price separately and are not represented here — crumbl-ops'

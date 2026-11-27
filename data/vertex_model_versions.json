@@ -1,7 +1,7 @@
 {
-  "fetched_at": "2026-11-20 23:08 UTC",
+  "fetched_at": "2026-11-27 23:07 UTC",
   "source": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-versions",
-  "page_rows": 61,
+  "page_rows": 62,
   "callers": {
     "michaeladickson/crumbl-ops": [
       "gemini-3.5-flash",
@@ -132,6 +132,11 @@
       "retirement": "No retirement date announced",
       "replacement": ""
     },
+    "gemini-4-neon-cyber-permissive": {
+      "section": "Models available for shorter availability periods",
+      "retirement": "No retirement date announced",
+      "replacement": ""
+    },
     "gemini-4-hydrogen": {
       "section": "Models available for shorter availability periods",
       "retirement": "No retirement date announced",
@@ -160,12 +165,12 @@
     "gemini-3.7-flash": {
       "section": "Models available for shorter availability periods",
       "retirement": "January 28, 2027",
-      "replacement": "gemini-3.8-flash"
+      "replacement": "gemini-4-hydrogen"
     },
     "gemini-3.6-flash": {
       "section": "Models available for shorter availability periods",
-      "retirement": "November 19, 2026",
-      "replacement": "gemini-3.8-flash"
+      "retirement": "January 28, 2027",
+      "replacement": "gemini-4-hydrogen"
     },
     "gemini-nano-banana-2.1": {
       "section": "Models available for shorter availability periods",
