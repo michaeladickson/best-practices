@@ -1,7 +1,7 @@
 ---
 name: wrap-up
 description: End-of-session in best-practices — verify all three git refs (worktree, origin/main, main checkout) match; trace cross-repo tangents (issues filed in crumbl-ops / command-center / wealth-mgmt, prompts handed off); flag digest-pipeline watch-items for Friday's run; capture any draft-edit voice deltas as feedback_voice_* memories for the monthly command-center /voice-sync; save any genuinely-surprising insight to cross-session memory; present a terse summary. No parking, no PROJECT_STATUS — this repo is a catalog, not a delivery tracker.
-user_invocable: true
+user-invocable: true
 ---
 
 # /wrap-up — End-of-Session (best-practices)
@@ -114,6 +114,14 @@ preferences are almost always shared; anything naming this repo's tools, data or
 Getting this right at capture time is the cheap moment. Deciding later means moving the file
 and then repairing every skill, hook and `[[wikilink]]` that pointed at the old location,
 which is the whole reason `/judgment-sync` exists.
+
+Before writing a new file, grep both stores for the rule's keywords and update the match if
+either already has one; this repo's `MEMORY.md` alone cannot show a rule already in `_shared`:
+
+```bash
+grep -il "<keyword>" ~/.claude/projects/C--Users-micha-best-practices/memory/*.md \
+                     ~/.claude/projects/_shared/memory/*.md
+```
 
 ### 5b. Push the memory repo (REQUIRED — a different repo from this one)
 
